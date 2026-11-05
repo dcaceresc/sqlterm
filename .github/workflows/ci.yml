@@ -1,0 +1,64 @@
+name: CI
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  unit:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+      - run: go test ./...
+      - run: go vet ./...
+      - run: go build ./cmd/sqlterm
+      - if: runner.os == 'Linux'
+        run: go test -race ./...
+  integration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: sqlterm_test
+          POSTGRES_DB: sqlterm_test
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: sqlterm_test
+          MYSQL_DATABASE: sqlterm_test
+          MYSQL_ROOT_HOST: '%'
+        ports: ['3306:3306']
+        options: >-
+          --health-cmd "mysqladmin ping -h localhost -psqlterm_test"
+          --health-interval 10s --health-timeout 5s --health-retries 20
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: Sqlterm_Test_123!
+        ports: ['1433:1433']
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Sqlterm_Test_123!' -C -Q 'SELECT 1'"
+          --health-interval 10s --health-timeout 5s --health-retries 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: '1.23.x'
+      - run: go test ./internal/db -run TestIntegration -v -count=1 -timeout=5m
+        env:
+          SQLTERM_TEST_SQLSERVER_PROFILE: '{"host":"localhost","port":1433,"database":"master","user":"sa","tls":"insecure"}'
+          SQLTERM_TEST_SQLSERVER_PASSWORD: Sqlterm_Test_123!
+          SQLTERM_TEST_MYSQL_PROFILE: '{"host":"localhost","port":3306,"database":"sqlterm_test","user":"root","tls":"disable"}'
+          SQLTERM_TEST_MYSQL_PASSWORD: sqlterm_test
+          SQLTERM_TEST_POSTGRES_PROFILE: '{"host":"localhost","port":5432,"database":"sqlterm_test","user":"postgres","tls":"disable"}'
+          SQLTERM_TEST_POSTGRES_PASSWORD: sqlterm_test

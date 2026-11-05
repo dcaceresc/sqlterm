@@ -1,0 +1,85 @@
+package ui
+
+import (
+	"fmt"
+	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
+	"github.com/rivo/uniseg"
+	"strings"
+)
+
+func clipColumns(text string, width int) string {
+	if width <= 0 {
+		return ""
+	}
+	if uniseg.StringWidth(text) <= width {
+		return text
+	}
+	if width == 1 {
+		return "…"
+	}
+	var b strings.Builder
+	used := 0
+	g := uniseg.NewGraphemes(text)
+	for g.Next() {
+		if used+g.Width() > width-1 {
+			break
+		}
+		b.WriteString(g.Str())
+		used += g.Width()
+	}
+	b.WriteRune('…')
+	return b.String()
+}
+
+// A lualine-style mode block, context section and right-aligned SQL position.
+// Only the middle section is shortened when space is limited.
+func modeStatus(p Palette, mode, file, connection, state string, row, column, width int) string {
+	badge := " " + mode + " "
+	badge = clipColumns(badge, width)
+	remaining := max(0, width-uniseg.StringWidth(badge))
+	right := clipColumns(fmt.Sprintf(" SQL  %d:%d ", row, column), remaining)
+	middleWidth := max(0, remaining-uniseg.StringWidth(right))
+	middle := fmt.Sprintf(" %s │ %s │ %s", file, connection, state)
+	middle = strings.NewReplacer("\r", " ", "\n", " ", "\t", " ").Replace(middle)
+	middle = clipColumns(middle, middleWidth)
+	padding := max(0, middleWidth-uniseg.StringWidth(middle))
+	return fmt.Sprintf("[%s:%s:b]%s[%s:%s:-]%s%s[%s:%s:b]%s[-:-:-]", colorTag(p.Background), colorTag(p.ModeColor(mode)), tview.Escape(badge), colorTag(p.Foreground), colorTag(p.Surface), tview.Escape(middle), strings.Repeat(" ", padding), colorTag(p.Foreground), colorTag(p.Border), tview.Escape(right))
+}
+func (u *UI) refreshModeBorders() {
+	for i, t := range u.tabs {
+		color := u.palette.Border
+		title := u.palette.Muted
+		if i == u.current && t.Editor.Area.HasFocus() {
+			color = u.palette.ModeColor(t.Editor.Mode)
+			title = color
+		}
+		t.Editor.Area.SetBorderColor(color).SetTitleColor(title)
+		t.Editor.Area.SetTitle(" SQL · " + t.Editor.Mode + " ")
+	}
+	objectColor := u.palette.Border
+	if u.objects.HasFocus() || u.search.HasFocus() || u.kind.HasFocus() {
+		objectColor = u.palette.Accent
+	}
+	u.objects.SetBorderColor(objectColor)
+	resultColor := u.palette.Border
+	if u.table.HasFocus() {
+		resultColor = u.palette.Accent
+	}
+	u.table.SetBorderColor(resultColor)
+}
+func (u *UI) updateCursor(screen tcell.Screen) {
+	if len(u.tabs) == 0 {
+		return
+	}
+	t := u.active()
+	if t.Editor.Area.HasFocus() {
+		shape := tcell.CursorStyleSteadyBlock
+		if t.Editor.Mode == "INSERT" {
+			shape = tcell.CursorStyleSteadyBar
+		}
+		screen.SetCursorStyle(shape, u.palette.ModeColor(t.Editor.Mode))
+		return
+	}
+	screen.SetCursorStyle(tcell.CursorStyleDefault, tcell.ColorReset)
+}
