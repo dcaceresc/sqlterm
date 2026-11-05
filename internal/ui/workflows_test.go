@@ -229,11 +229,12 @@ func TestBlankDatabaseBrowsesDatabasesThenLoadsSelectedObjects(t *testing.T) {
 	waitUI(t, u, func() bool { return !u.active().Busy })
 	u.app.QueueUpdateDraw(func() {
 		_, page := u.pages.GetFrontPage()
-		list, ok := page.(*centered).child.(*tview.List)
+		panel, ok := page.(*centered).child.(*tview.Flex)
 		if !ok {
 			t.Error("F4 did not show database picker")
 			return
 		}
+		list := panel.GetItem(1).(*tview.List)
 		list.GetItemSelectedFunc(0)()
 	})
 	waitUI(t, u, func() bool { return !u.active().Busy })
@@ -241,7 +242,7 @@ func TestBlankDatabaseBrowsesDatabasesThenLoadsSelectedObjects(t *testing.T) {
 		if u.active().SelectingDatabase || u.active().Profile.Database != "DEV" || len(u.active().Catalog) != 1 {
 			t.Error("selected database objects missing")
 		}
-		if u.search.GetText() != "" || u.objects.GetItemCount() != 1 {
+		if u.search.GetText() != "" || len(u.catalogRows) != 1 {
 			t.Error("database search filter hid the selected database objects")
 		}
 		if u.cfg.Profiles[0].Database != "" {

@@ -118,6 +118,7 @@ func TestAddProfileInSelectedFolderAndKeyboardNavigation(t *testing.T) {
 	if ref.Folder != "PROD" {
 		t.Fatal("folder selection not restored")
 	}
+	u.pages.InputHandler()(tcell.NewEventKey(tcell.KeyTab, 0, 0), func(p tview.Primitive) { u.app.SetFocus(p) })
 	u.pages.InputHandler()(tcell.NewEventKey(tcell.KeyRune, '+', 0), func(p tview.Primitive) { u.app.SetFocus(p) })
 	f := currentForm(u)
 	if f.GetFormItem(9).(*tview.InputField).GetText() != "PROD" {
