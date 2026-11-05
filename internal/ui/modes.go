@@ -55,13 +55,39 @@ func (u *UI) refreshModeBorders() {
 			title = color
 		}
 		t.Editor.Area.SetBorderColor(color).SetTitleColor(title)
-		t.Editor.Area.SetTitle(" SQL · " + t.Editor.Mode + " ")
+		prefix := ""
+		if i == u.current && t.Editor.Area.HasFocus() {
+			prefix = "> "
+		}
+		scope := "Execute script"
+		if selected, _, _ := t.Editor.Area.GetSelection(); selected != "" {
+			scope = "Execute selection"
+		}
+		t.Editor.Area.SetTitle(" " + prefix + u.tr("Editor") + " · " + t.Editor.Mode + " · " + u.tr(scope) + " ")
 	}
 	objectColor := u.palette.Border
 	if u.objects.HasFocus() || u.search.HasFocus() || u.kind.HasFocus() {
 		objectColor = u.palette.Accent
 	}
 	u.objects.SetBorderColor(objectColor)
+	prefix := ""
+	if objectColor == u.palette.Accent {
+		prefix = "> "
+	}
+	name := "Objects"
+	if u.active().SelectingDatabase {
+		name = "Databases"
+	}
+	action := u.tr("Enter definition")
+	if u.active().SelectingDatabase {
+		action = u.tr("Enter select")
+	}
+	u.objects.SetTitle(" " + prefix + u.tr(name) + " · " + action + " ")
+	style := tcell.StyleDefault.Foreground(u.palette.Muted).Background(u.palette.Surface)
+	if objectColor == u.palette.Accent {
+		style = tcell.StyleDefault.Foreground(u.palette.SelectedText).Background(u.palette.Selection)
+	}
+	u.objects.SetSelectedStyle(style)
 	resultColor := u.palette.Border
 	if u.table.HasFocus() {
 		resultColor = u.palette.Accent

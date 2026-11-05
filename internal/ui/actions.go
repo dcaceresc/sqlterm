@@ -25,10 +25,10 @@ func (u *UI) saveFile() {
 			}
 			t.Path = path
 			t.Saved = t.Editor.Area.GetText()
-			u.message("Saved " + path)
+			u.message(u.tr("Saved ") + path)
 		}
 		if _, e := os.Stat(path); e == nil && path != t.Path {
-			u.confirm("Overwrite "+path+"?", write)
+			u.confirm(u.tr("Overwrite ")+path+"?", write)
 		} else {
 			write()
 		}
@@ -36,12 +36,12 @@ func (u *UI) saveFile() {
 	if t.Path != "" {
 		save(t.Path)
 	} else {
-		u.prompt("Save SQL file", "query.sql", false, save)
+		u.prompt(u.tr("Save SQL file"), "query.sql", false, save)
 	}
 }
 func (u *UI) openFile() {
 	t := u.active()
-	u.prompt("Open SQL file", "", false, func(path string) {
+	u.prompt(u.tr("Open SQL file"), "", false, func(path string) {
 		open := func() {
 			info, e := os.Stat(path)
 			if e != nil {
@@ -49,7 +49,7 @@ func (u *UI) openFile() {
 				return
 			}
 			if info.Size() > 8*1024*1024 {
-				u.message("Editor file limit is 8 MiB")
+				u.message(u.tr("Editor file limit is 8 MiB"))
 				return
 			}
 			b, e := os.ReadFile(path)
@@ -64,7 +64,7 @@ func (u *UI) openFile() {
 			u.refreshBars()
 		}
 		if t.Editor.Area.GetText() != t.Saved {
-			u.confirm("Replace unsaved SQL?", open)
+			u.confirm(u.tr("Replace unsaved SQL?"), open)
 		} else {
 			open()
 		}
@@ -72,7 +72,7 @@ func (u *UI) openFile() {
 }
 func (u *UI) searchEditor() {
 	t := u.active()
-	u.prompt("Find forward (wraps)", "", false, func(needle string) {
+	u.prompt(u.tr("Find forward (wraps)"), "", false, func(needle string) {
 		if needle == "" {
 			return
 		}
@@ -86,7 +86,7 @@ func (u *UI) searchEditor() {
 			n = strings.Index(text, needle)
 		}
 		if n < 0 {
-			u.message("No match")
+			u.message(u.tr("No match"))
 			return
 		}
 		t.Editor.Area.Select(n, n)
@@ -95,7 +95,7 @@ func (u *UI) searchEditor() {
 }
 func (u *UI) showHistory() {
 	if !u.cfg.History {
-		u.confirm("Enable local SQL history? Statements may contain sensitive literals. Invocation parameter values are excluded.", func() {
+		u.confirm(u.tr("Enable local SQL history? Statements may contain sensitive literals. Invocation parameter values are excluded."), func() {
 			next := u.cfg
 			next.History = true
 			if e := config.Save(u.configPath, next); e != nil {
@@ -113,9 +113,9 @@ func (u *UI) showHistory() {
 		return
 	}
 	l := tview.NewList()
-	l.SetBorder(true).SetTitle(" History · Enter loads SQL into current tab ")
+	l.SetBorder(true).SetTitle(u.tr(" History · Enter loads SQL into current tab "))
 	l.AddItem("Clear history", "", 'd', func() {
-		u.confirm("Delete all local SQL history?", func() {
+		u.confirm(u.tr("Delete all local SQL history?"), func() {
 			if e := history.Clear(u.historyPath()); e != nil {
 				u.message(e.Error())
 			}
@@ -142,7 +142,7 @@ func (u *UI) showHistory() {
 			t := u.active()
 			load := func() { t.Editor.SetText(entry.SQL); t.Path = ""; t.Object = nil; u.refreshBars() }
 			if t.Editor.Area.GetText() != t.Saved {
-				u.confirm("Replace unsaved SQL with history entry?", load)
+				u.confirm(u.tr("Replace unsaved SQL with history entry?"), load)
 			} else {
 				load()
 			}
@@ -153,18 +153,18 @@ func (u *UI) showHistory() {
 func (u *UI) template() {
 	t := u.active()
 	if t.SelectingDatabase {
-		u.message("Choose a database first (F4)")
+		u.message(u.tr("Choose a database first (F4)"))
 		return
 	}
 	if t.Session == nil {
-		u.message("Connect first")
+		u.message(u.tr("Connect first"))
 		return
 	}
 	if t.Profile.Engine == "mysql" && t.Profile.Database == "" {
-		u.message("Choose a database with Space b first")
+		u.message(u.tr("Choose a database with Space b first"))
 		return
 	}
-	u.prompt("New procedure name (unqualified)", "new_procedure", false, func(name string) {
+	u.prompt(u.tr("New procedure name (unqualified)"), "new_procedure", false, func(name string) {
 		if name == "" {
 			return
 		}
@@ -188,7 +188,7 @@ func (u *UI) template() {
 		}
 		load := func() { t.Editor.SetText(text); t.Path = ""; t.Saved = ""; t.Object = nil; u.refreshBars() }
 		if t.Editor.Area.GetText() != t.Saved {
-			u.confirm("Replace unsaved SQL with template?", load)
+			u.confirm(u.tr("Replace unsaved SQL with template?"), load)
 		} else {
 			load()
 		}
@@ -197,15 +197,15 @@ func (u *UI) template() {
 func (u *UI) applyDefinition() {
 	t := u.active()
 	if t.SelectingDatabase {
-		u.message("Choose a database first (F4)")
+		u.message(u.tr("Choose a database first (F4)"))
 		return
 	}
 	if t.Session == nil {
-		u.message("Connect first")
+		u.message(u.tr("Connect first"))
 		return
 	}
 	if t.Busy {
-		u.message("Session busy")
+		u.message(u.tr("Session busy"))
 		return
 	}
 	text := t.Editor.Area.GetText()
@@ -225,8 +225,8 @@ func (u *UI) applyDefinition() {
 		preview = "POSTGRESQL: changing input argument types creates another overload; the original remains.\n\n" + preview
 	}
 	v := tview.NewTextView().SetText(preview).SetScrollable(true).SetWrap(false)
-	v.SetBorder(true).SetTitle(" Review definition · scroll / Tab to buttons ")
-	buttons := tview.NewForm().AddButton("Cancel", u.dismiss).AddButton("Apply to server", func() {
+	v.SetBorder(true).SetTitle(u.tr(" Review definition · scroll / Tab to buttons "))
+	buttons := tview.NewForm().AddButton(u.tr("Cancel"), u.dismiss).AddButton(u.tr("Apply to server"), func() {
 		u.dismiss()
 		u.run(t, text, func(ctx context.Context, emit func(db.Event)) error {
 			for _, st := range plan {

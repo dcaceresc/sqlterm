@@ -7,14 +7,17 @@ import (
 	"github.com/rivo/tview"
 	"path/filepath"
 	"sqlterm/internal/result"
+	"strconv"
 	"strings"
 )
 
 type gridContent struct {
 	tview.TableContentReadOnly
-	store   *result.Store
-	order   []int
-	palette *Palette
+	store       *result.Store
+	order       []int
+	palette     *Palette
+	widths      map[int]int
+	selectedRow func() int
 }
 
 func (g *gridContent) GetRowCount() int {
@@ -37,8 +40,12 @@ func (g *gridContent) GetCell(row, col int) *tview.TableCell {
 	if g.store == nil || col < 0 || col >= len(g.store.Columns) {
 		return nil
 	}
+	width := 36
+	if g.widths[col] > 0 {
+		width = g.widths[col]
+	}
 	if row == 0 {
-		return tview.NewTableCell(tview.Escape(g.store.Columns[col])).SetTextColor(p.Accent).SetBackgroundColor(p.Background).SetSelectable(false).SetMaxWidth(36)
+		return tview.NewTableCell(tview.Escape(g.store.Columns[col])).SetTextColor(p.Accent).SetBackgroundColor(p.Background).SetSelectable(false).SetMaxWidth(width)
 	}
 	n := row - 1
 	if len(g.order) > 0 {
@@ -55,11 +62,22 @@ func (g *gridContent) GetCell(row, col int) *tview.TableCell {
 		return nil
 	}
 	v := r[col]
-	if v.Null {
-		return tview.NewTableCell("NULL").SetTextColor(p.Muted).SetBackgroundColor(p.Background).SetMaxWidth(36)
+	bg := p.Background
+	if g.selectedRow != nil && g.selectedRow() == row {
+		bg = p.Surface
 	}
-	text := strings.ReplaceAll(strings.ReplaceAll(v.Text, "\r", "\\r"), "\n", "\\n")
-	return tview.NewTableCell(tview.Escape(text)).SetTextColor(p.Foreground).SetBackgroundColor(p.Background).SetMaxWidth(36)
+	if v.Null {
+		return tview.NewTableCell("NULL").SetTextColor(p.Muted).SetBackgroundColor(bg).SetMaxWidth(width)
+	}
+	text := strings.NewReplacer("\r", `\r`, "\n", `\n`, "\t", `\t`, "\x00", `\0`).Replace(v.Text)
+	if text == "" {
+		text = `""`
+	}
+	cell := tview.NewTableCell(tview.Escape(text)).SetTextColor(p.Foreground).SetBackgroundColor(bg).SetMaxWidth(width)
+	if _, err := strconv.ParseFloat(v.Text, 64); err == nil && strings.TrimSpace(v.Text) == v.Text {
+		cell.SetAlign(tview.AlignRight)
+	}
+	return cell
 }
 func (u *UI) currentStore() *result.Store {
 	t := u.active()
@@ -71,13 +89,9 @@ func (u *UI) currentStore() *result.Store {
 func (u *UI) showResults() {
 	t := u.active()
 	s := u.currentStore()
-	u.table.SetContent(&gridContent{store: s, order: t.Order, palette: &u.palette})
+	u.table.SetContent(&gridContent{store: s, order: t.Order, palette: &u.palette, widths: t.ColumnWidths, selectedRow: func() int { r, _ := u.table.GetSelection(); return r }})
 	u.table.SetOffset(0, 0).Select(1, 0)
-	if s == nil {
-		u.table.SetTitle(" Results ")
-	} else {
-		u.table.SetTitle(fmt.Sprintf(" Results · set %d/%d · %d rows ", t.SelectedSet+1, len(t.Results), s.Count()))
-	}
+	u.refreshResultInfo()
 }
 func (u *UI) viewCell(row, col int) {
 	s := u.currentStore()
@@ -96,7 +110,7 @@ func (u *UI) viewCell(row, col int) {
 		u.message(e.Error())
 		return
 	}
-	if col >= len(r) {
+	if col < 0 || col >= len(r) {
 		return
 	}
 	v := r[col]
@@ -104,7 +118,7 @@ func (u *UI) viewCell(row, col int) {
 	if v.Null {
 		text = "SQL NULL"
 	}
-	u.notice(s.Columns[col], text)
+	u.inspectText(fmt.Sprintf(u.tr("Cell · row %d · column %d: %s"), row, col+1, s.Columns[col]), text)
 }
 func (u *UI) gridKey(k *tcell.EventKey) *tcell.EventKey {
 	if k.Key() != tcell.KeyRune {
@@ -112,6 +126,32 @@ func (u *UI) gridKey(k *tcell.EventKey) *tcell.EventKey {
 	}
 	t := u.active()
 	switch k.Rune() {
+	case '+', '-':
+		_, col := u.table.GetSelection()
+		if t.ColumnWidths == nil {
+			t.ColumnWidths = map[int]int{}
+		}
+		w := t.ColumnWidths[col]
+		if w == 0 {
+			w = 36
+		}
+		if k.Rune() == '+' {
+			w += 4
+		} else {
+			w = max(8, w-4)
+		}
+		t.ColumnWidths[col] = min(160, w)
+		u.table.SetContent(&gridContent{store: u.currentStore(), order: t.Order, palette: &u.palette, widths: t.ColumnWidths, selectedRow: func() int { r, _ := u.table.GetSelection(); return r }})
+		return nil
+	case 'v':
+		if t.CopyAnchor > 0 {
+			t.CopyAnchor = 0
+		} else {
+			r, _ := u.table.GetSelection()
+			t.CopyAnchor = r
+		}
+		u.refreshResultInfo()
+		return nil
 	case 'y', 'Y':
 		u.copyResults("all", k.Rune() == 'Y')
 		return nil
@@ -122,7 +162,7 @@ func (u *UI) gridKey(k *tcell.EventKey) *tcell.EventKey {
 		u.copyResults("row", k.Rune() == 'R')
 		return nil
 	case 'm':
-		u.notice("Messages", strings.Join(t.Messages, "\n"))
+		u.showMessages()
 		return nil
 	case '[', ']':
 		if len(t.Results) > 0 {
@@ -132,6 +172,8 @@ func (u *UI) gridKey(k *tcell.EventKey) *tcell.EventKey {
 			}
 			t.SelectedSet = (t.SelectedSet + d + len(t.Results)) % len(t.Results)
 			t.Order = nil
+			t.SortDescription = ""
+			t.CopyAnchor = 0
 			u.showResults()
 		}
 		return nil
@@ -144,7 +186,7 @@ func (u *UI) gridKey(k *tcell.EventKey) *tcell.EventKey {
 			return nil
 		}
 		if t.Busy {
-			u.message("Wait until execution finishes")
+			u.message(u.tr("Wait until execution finishes"))
 			return nil
 		}
 		_, col := u.table.GetSelection()
@@ -156,6 +198,11 @@ func (u *UI) gridKey(k *tcell.EventKey) *tcell.EventKey {
 			}
 			return func() {
 				t.Order = order
+				direction := "ASC"
+				if desc {
+					direction = "DESC"
+				}
+				t.SortDescription = fmt.Sprintf(u.tr("local received rows: %s %s (lexical)"), s.Columns[col], direction)
 				if u.active() == t {
 					u.showResults()
 				}
@@ -163,7 +210,7 @@ func (u *UI) gridKey(k *tcell.EventKey) *tcell.EventKey {
 		})
 		return nil
 	case '/':
-		u.prompt("Find in results", "", false, func(text string) {
+		u.prompt(u.tr("Find in results"), "", false, func(text string) {
 			s := u.currentStore()
 			if s == nil {
 				return
@@ -203,14 +250,14 @@ func (u *UI) export() {
 	t := u.active()
 	s := u.currentStore()
 	if s == nil {
-		u.message("No results to export")
+		u.message(u.tr("No results to export"))
 		return
 	}
 	if t.Busy {
-		u.message("Wait until execution finishes")
+		u.message(u.tr("Wait until execution finishes"))
 		return
 	}
-	u.prompt("Export complete set to new .csv or .json file", "results.csv", false, func(path string) {
+	u.prompt(u.tr("Export complete set to new .csv or .json file"), "results.csv", false, func(path string) {
 		format := strings.TrimPrefix(strings.ToLower(filepath.Ext(path)), ".")
 		u.task(t, "Export", func(ctx context.Context) (func(), error) { return nil, s.ExportContext(ctx, path, format) })
 	})

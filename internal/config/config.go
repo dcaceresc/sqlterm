@@ -117,11 +117,24 @@ func (p Profile) TLSMode() string {
 }
 
 type Config struct {
-	Profiles []Profile         `json:"profiles"`
-	History  bool              `json:"history"`
-	Keys     map[string]string `json:"keys,omitempty"`
-	Theme    string            `json:"theme,omitempty"`
-	Folders  []string          `json:"folders"`
+	Profiles          []Profile         `json:"profiles"`
+	History           bool              `json:"history"`
+	Keys              map[string]string `json:"keys,omitempty"`
+	Theme             string            `json:"theme,omitempty"`
+	Folders           []string          `json:"folders"`
+	Layout            Layout            `json:"layout,omitempty"`
+	FlatCatalog       bool              `json:"flat_catalog,omitempty"`
+	RecentConnections []string          `json:"recent_connections,omitempty"`
+	Favorites         []string          `json:"favorites,omitempty"`
+	ConfirmExecution  string            `json:"confirm_execution,omitempty"`
+	Language          string            `json:"language,omitempty"`
+}
+
+type Layout struct {
+	CatalogWidth  int    `json:"catalog_width,omitempty"`
+	EditorPercent int    `json:"editor_percent,omitempty"`
+	HideCatalog   bool   `json:"hide_catalog,omitempty"`
+	Maximized     string `json:"maximized,omitempty"`
 }
 
 func DefaultPath() string {
@@ -143,6 +156,12 @@ func Load(path string) (Config, error) {
 	err = json.Unmarshal(b, &c)
 	if err != nil {
 		return c, fmt.Errorf("config: %w", err)
+	}
+	if c.Language != "" && c.Language != "en" && c.Language != "es" {
+		return c, fmt.Errorf("config: language must be en or es")
+	}
+	if c.ConfirmExecution != "" && c.ConfirmExecution != "production" && c.ConfirmExecution != "all" {
+		return c, fmt.Errorf("config: confirm_execution must be empty, production or all")
 	}
 	names := map[string]bool{}
 	for i := range c.Profiles {
