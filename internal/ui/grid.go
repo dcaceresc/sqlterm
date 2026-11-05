@@ -112,6 +112,15 @@ func (u *UI) gridKey(k *tcell.EventKey) *tcell.EventKey {
 	}
 	t := u.active()
 	switch k.Rune() {
+	case 'y', 'Y':
+		u.copyResults("all", k.Rune() == 'Y')
+		return nil
+	case 'c':
+		u.copyResults("cell", false)
+		return nil
+	case 'r', 'R':
+		u.copyResults("row", k.Rune() == 'R')
+		return nil
 	case 'm':
 		u.notice("Messages", strings.Join(t.Messages, "\n"))
 		return nil

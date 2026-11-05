@@ -73,6 +73,11 @@ func (u *UI) updateCursor(screen tcell.Screen) {
 		return
 	}
 	t := u.active()
+	if state := u.suggestions; state != nil && t.Editor.Area.HasFocus() {
+		if front, _ := u.pages.GetFrontPage(); front == "main" {
+			state.Popup.Draw(screen)
+		}
+	}
 	if t.Editor.Area.HasFocus() {
 		shape := tcell.CursorStyleSteadyBlock
 		if t.Editor.Mode == "INSERT" {

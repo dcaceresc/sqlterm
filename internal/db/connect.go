@@ -26,6 +26,7 @@ func Connect(ctx context.Context, p config.Profile, password string) (*Session, 
 	if err := p.Validate(); err != nil {
 		return nil, err
 	}
+	p = serverProfile(p)
 	port := p.EffectivePort()
 	addr := net.JoinHostPort(p.Host, strconv.Itoa(port))
 	var driver, dsn string
@@ -139,6 +140,21 @@ func Connect(ctx context.Context, p config.Profile, password string) (*Session, 
 		p.Database = currentDB.String
 	}
 	return &Session{DB: database, Conn: conn, Adapter: NewAdapter(p.Engine), Profile: p, Messages: messages}, nil
+}
+
+// PostgreSQL requires a database even for listing databases. SQL Server uses
+// master for server-level browsing instead of an arbitrary login default.
+func serverProfile(p config.Profile) config.Profile {
+	if strings.TrimSpace(p.Database) == "" {
+		p.Database = ""
+		switch p.Engine {
+		case "sqlserver":
+			p.Database = "master"
+		case "postgres":
+			p.Database = "postgres"
+		}
+	}
+	return p
 }
 func sqlServerDSN(p config.Profile, password, addr, mode string) string {
 	u := url.URL{Scheme: "sqlserver", Host: addr, User: url.UserPassword(p.User, password)}

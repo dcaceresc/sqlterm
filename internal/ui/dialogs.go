@@ -11,6 +11,7 @@ import (
 )
 
 func (u *UI) popup(p tview.Primitive, width, height int) {
+	u.hideSuggestions()
 	if u.dialogCancel != nil {
 		cancel := u.dialogCancel
 		u.dialogCancel = nil
@@ -140,6 +141,12 @@ func (u *UI) profileForm(index int) {
 	f.AddInputField("Name", p.Name, 45, nil, nil).AddDropDown("Engine", engines, ei, nil).AddInputField("Host", p.Host, 45, nil, nil).AddInputField("Port", strconv.Itoa(p.EffectivePort()), 7, tview.InputFieldInteger, nil).AddInputField("Database", p.Database, 45, nil, nil).AddInputField("User", p.User, 45, nil, nil).AddPasswordField("Password", "", 45, '*', nil).AddCheckbox("Encrypt connection", p.TLSMode() != "disable", nil).AddCheckbox("Trust server certificate", p.TLSMode() == "insecure", nil)
 	f.AddInputField("Folder", p.Folder, 45, nil, nil)
 	f.GetFormItem(9).(*tview.InputField).SetPlaceholder("DEV, QA, PROD or DEV/Project")
+	f.GetFormItem(4).(*tview.InputField).SetPlaceholder("Optional - choose a database after connecting")
+	testState := &Tab{}
+	testResult := tview.NewTextView().SetWrap(true).SetScrollable(true)
+	testResult.SetLabel("Test").SetSize(2, 45)
+	testResult.SetText("Not tested")
+	f.AddFormItem(testResult)
 	previousEngine := p.Engine
 	f.GetFormItem(1).(*tview.DropDown).SetSelectedFunc(func(engine string, _ int) {
 		portField := f.GetFormItem(3).(*tview.InputField)
@@ -193,6 +200,20 @@ func (u *UI) profileForm(index int) {
 		u.dismiss()
 		u.chooseConnection()
 	})
+	f.AddButton("Test connection", func() {
+		if testState.Busy {
+			if testState.Cancel != nil {
+				testState.Cancel()
+			}
+			return
+		}
+		profile, secret, err := testProfileFromForm(f, p)
+		if err != nil {
+			testResult.SetText(err.Error())
+			return
+		}
+		u.testConnection(f, testResult, testState, profile, secret)
+	})
 	if index >= 0 {
 		f.AddButton("Delete", func() {
 			u.confirm("Delete connection profile "+p.Name+"?", func() {
@@ -215,7 +236,12 @@ func (u *UI) profileForm(index int) {
 		})
 	}
 	f.AddButton("Cancel", u.dismiss)
-	u.popup(f, 88, 25)
+	u.popup(f, 88, 27)
+	u.dialogCancel = func() {
+		if testState.Cancel != nil {
+			testState.Cancel()
+		}
+	}
 }
 func (u *UI) connectionFailure(p config.Profile, err error) {
 	title := "Connection failed"
@@ -237,11 +263,13 @@ func (u *UI) connectionFailure(p config.Profile, err error) {
 	u.popup(f, 88, 22)
 }
 func (u *UI) showHelp() {
-	u.notice("SQLTerm", fmt.Sprintf(`F2 connections/folders     F3 themes     F5 execute SQL     F9 invoke object
+	u.notice("SQLTerm", fmt.Sprintf(`F2 connections/folders     F3 themes     F4 database     F5 execute SQL
 F6 object search     F7 editor     F8 results     F10 cancel
 Ctrl+N new session     Alt+1..9 switch tabs     Ctrl+O open     Ctrl+S save
-Ctrl+Space completion (or Space ? to open this help)
-Ctrl+C quit     Esc closes dialogs / returns to NORMAL
+IntelliSense: automatic while typing; Ctrl+Space opens suggestions.
+Up/Down or Ctrl+N/P select; Tab/Enter accept; Esc closes and returns NORMAL.
+Ctrl+Q quit; Ctrl+C opens copy options in results, quits from the editor.
+Esc closes dialogs / returns to NORMAL.
 
 Editor: i/a/I/A/o insert; Esc normal; v visual (half-open selection).
 h/j/k/l, w/b, 0/$, gg/G move. yy/dd copy/cut line; y/d visual selection;
@@ -255,10 +283,14 @@ e edit profile, r rename folder, d delete empty folder, / search.
 
 Results: [ / ] previous/next result set; Enter inspect cell; m messages;
 / search rows; s sort selected column ascending; S descending; e export.
+Ctrl+C copy menu; y/Y copy all without/with headers; r/R current row;
+c current cell. Clipboard rows are TSV in displayed order.
 Sorting is lexical, NULL first ascending. Export includes the complete set.
 
 SQL Server: GO separates batches. MySQL: DELIMITER for routine scripts.
 PostgreSQL: dollar-quoted function bodies are supported.
+Blank Database: choose from the explorer or press F4 before executing SQL.
+Connection form: Test connection uses unsaved fields and does not save them.
 Each tab owns a connection. Queries run with the server's transaction rules;
 use BEGIN / COMMIT / ROLLBACK explicitly when needed.
 History is opt-in (Space h). Passwords are never saved in profiles.

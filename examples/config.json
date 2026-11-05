@@ -37,6 +37,6 @@
   "history": false,
   "keys": {
     "run": "Ctrl-E",
-    "apply": "F4"
+    "apply": "F12"
   }
 }

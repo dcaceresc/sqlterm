@@ -45,6 +45,9 @@ terminal habitual; no se requiere una extensión del editor.
 1. Pulsa **F2**, selecciona una carpeta y pulsa **+** o **Add profile**. Completa
    el motor, servidor, base y usuario; el campo **Folder** indica su carpeta.
 2. Introduce la contraseña en el campo oculto, guarda el perfil y selecciónalo.
+   **Test connection** permite verificar los datos antes de guardar; durante la
+   prueba se convierte en **Cancel test**. No guarda el perfil ni la contraseña,
+   y cierra la conexión temporal al terminar.
 3. Pulsa **F6** y busca el procedimiento por nombre. Puedes filtrar por tipo.
 4. **Enter** abre su definición. **F9** abre sus parámetros: valor, `NULL` o
    predeterminado cuando el catálogo/definición lo permite.
@@ -88,11 +91,12 @@ para `OUT`/`INOUT` y las consulta al terminar `CALL`.
 | --- | --- |
 | F1 / F2 | Ayuda / conexiones |
 | F3 / Space T | Selector de temas con vista previa |
+| F4 | Seleccionar o cambiar base de datos |
 | F5 / F9 / F10 | Ejecutar SQL / invocar objeto / cancelar |
 | F6 / F7 / F8 | Buscar objetos / editor / resultados |
-| Ctrl+Space | Autocompletar; algunos terminales lo envían como Ctrl+@ |
+| Ctrl+Space | Abrir IntelliSense; también aparece automáticamente al escribir |
 | Ctrl+O / Ctrl+S / Ctrl+N | Abrir archivo / guardar / nueva sesión |
-| Ctrl+C | Salir, con confirmación si hay cambios sin guardar |
+| Ctrl+C / Ctrl+Q | Menú de copia en resultados / salir; Ctrl+C también sale desde el editor |
 | Space c/f/x/p/a/r | Conectar / buscar / ejecutar / invocar / aplicar / actualizar catálogo |
 | Space n/w/o/q | Nueva pestaña / guardar / abrir / cerrar pestaña |
 | Space h/e/b/d/t | Historial / exportar / cambiar base / desconectar / plantilla |
@@ -121,6 +125,59 @@ seleccionada ascendente/descendente; `e` exporta; `m` muestra mensajes;
 `[`/`]` cambia de conjunto. La ordenación es lexical y coloca `NULL` primero
 en ascendente; la exportación conserva el orden original del servidor.
 
+Para copiar resultados al portapapeles:
+
+| Tecla en resultados | Acción |
+| --- | --- |
+| Ctrl+C | Menú para copiar celda, fila o todo el conjunto, con o sin cabeceras |
+| y / Y | Todo el conjunto sin / con cabeceras |
+| r / R | Fila actual sin / con cabeceras |
+| c | Celda actual |
+
+Las filas se copian como TSV, en el orden visible de la cuadrícula, conservando
+tabulaciones y saltos de línea mediante comillas. SQL NULL usa `\N`, igual que CSV.
+Los caracteres NUL se representan como `\0` al copiar, sin modificar los resultados.
+Los fallos del portapapeles se muestran en la barra de estado y mantienen abierta la aplicación.
+La copia espera a que termine la consulta. En Linux se requiere un proveedor de
+portapapeles compatible disponible en la sesión, como `xclip` o `xsel`.
+
+## Base de datos opcional
+
+Puedes guardar un perfil con **Database** vacío. Al conectar, el explorador muestra
+las bases disponibles para ese usuario. **Enter** selecciona una base y carga sus
+objetos. **F4** abre el selector de bases; también permite cambiar una base ya
+seleccionada. **Space b** conserva la misma acción. El filtro de tipos queda
+desactivado mientras se muestran bases en lugar de objetos.
+
+La selección se aplica a esa pestaña y no modifica el perfil guardado. Cada cambio
+abre una conexión nueva; el SQL del editor permanece, y los resultados y metadatos
+de la base anterior se limpian. Hasta seleccionar una base no se permite ejecutar
+SQL, aplicar definiciones ni invocar rutinas en la base de entrada del servidor.
+
+SQL Server usa `master` para enumerar bases; PostgreSQL necesita una conexión
+inicial a `postgres`; MySQL puede conectarse sin base. El usuario necesita acceso
+a esa base inicial y permisos para ver las bases disponibles. Si no tiene ese
+acceso, indica una base explícita en el perfil.
+
+## IntelliSense
+
+En INSERT aparecen sugerencias al escribir dos caracteres o un punto. **Ctrl+Space**
+las abre manualmente. Las flechas o **Ctrl+N/P** recorren opciones; **Tab** o **Enter**
+aceptan; **Esc** cierra la lista y vuelve a NORMAL. La lista flota junto al cursor y
+mantiene el foco en el editor.
+
+Sugiere palabras del dialecto, esquemas, tablas, vistas y rutinas con su firma.
+Sin conexión ofrece palabras SQL; los objetos y sus columnas requieren catálogo.
+Obtiene columnas del catálogo al necesitarlas y reconoce referencias y alias simples
+de `FROM`, `JOIN`, `UPDATE` e `INTO`, por ejemplo `SELECT c.Na` con
+`FROM dbo.Customers c`. Para SQL Server también sugiere parámetros nombrados tras
+`EXEC procedimiento @pa`. No ejecuta el SQL escrito para generar sugerencias.
+
+No es un servidor de lenguaje ni un analizador semántico completo: no infiere
+columnas de CTE o subconsultas complejas, ni muestra diagnósticos equivalentes al
+servicio de lenguaje de Microsoft. **Space r** actualiza el catálogo y limpia
+la caché de columnas si cambió el esquema.
+
 ## Temas
 
 **F3** abre el selector desde el editor o el diálogo de conexiones. También puedes
@@ -135,7 +192,7 @@ reiniciar. El tema predeterminado es Tokyo Night; un nombre desconocido utiliza
 ese mismo tema.
 
 El campo JSON `theme` acepta `tokyo-night`, `rose-pine`, `nord`, `gruvbox`, `light`
-o `classic`. Se puede asignar un alias de teclado con `"theme": "F4"` dentro de
+o `classic`. Se puede asignar un alias de teclado con `"theme": "F11"` dentro de
 `keys`. Las opciones visuales toman como referencia los temas anunciados por
 [sqlit](https://github.com/Maxteabag/sqlit); están implementadas directamente en Go.
 
@@ -197,8 +254,9 @@ el error y no guarda contraseñas en texto plano. Los perfiles anteriores siguen
 siendo compatibles; `password_env` aún se admite en archivos existentes.
 
 `keys` permite alias globales con nombres de teclas especiales de tcell, por
-ejemplo `"run": "Ctrl-E"` o `"apply": "F4"`. Acciones: `run`, `connect`, `invoke`,
-`cancel`, `help`, `save`, `open`, `new`, `apply`, `refresh`, `theme`. Acepta también `+`
+ejemplo `"run": "Ctrl-E"` o `"apply": "F12"`. Acciones: `run`, `connect`, `invoke`,
+`cancel`, `help`, `save`, `open`, `new`, `apply`, `refresh`, `theme`, `database`,
+`complete`. F4 queda reservado para seleccionar bases. Acepta también `+`
 en lugar de `-`. Los alias tienen prioridad sobre los atajos predeterminados;
 los demás atajos predeterminados siguen activos.
 
