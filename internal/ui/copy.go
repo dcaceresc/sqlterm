@@ -23,6 +23,7 @@ func (u *UI) copyMenu() {
 		l.AddItem(o.label, "", 0, func() { u.dismiss(); u.app.SetFocus(u.table); u.copyResults(o.scope, o.headers) })
 	}
 	u.popup(l, 70, 9)
+	u.copyPopup = l
 }
 func (u *UI) copyResults(scope string, headers bool) {
 	t := u.active()

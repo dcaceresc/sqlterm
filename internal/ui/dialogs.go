@@ -11,6 +11,7 @@ import (
 )
 
 func (u *UI) popup(p tview.Primitive, width, height int) {
+	u.copyPopup = nil
 	u.hideSuggestions()
 	if u.dialogCancel != nil {
 		cancel := u.dialogCancel
@@ -26,6 +27,7 @@ func (u *UI) popup(p tview.Primitive, width, height int) {
 		}
 		return k
 	})
+	u.dialogContent = p
 	u.pages.AddPage("dialog", frame, true, true)
 	u.style(frame)
 	u.app.SetFocus(p)
@@ -38,6 +40,14 @@ type centered struct {
 	width, height int
 }
 
+func (u *UI) dialogContains(x, y int) bool {
+	if u.dialogContent == nil {
+		return false
+	}
+	left, top, width, height := u.dialogContent.GetRect()
+	return x >= left && x < left+width && y >= top && y < top+height
+}
+
 func (c *centered) Draw(screen tcell.Screen) {
 	_, _, w, h := c.GetRect()
 	c.Flex.ResizeItem(c.inner, min(c.width, max(1, w-2)), 0)
@@ -45,6 +55,8 @@ func (c *centered) Draw(screen tcell.Screen) {
 	c.Flex.Draw(screen)
 }
 func (u *UI) dismiss() {
+	u.dialogContent = nil
+	u.copyPopup = nil
 	if u.dialogCancel != nil {
 		cancel := u.dialogCancel
 		u.dialogCancel = nil
@@ -268,7 +280,7 @@ F6 object search     F7 editor     F8 results     F10 cancel
 Ctrl+N new session     Alt+1..9 switch tabs     Ctrl+O open     Ctrl+S save
 IntelliSense: automatic while typing; Ctrl+Space opens suggestions.
 Up/Down or Ctrl+N/P select; Tab/Enter accept; Esc closes and returns NORMAL.
-Ctrl+Q quit; Ctrl+C opens copy options in results, quits from the editor.
+Ctrl+Q quit; Ctrl+C opens result copy options from any panel, or closes a dialog.
 Esc closes dialogs / returns to NORMAL.
 
 Editor: i/a/I/A/o insert; Esc normal; v visual (half-open selection).

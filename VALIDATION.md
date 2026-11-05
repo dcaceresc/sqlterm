@@ -70,6 +70,17 @@ filas TSV que contienen NUL, sin modificar el portapapeles del usuario. Pruebas 
 copia de filas y conjuntos con/sin cabeceras, escape de NUL sin alterar los datos,
 y recuperación de un panic del backend seguida de otra copia en la misma UI.
 
+Actualización 0.1.8: pruebas de clic fuera del menú de copia hacia editor/objetos,
+cambio de panel con F6/F7/F8, cierre con Esc/Ctrl+C y reapertura desde otro panel.
+Ctrl+C se consume antes del manejador de salida de tview, también sin resultados.
+El atajo actual para salir es Ctrl+Q; las referencias anteriores a Ctrl+C describen
+pruebas de versiones previas.
+
+Actualización 0.1.9: ciclo común de ventanas emergentes y 24 casos de regresión
+para F2/F3/F4: clic hacia editor/objetos, F6/F7/F8, Esc, Ctrl+C y reapertura con
+la misma tecla. Se verifica la reversión de la vista previa de temas. El selector
+F4 usa SQL Server simulado para enumerar bases; no requiere un servidor real.
+
 ## Pendiente en entornos externos
 
 No se proporcionaron servidores de prueba ni credenciales; Docker no está

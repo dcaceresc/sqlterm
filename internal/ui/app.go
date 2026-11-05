@@ -51,6 +51,8 @@ type UI struct {
 	writeClipboard        func(string) error
 	palette               Palette
 	dialogCancel          func()
+	dialogContent         tview.Primitive
+	copyPopup             *tview.List
 	connectionFolder      string
 	configPath            string
 	tabs                  []*Tab
@@ -93,6 +95,11 @@ func New(path string, cfg config.Config) *UI {
 	u.pages = tview.NewPages().AddPage("main", u.layout, true, true)
 	u.app.SetRoot(u.pages, true).EnableMouse(true).EnablePaste(true).SetInputCapture(u.key)
 	u.app.SetMouseCapture(func(event *tcell.EventMouse, action tview.MouseAction) (*tcell.EventMouse, tview.MouseAction) {
+		if u.dialogContent != nil && (action == tview.MouseLeftDown || action == tview.MouseMiddleDown || action == tview.MouseRightDown) {
+			if x, y := event.Position(); !u.dialogContains(x, y) {
+				u.dismiss()
+			}
+		}
 		if state := u.suggestions; state != nil {
 			if x, y := event.Position(); state.List.InRect(x, y) {
 				consumed, _ := state.List.MouseHandler()(action, event, func(tview.Primitive) {})
@@ -309,6 +316,19 @@ func (u *UI) closeTab() {
 	}
 }
 func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
+	if u.dialogContent != nil {
+		switch k.Key() {
+		case tcell.KeyCtrlC, tcell.KeyEscape:
+			wasCopy := u.copyPopup != nil
+			u.dismiss()
+			if wasCopy {
+				u.app.SetFocus(u.table)
+			}
+			return nil
+		case tcell.KeyF2, tcell.KeyF3, tcell.KeyF4, tcell.KeyF6, tcell.KeyF7, tcell.KeyF8, tcell.KeyCtrlQ:
+			u.dismiss()
+		}
+	}
 	if u.suggestionKey(k) {
 		return nil
 	}
@@ -321,6 +341,10 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 	}
 	name, _ := u.pages.GetFrontPage()
 	if name != "main" {
+		if k.Key() == tcell.KeyCtrlC {
+			u.dismiss()
+			return nil
+		}
 		return k
 	}
 	if u.closing {
@@ -342,11 +366,7 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 	}
 	switch k.Key() {
 	case tcell.KeyCtrlC:
-		if u.table.HasFocus() {
-			u.copyMenu()
-		} else {
-			u.quit()
-		}
+		u.copyMenu()
 		return nil
 	case tcell.KeyCtrlQ:
 		u.quit()
