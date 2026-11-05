@@ -1,0 +1,42 @@
+{
+  "theme": "tokyo-night",
+  "folders": ["DEV", "QA", "PROD"],
+  "profiles": [
+    {
+      "name": "SQL Server local",
+      "folder": "DEV",
+      "engine": "sqlserver",
+      "host": "localhost",
+      "port": 1433,
+      "database": "master",
+      "user": "sa",
+      "encrypt": true,
+      "trust_server_certificate": true
+    },
+    {
+      "name": "PostgreSQL local",
+      "folder": "DEV",
+      "engine": "postgres",
+      "host": "localhost",
+      "port": 5432,
+      "database": "postgres",
+      "user": "postgres",
+      "encrypt": false
+    },
+    {
+      "name": "MySQL local",
+      "folder": "DEV",
+      "engine": "mysql",
+      "host": "localhost",
+      "port": 3306,
+      "database": "app",
+      "user": "root",
+      "encrypt": false
+    }
+  ],
+  "history": false,
+  "keys": {
+    "run": "Ctrl-E",
+    "apply": "F4"
+  }
+}
