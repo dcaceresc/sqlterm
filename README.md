@@ -96,7 +96,7 @@ para `OUT`/`INOUT` y las consulta al terminar `CALL`.
 | F6 / F7 / F8 | Buscar objetos / editor / resultados |
 | Ctrl+Space | Abrir IntelliSense; también aparece automáticamente al escribir |
 | Ctrl+O / Ctrl+S / Ctrl+N | Abrir archivo / guardar / nueva sesión |
-| Ctrl+C / Ctrl+Q | Menú de copia en resultados / salir; Ctrl+C también sale desde el editor |
+| Ctrl+C / Ctrl+Q | Menú de copia desde cualquier panel / salir |
 | Space c/f/x/p/a/r | Conectar / buscar / ejecutar / invocar / aplicar / actualizar catálogo |
 | Space n/w/o/q | Nueva pestaña / guardar / abrir / cerrar pestaña |
 | Space h/e/b/d/t | Historial / exportar / cambiar base / desconectar / plantilla |
@@ -133,6 +133,15 @@ Para copiar resultados al portapapeles:
 | y / Y | Todo el conjunto sin / con cabeceras |
 | r / R | Fila actual sin / con cabeceras |
 | c | Celda actual |
+
+El menú de copia se cierra con Esc, Ctrl+C o un clic fuera de él. Al cambiar de
+panel con F6/F7/F8 también se cierra. Ctrl+C permite abrirlo de nuevo desde el
+editor, objetos o resultados; Ctrl+Q sale de la aplicación.
+
+Los selectores de conexiones (F2), temas (F3) y bases (F4) siguen el mismo
+comportamiento: clic fuera, Esc o Ctrl+C cancelan; F6/F7/F8 cierran el selector
+y cambian de panel. F2/F3/F4 permiten abrir otro selector. Cancelar el selector
+de temas revierte la vista previa.
 
 Las filas se copian como TSV, en el orden visible de la cuadrícula, conservando
 tabulaciones y saltos de línea mediante comillas. SQL NULL usa `\N`, igual que CSV.
