@@ -10,6 +10,7 @@ import (
 
 type Editor struct {
 	Area        *tview.TextArea
+	View        *View
 	Mode        string
 	Clipboard   string
 	linewise    bool
@@ -21,6 +22,7 @@ type Editor struct {
 
 func New() *Editor {
 	e := &Editor{Area: tview.NewTextArea().SetWrap(false), Mode: "NORMAL"}
+	e.View = &View{TextArea: e.Area, editor: e, numbers: true}
 	e.Area.SetInputCapture(e.Handle)
 	return e
 }

@@ -169,6 +169,7 @@ func (u *UI) Run() error {
 func (u *UI) active() *Tab { return u.tabs[u.current] }
 func (u *UI) newTab(from *Tab) {
 	t := &Tab{Editor: editor.New(), Columns: map[string][]string{}, Status: "Disconnected"}
+	u.configureEditor(t)
 	t.Editor.Area.SetBorder(true)
 	u.style(t.Editor.Area)
 	t.Editor.Area.SetChangedFunc(func() { u.refreshBars() })
@@ -203,7 +204,7 @@ func (u *UI) newTab(from *Tab) {
 func (u *UI) showTab() {
 	u.hideSuggestions()
 	t := u.active()
-	u.editorHost.Clear().AddItem(t.Editor.Area, 0, 1, true)
+	u.editorHost.Clear().AddItem(t.Editor.View, 0, 1, true)
 	u.restoringCatalog = true
 	u.search.SetText(t.CatalogFilter)
 	u.kind.SetCurrentOption(t.CatalogKind)
@@ -244,7 +245,7 @@ func (u *UI) refreshBars() {
 	if t.Editor.Area.GetText() != t.Saved {
 		file += "*"
 	}
-	_, _, row, column := t.Editor.Area.GetCursor()
+	row, column := t.Editor.Position()
 	_, _, width, _ := u.status.GetInnerRect()
 	if width == 0 {
 		width = 80
@@ -382,6 +383,10 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 		return nil
 	}
 	if u.customKey(k) {
+		return nil
+	}
+	if k.Key() == tcell.KeyRune && k.Modifiers()&tcell.ModAlt != 0 && (k.Rune() == 'z' || k.Rune() == 'Z') {
+		u.toggleEditorOption(true)
 		return nil
 	}
 	switch k.Key() {

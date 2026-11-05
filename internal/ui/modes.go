@@ -48,6 +48,7 @@ func modeStatus(p Palette, mode, file, connection, state string, row, column, wi
 }
 func (u *UI) refreshModeBorders() {
 	for i, t := range u.tabs {
+		t.Editor.View.SetLineNumberColors(u.palette.Muted, u.palette.ModeColor(t.Editor.Mode))
 		color := u.palette.Border
 		title := u.palette.Muted
 		if i == u.current && t.Editor.Area.HasFocus() {

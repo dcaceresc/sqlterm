@@ -97,6 +97,7 @@ para `OUT`/`INOUT` y las consulta al terminar `CALL`.
 | F11 | Distribución: editar, explorar, equilibrado, maximizar y ajustar tamaños |
 | Ctrl+P / Space en NORMAL | Paleta de acciones; `/` busca y Tab cambia al buscador |
 | Ctrl+Space | Abrir IntelliSense; también aparece automáticamente al escribir |
+| Alt+Z | Activar / desactivar ajuste de línea (Word Wrap) en el editor |
 | Ctrl+O / Ctrl+S / Ctrl+N | Abrir archivo / guardar / nueva sesión |
 | Ctrl+C / Ctrl+Q | Menú de copia desde cualquier panel / salir |
 | Space c/f/x/p/a/r | Conectar / buscar / ejecutar / invocar / aplicar / actualizar catálogo |
@@ -143,6 +144,19 @@ Editor: `i a I A o` para insertar; `Esc` normal; `v` visual; `hjkl`, `w b`,
 `0 $`, `gg G` para mover; `yy/dd` copiar/cortar línea; `y/d` sobre selección;
 `x` borrar; `p` pegar; `u` deshacer; `Ctrl+R` rehacer; `/` buscar con vuelta.
 La selección visual usa un intervalo semiabierto: `vl` selecciona un carácter.
+
+El editor muestra números de línea en un margen separado del SQL. **Alt+Z** o
+**Ctrl+P → Ajuste de línea / Word wrap** activa o desactiva el ajuste visual,
+sin añadir saltos al contenido. `↪` marca una continuación de la misma línea.
+La posición de la barra de estado conserva la línea y columna reales del SQL.
+**Ctrl+P → Números de línea / Line numbers** permite ocultar o mostrar el margen.
+Ambas preferencias se guardan y se aplican a todas las pestañas, incluidas nuevas.
+
+En **F2**, selecciona una conexión y pulsa **`*`** o el botón **★ Favorito**.
+Los favoritos aparecen en una sección **★ Favoritos** al principio del árbol,
+por encima de DEV/QA/PROD, y siguen accesibles en su carpeta original. La sección
+incluye el entorno para distinguir conexiones con el mismo nombre. Repite la
+acción para quitar el favorito. Los favoritos se conservan al reiniciar.
 El portapapeles es interno al editor. No implementa macros, registros ni Ex.
 
 La barra inferior sigue el esquema visual de una statusline de LazyVim: un bloque
