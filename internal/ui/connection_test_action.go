@@ -51,13 +51,14 @@ func (u *UI) testConnection(f *tview.Form, result *tview.TextView, state *Tab, p
 			return
 		}
 		if !ok {
-			result.SetText("Enter the password to test this connection")
+			result.SetText(u.tr("Enter the password to test this connection"))
 			return
 		}
 		password = saved
 	}
-	result.SetText("Testing connection…")
-	f.GetButton(1).SetLabel("Cancel test")
+	result.SetText(u.tr("Testing connection…"))
+	f.GetButton(1).SetLabel(u.tr("Cancel test"))
+	successMessage, failurePrefix := u.tr("Connection successful"), u.tr("Connection failed: ")
 	u.task(state, "Test connection", func(ctx context.Context) (func(), error) {
 		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 		defer cancel()
@@ -65,14 +66,14 @@ func (u *UI) testConnection(f *tview.Form, result *tview.TextView, state *Tab, p
 		if session != nil {
 			session.Close()
 		}
-		message := "Connection successful"
+		message := successMessage
 		if err != nil {
 			message = err.Error()
 			if password != "" {
 				message = strings.ReplaceAll(message, password, "[redacted]")
 			}
-			message = "Connection failed: " + message
+			message = failurePrefix + message
 		}
-		return func() { f.GetButton(1).SetLabel("Test connection"); result.SetText(message) }, nil
+		return func() { f.GetButton(1).SetLabel(u.tr("Test connection")); result.SetText(message) }, nil
 	})
 }

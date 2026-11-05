@@ -34,9 +34,7 @@ func (u *UI) customKey(k *tcell.EventKey) bool {
 		case "invoke":
 			u.invokeSelected()
 		case "cancel":
-			if u.active().Cancel != nil {
-				u.active().Cancel()
-			}
+			u.cancelOperation()
 		case "help":
 			u.showHelp()
 		case "save":

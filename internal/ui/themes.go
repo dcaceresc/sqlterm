@@ -159,15 +159,19 @@ func (u *UI) chooseTheme() {
 		u.dismiss()
 	}
 	original := u.palette.ID
-	l := tview.NewList().ShowSecondaryText(true)
-	l.SetBorder(true).SetTitle(" Themes · arrows preview · Enter save · Esc cancel ")
+	l := tview.NewList().ShowSecondaryText(false)
+	l.SetBorder(true).SetTitle(u.tr(" Themes · arrows preview · Enter save · Esc cancel "))
 	for _, p := range palettes {
 		choice := p
-		l.AddItem(p.Name, p.ID, 0, func() {
+		label := p.Name
+		if p.ID == original {
+			label += " · " + u.tr("Current")
+		}
+		l.AddItem(label, "", 0, func() {
 			next := u.cfg
 			next.Theme = choice.ID
 			if err := config.Save(u.configPath, next); err != nil {
-				l.SetTitle(" " + err.Error() + " ")
+				l.SetTitle(u.tr(" ") + err.Error() + " ")
 				return
 			}
 			u.cfg = next
@@ -179,6 +183,7 @@ func (u *UI) chooseTheme() {
 	l.SetChangedFunc(func(i int, _ string, _ string, _ rune) {
 		if i >= 0 && i < len(palettes) {
 			u.applyTheme(palettes[i].ID)
+			l.SetTitle(u.tr(" Themes · Preview: ") + palettes[i].Name + " · " + u.tr("Enter save · Esc restore") + " ")
 		}
 	})
 	for i, p := range palettes {

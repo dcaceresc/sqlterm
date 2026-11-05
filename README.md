@@ -94,6 +94,8 @@ para `OUT`/`INOUT` y las consulta al terminar `CALL`.
 | F4 | Seleccionar o cambiar base de datos |
 | F5 / F9 / F10 | Ejecutar SQL / invocar objeto / cancelar |
 | F6 / F7 / F8 | Buscar objetos / editor / resultados |
+| F11 | Distribución: editar, explorar, equilibrado, maximizar y ajustar tamaños |
+| Ctrl+P / Space en NORMAL | Paleta de acciones; `/` busca y Tab cambia al buscador |
 | Ctrl+Space | Abrir IntelliSense; también aparece automáticamente al escribir |
 | Ctrl+O / Ctrl+S / Ctrl+N | Abrir archivo / guardar / nueva sesión |
 | Ctrl+C / Ctrl+Q | Menú de copia desde cualquier panel / salir |
@@ -102,6 +104,40 @@ para `OUT`/`INOUT` y las consulta al terminar `CALL`.
 | Space h/e/b/d/t | Historial / exportar / cambiar base / desconectar / plantilla |
 
 Los atajos con **Space** se usan en modo **NORMAL** y con foco en el editor.
+Space abre la paleta y la segunda tecla conserva la acción existente (por ejemplo,
+Space c conecta). Ctrl+P está disponible desde cualquier panel.
+
+## Interfaz y contexto de ejecución
+
+La barra superior muestra entorno, conexión, base y estado de la sesión. PROD
+se destaca mediante texto y color. Los resultados identifican consulta, destino,+número de ejecución, hora, duración y estado. Editar el SQL marca los resultados
+como pertenecientes al SQL anterior. F10 muestra **Cancelando** hasta que el
+controlador confirme la finalización; las filas parciales quedan identificadas.
+
+El catálogo agrupa por esquema y tipo; Enter expande grupos o abre definiciones.
+La búsqueda incluye nombre, esquema y tipo y se conserva por pestaña. En la
+paleta puedes cambiar a lista plana, insertar el nombre entre comillas, generar
+un SELECT para tablas/vistas o invocar una rutina. Estas acciones no ejecutan
+automáticamente un SELECT generado.
+
+F1 abre ayuda contextual, con secciones y búsqueda. F2 incluye búsqueda inicial,
+detalles del perfil, recientes y favoritos (`*` sobre el perfil). En F4 se marca
+la base actual y se explica el reemplazo de sesión: conserva el SQL y mantiene
+la sesión anterior si falla la nueva conexión; no conserva estado transaccional
+entre conexiones. Esc devuelve el foco al control que abrió el diálogo.
+
+F11 permite ajustar la proporción editor/resultados, el ancho del catálogo,
+ocultarlo y maximizar paneles. La distribución se guarda. En 80×24 se muestra un
+panel a la vez; F6/F7/F8 alternan entre ellos y el destino permanece visible.
+
+La paleta también ofrece **Language / Idioma** (English / Español) y
+**Execution confirmations**: desactivadas por defecto, escrituras probables en
+PROD o cada ejecución con F5. La detección de escrituras es heurística y no
+garantiza seguridad ni solo lectura. Los mensajes técnicos del motor conservan
+su idioma original. SQL, nombres y valores nunca se traducen.
+
+La revisión y las decisiones de implementación están en
+[Propuesta-UI/IMPLEMENTACION.md](Propuesta-UI/IMPLEMENTACION.md).
 
 Editor: `i a I A o` para insertar; `Esc` normal; `v` visual; `hjkl`, `w b`,
 `0 $`, `gg G` para mover; `yy/dd` copiar/cortar línea; `y/d` sobre selección;
@@ -133,6 +169,13 @@ Para copiar resultados al portapapeles:
 | y / Y | Todo el conjunto sin / con cabeceras |
 | r / R | Fila actual sin / con cabeceras |
 | c | Celda actual |
+| v | Iniciar / quitar selección de un rango de filas; mueve el cursor y usa Ctrl+C |
+| + / - | Ampliar / reducir el ancho de la columna activa |
+
+Enter abre el inspector con el valor completo y un botón de copia. La línea de
+detalle muestra el nombre completo de la columna y su posición. `NULL` indica
+SQL NULL y `""` una cadena vacía. El orden con s/S es léxico y local a las filas
+recibidas. El menú de copia indica el origen, alcance y cantidad de filas.
 
 El menú de copia se cierra con Esc, Ctrl+C o un clic fuera de él. Al cambiar de
 panel con F6/F7/F8 también se cierra. Ctrl+C permite abrirlo de nuevo desde el
