@@ -117,7 +117,7 @@ func (u *UI) updateSuggestions(explicit bool) {
 	if t.SelectingDatabase || !t.Editor.Area.HasFocus() || front != "main" || (!explicit && t.Editor.Mode != "INSERT") {
 		u.hideSuggestions()
 		if explicit && t.SelectingDatabase {
-			u.message("Choose a database first (F4)")
+			u.message(u.tr("Choose a database first (F4)"))
 		}
 		return
 	}
@@ -142,11 +142,11 @@ func (u *UI) updateSuggestions(explicit bool) {
 	if len(items) == 0 {
 		u.hideSuggestions()
 		if explicit {
-			u.message("No completions for this SQL context")
+			u.message(u.tr("No completions for this SQL context"))
 		}
 	} else {
 		list := tview.NewList().ShowSecondaryText(true).SetUseStyleTags(false, false)
-		list.SetBorder(true).SetTitle(" IntelliSense · Tab/Enter accept · Esc close ")
+		list.SetBorder(true).SetTitle(u.tr(" IntelliSense · Tab/Enter accept · Esc close "))
 		state := &suggestionState{Tab: t, Context: ctx, Items: items, List: list}
 		for i, c := range items {
 			index := i

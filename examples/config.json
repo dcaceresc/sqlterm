@@ -1,5 +1,7 @@
 {
   "theme": "tokyo-night",
+  "language": "es",
+  "layout": {"catalog_width": 30, "editor_percent": 45},
   "folders": ["DEV", "QA", "PROD"],
   "profiles": [
     {

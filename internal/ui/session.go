@@ -13,7 +13,7 @@ import (
 
 func (u *UI) connect(t *Tab, p config.Profile, password string) {
 	if t.Busy {
-		u.message("Session busy")
+		u.message(u.tr("Session busy"))
 		return
 	}
 	u.task(t, "Connect", func(ctx context.Context) (func(), error) {
@@ -43,9 +43,14 @@ func (u *UI) connect(t *Tab, p config.Profile, password string) {
 			}
 			t.Results = nil
 			t.Order = nil
+			t.Execution = nil
+			t.SortDescription = ""
 			t.Messages = nil
 			t.SelectedSet = 0
+			t.CopyAnchor = 0
+			t.ColumnWidths = nil
 			t.Profile = s.Profile
+			u.recordRecent(p)
 			t.Password = password
 			t.Object = nil
 			t.Catalog = nil
@@ -55,7 +60,7 @@ func (u *UI) connect(t *Tab, p config.Profile, password string) {
 			t.Original = ""
 			if u.active() == t {
 				u.hideSuggestions()
-				u.search.SetText("")
+				u.search.SetText(u.tr(""))
 				u.kind.SetCurrentOption(0)
 				u.filterObjects()
 				u.showResults()
@@ -72,7 +77,7 @@ func (u *UI) disconnect() {
 	u.hideSuggestions()
 	t := u.active()
 	if t.Busy {
-		u.message("Cancel execution before disconnecting")
+		u.message(u.tr("Cancel execution before disconnecting"))
 		return
 	}
 	if t.Session != nil {
@@ -90,9 +95,17 @@ func (u *UI) disconnect() {
 }
 func (u *UI) refreshCatalog() { u.refreshCatalogTab(u.active()) }
 func (u *UI) refreshCatalogTab(t *Tab) {
-	if t.Session == nil {
-		u.message("Connect first")
+	if t.Busy {
+		u.message(u.tr("Session busy"))
 		return
+	}
+	if t.Session == nil {
+		u.message(u.tr("Connect first"))
+		return
+	}
+	t.CatalogStatus = "Loading catalog…"
+	if u.active() == t {
+		u.filterObjects()
 	}
 	u.task(t, "Refresh catalog", func(ctx context.Context) (func(), error) {
 		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
@@ -111,9 +124,15 @@ func (u *UI) refreshCatalogTab(t *Tab) {
 		}
 		objects, e := t.Session.Adapter.Catalog(ctx, t.Session.Conn)
 		if e != nil {
-			return nil, e
+			return func() {
+				t.CatalogStatus = "Could not load catalog · Ctrl+P Refresh catalog"
+				if u.active() == t {
+					u.filterObjects()
+				}
+			}, e
 		}
 		return func() {
+			t.CatalogStatus = ""
 			t.Catalog = objects
 			t.Columns = map[string][]string{}
 			if u.active() == t {
@@ -159,7 +178,7 @@ func (u *UI) openObject(o db.Object) {
 		})
 	}
 	if t.Editor.Area.GetText() != t.Saved {
-		u.confirm("Replace unsaved editor contents with "+o.Label()+"?", open)
+		u.confirm(u.tr("Replace unsaved editor contents with ")+o.Label()+"?", open)
 	} else {
 		open()
 	}
@@ -167,7 +186,7 @@ func (u *UI) openObject(o db.Object) {
 func (u *UI) switchDatabase() {
 	t := u.active()
 	if t.Session == nil {
-		u.message("Connect first")
+		u.message(u.tr("Connect first"))
 		return
 	}
 	u.task(t, "List databases", func(ctx context.Context) (func(), error) {
@@ -177,26 +196,21 @@ func (u *UI) switchDatabase() {
 		if e != nil {
 			return nil, e
 		}
-		return func() {
-			l := tview.NewList()
-			t.Databases = names
-			l.SetBorder(true).SetTitle(" Change database · opens a fresh connection ")
-			for _, name := range names {
-				n := name
-				l.AddItem(n, "", 0, func() { u.dismiss(); p := t.Profile; p.Database = n; u.connect(t, p, t.Password) })
-			}
-			u.popup(l, 80, 22)
-		}, nil
+		return func() { t.Databases = names; u.databaseSelector(t, names) }, nil
 	})
 }
 func (u *UI) execute() {
 	t := u.active()
+	if t.Busy {
+		u.message(u.tr("Session busy"))
+		return
+	}
 	if t.Session == nil {
-		u.message("Connect first")
+		u.message(u.tr("Connect first"))
 		return
 	}
 	if t.SelectingDatabase {
-		u.message("Choose a database first (F4)")
+		u.message(u.tr("Choose a database first (F4)"))
 		return
 	}
 	text, _, _ := t.Editor.Area.GetSelection()
@@ -209,18 +223,30 @@ func (u *UI) execute() {
 		return
 	}
 	if len(statements) == 0 {
-		u.message("No SQL to execute")
+		u.message(u.tr("No SQL to execute"))
 		return
 	}
 	bound := make([]db.Bound, len(statements))
 	for i, s := range statements {
 		bound[i] = db.Bound{SQL: s}
 	}
-	u.run(t, text, func(ctx context.Context, emit func(db.Event)) error { return t.Session.Run(ctx, bound, emit) })
+	session := t.Session
+	run := func() {
+		if t.Session != session {
+			u.message(u.tr("Destination changed; review SQL and execute again"))
+			return
+		}
+		u.run(t, text, func(ctx context.Context, emit func(db.Event)) error { return session.Run(ctx, bound, emit) })
+	}
+	if confirmExecution(u.cfg.ConfirmExecution, t.Profile.Folder, statements) {
+		u.confirm(u.tr("Execute SQL on ")+t.Profile.DisplayName()+" / "+t.Profile.Database+"? This policy uses SQL heuristics; it is not a read-only or security guarantee.", run)
+	} else {
+		run()
+	}
 }
 func (u *UI) run(t *Tab, sqlText string, work func(context.Context, func(db.Event)) error, after ...func()) {
 	if t.Busy {
-		u.message("Session busy")
+		u.message(u.tr("Session busy"))
 		return
 	}
 	for _, s := range t.Results {
@@ -230,17 +256,29 @@ func (u *UI) run(t *Tab, sqlText string, work func(context.Context, func(db.Even
 	t.Messages = nil
 	t.Order = nil
 	t.SelectedSet = 0
+	t.CopyAnchor = 0
+	t.ColumnWidths = nil
+	t.SortDescription = ""
 	if u.active() == t {
 		u.showResults()
 	}
 	if u.cfg.History {
 		if e := history.Add(u.historyPath(), history.Entry{At: time.Now(), Profile: t.Profile.DisplayName(), Database: t.Profile.Database, SQL: sqlText}); e != nil {
-			u.notice("History error", e.Error())
+			u.notice(u.tr("History error"), e.Error())
 			return
 		}
 	}
+	u.nextExecution++
+	scope := "Execute script"
+	if selected, _, _ := t.Editor.Area.GetSelection(); selected != "" {
+		scope = "Execute selection"
+	}
+	e := &execution{ID: u.nextExecution, SQL: sqlText, EditorSQL: t.Editor.Area.GetText(), Source: u.queryName(t), Profile: t.Profile.DisplayName(), Database: t.Profile.Database, Scope: scope, Started: time.Now(), Phase: "Running"}
+	t.Execution = e
 	u.task(t, "Execute", func(ctx context.Context) (func(), error) {
 		started := time.Now()
+		stopPulse := u.executionPulse(t, e)
+		defer stopPulse()
 		err := work(ctx, func(ev db.Event) {
 			u.post(func() {
 				switch ev.Kind {
@@ -250,8 +288,11 @@ func (u *UI) run(t *Tab, sqlText string, work func(context.Context, func(db.Even
 						u.showResults()
 					}
 				case "rows":
+					if e.Phase != "Cancelling" {
+						e.Phase = "Receiving rows"
+					}
 					if u.active() == t {
-						u.table.SetTitle(fmt.Sprintf(" Results · set %d/%d · %d rows ", t.SelectedSet+1, len(t.Results), t.Results[t.SelectedSet].Count()))
+						u.refreshResultInfo()
 					}
 				case "message":
 					if len(t.Messages) < 2000 {
@@ -263,12 +304,20 @@ func (u *UI) run(t *Tab, sqlText string, work func(context.Context, func(db.Even
 			})
 		})
 		elapsed := time.Since(started)
+		cancelled := ctx.Err() == context.Canceled
 		return func() {
+			e.Duration = elapsed
+			e.Phase = "Completed"
 			if err != nil {
+				e.Phase = "Error"
+				e.Error = err.Error()
+				if cancelled {
+					e.Phase = "Cancelled"
+				}
 				t.Messages = append(t.Messages, err.Error())
 			}
 			if err == nil {
-				t.Status = fmt.Sprintf("Complete in %s · %d result sets", elapsed.Round(time.Millisecond), len(t.Results))
+				t.Status = fmt.Sprintf(u.tr("Complete in %s · %d result sets"), elapsed.Round(time.Millisecond), len(t.Results))
 				for _, f := range after {
 					f()
 				}
@@ -282,11 +331,11 @@ func (u *UI) run(t *Tab, sqlText string, work func(context.Context, func(db.Even
 func (u *UI) invokeSelected() {
 	t := u.active()
 	if t.SelectingDatabase {
-		u.message("Choose a database first (F4)")
+		u.message(u.tr("Choose a database first (F4)"))
 		return
 	}
 	if t.Session == nil {
-		u.message("Connect first")
+		u.message(u.tr("Connect first"))
 		return
 	}
 	o, ok := u.selectedObject()
@@ -295,7 +344,7 @@ func (u *UI) invokeSelected() {
 		ok = true
 	}
 	if !ok || (o.Kind != "procedure" && o.Kind != "function") {
-		u.message("Select a procedure or function in Objects first")
+		u.message(u.tr("Select a procedure or function in Objects first"))
 		return
 	}
 	u.task(t, "Read parameters", func(ctx context.Context) (func(), error) {
@@ -314,7 +363,7 @@ func (u *UI) parameterForm(t *Tab, o db.Object, params []db.Parameter) {
 	modes := make([]*tview.DropDown, len(params))
 	list := tview.NewFlex().SetDirection(tview.FlexRow)
 	form := tview.NewForm()
-	form.SetBorder(true).SetTitle(" " + o.Label() + " · Tab navigate ")
+	form.SetBorder(true).SetTitle(u.tr(" ") + o.Label() + " · Tab navigate ")
 	for i, p := range params {
 		values[i] = tview.NewInputField().SetLabel(p.Name + " (" + p.Type + " " + p.Direction + ") ").SetFieldWidth(30)
 		options := []string{"value", "NULL"}
@@ -325,11 +374,11 @@ func (u *UI) parameterForm(t *Tab, o db.Object, params []db.Parameter) {
 		if p.Direction == "OUT" {
 			initial = 1
 		}
-		modes[i] = tview.NewDropDown().SetLabel("Mode").SetOptions(options, nil).SetCurrentOption(initial)
+		modes[i] = tview.NewDropDown().SetLabel(u.tr("Mode")).SetOptions(options, nil).SetCurrentOption(initial)
 		form.AddFormItem(values[i])
 		form.AddFormItem(modes[i])
 	}
-	form.AddButton("Execute", func() {
+	form.AddButton(u.tr("Execute"), func() {
 		vals := make([]db.Value, len(params))
 		for i := range params {
 			_, mode := modes[i].GetCurrentOption()
@@ -337,12 +386,12 @@ func (u *UI) parameterForm(t *Tab, o db.Object, params []db.Parameter) {
 		}
 		inv, e := t.Session.Adapter.Invoke(o, params, vals)
 		if e != nil {
-			form.SetTitle(" " + e.Error() + " ")
+			form.SetTitle(u.tr(" ") + e.Error() + " ")
 			return
 		}
 		u.dismiss()
 		u.run(t, "-- Invoke "+o.Label()+" (parameter values excluded from history)", func(ctx context.Context, emit func(db.Event)) error { return t.Session.RunInvocation(ctx, inv, emit) })
-	}).AddButton("Cancel", u.dismiss)
+	}).AddButton(u.tr("Cancel"), u.dismiss)
 	list.AddItem(form, 0, 1, true)
 	u.popup(list, 110, min(32, 8+len(params)*4))
 }

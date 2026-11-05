@@ -81,6 +81,21 @@ para F2/F3/F4: clic hacia editor/objetos, F6/F7/F8, Esc, Ctrl+C y reapertura con
 la misma tecla. Se verifica la reversión de la vista previa de temas. El selector
 F4 usa SQL Server simulado para enumerar bases; no requiere un servidor real.
 
+Actualización 0.2.0 / propuesta de UI: contexto persistente, identidad de ejecución,
+cancelación confirmada y filas parciales; filtros/selección de catálogo por pestaña;
+retorno de foco tras diálogos anidados; cambio de base fallido sin perder sesión,
+SQL ni resultados; selección de filas ordenadas y copia desde el inspector; búsqueda
+de perfiles, ayuda contextual y acciones no disponibles. Pantallas simuladas de
+80×24, 120×40 y 180×50 en inglés/español, sin errores de formato de traducción.
+Preferencias de distribución e idioma guardadas y recuperadas. Políticas de
+confirmación cubiertas con casos de lectura, escritura y entorno.
+
+PTY nativo Windows: selector inicial con búsqueda en español, Ctrl+P y atajo c
+de la paleta, vista previa de tema con flechas y reversión con Esc, F11 distribución
+y salida limpia con Ctrl+Q (código 0). Se usó configuración de prueba en `.cache`.
+Las vistas de `Propuesta-UI/implementacion` representan una pantalla tcell real
+con datos ficticios, no una conexión a una base externa.
+
 ## Pendiente en entornos externos
 
 No se proporcionaron servidores de prueba ni credenciales; Docker no está

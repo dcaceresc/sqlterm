@@ -110,7 +110,8 @@ func TestAllThemesRenderConnectionsAndMaskedPassword(t *testing.T) {
 		if bg != p.Background {
 			t.Fatalf("%s has an unthemed background", p.ID)
 		}
-		_, _, style, _ = s.GetContent(0, 1)
+		x, y, _, _ := u.search.GetRect()
+		_, _, style, _ = s.GetContent(x, y)
 		_, bg, _ = style.Decompose()
 		if bg != p.Background {
 			t.Fatalf("%s has an unthemed input label", p.ID)

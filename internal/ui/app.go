@@ -34,37 +34,53 @@ type Tab struct {
 	Order               []int
 	Busy                bool
 	Cancel              context.CancelFunc
+	Execution           *execution
+	SortDescription     string
+	CatalogStatus       string
+	CatalogSelection    string
+	CatalogFilter       string
+	CatalogKind         int
+	Collapsed           map[string]bool
+	ColumnWidths        map[int]int
+	CopyAnchor          int
 }
 type UI struct {
-	app                   *tview.Application
-	pages                 *tview.Pages
-	layout                *tview.Flex
-	editorHost            *tview.Flex
-	tabsBar, status, help *tview.TextView
-	objects               *tview.List
-	search                *tview.InputField
-	kind                  *tview.DropDown
-	table                 *tview.Table
-	cfg                   config.Config
-	vault                 credentials.Store
-	openSession           func(context.Context, config.Profile, string) (*db.Session, error)
-	writeClipboard        func(string) error
-	palette               Palette
-	dialogCancel          func()
-	dialogContent         tview.Primitive
-	copyPopup             *tview.List
-	connectionFolder      string
-	configPath            string
-	tabs                  []*Tab
-	current               int
-	leader                bool
-	closing               bool
-	suggestions           *suggestionState
-	suppressSuggestions   bool
-	skipSuggestionMove    bool
-	wg                    sync.WaitGroup
-	ctx                   context.Context
-	cancel                context.CancelFunc
+	app                                                *tview.Application
+	pages                                              *tview.Pages
+	layout                                             *tview.Flex
+	editorHost                                         *tview.Flex
+	body, center, sidebar, resultsHost                 *tview.Flex
+	contextBar, resultInfo, resultDetail, objectDetail *tview.TextView
+	catalogRows                                        map[int]db.Object
+	dialogReturn                                       tview.Primitive
+	lastWidth, lastHeight                              int
+	lastLayout                                         string
+	nextExecution                                      int
+	restoringCatalog                                   bool
+	tabsBar, status, help                              *tview.TextView
+	objects                                            *tview.List
+	search                                             *tview.InputField
+	kind                                               *tview.DropDown
+	table                                              *tview.Table
+	cfg                                                config.Config
+	vault                                              credentials.Store
+	openSession                                        func(context.Context, config.Profile, string) (*db.Session, error)
+	writeClipboard                                     func(string) error
+	palette                                            Palette
+	dialogCancel                                       func()
+	dialogContent                                      tview.Primitive
+	copyPopup                                          *tview.List
+	connectionFolder                                   string
+	configPath                                         string
+	tabs                                               []*Tab
+	current                                            int
+	closing                                            bool
+	suggestions                                        *suggestionState
+	suppressSuggestions                                bool
+	skipSuggestionMove                                 bool
+	wg                                                 sync.WaitGroup
+	ctx                                                context.Context
+	cancel                                             context.CancelFunc
 }
 
 func New(path string, cfg config.Config) *UI {
@@ -77,21 +93,38 @@ func New(path string, cfg config.Config) *UI {
 	}
 	u.palette = resolveTheme(cfg.Theme)
 	u.tabsBar = tview.NewTextView().SetDynamicColors(true)
+	u.contextBar = tview.NewTextView().SetDynamicColors(true)
+	u.resultInfo = tview.NewTextView().SetDynamicColors(true)
+	u.resultDetail = tview.NewTextView()
+	u.objectDetail = tview.NewTextView()
 	u.status = tview.NewTextView().SetDynamicColors(true)
-	u.help = tview.NewTextView().SetText(defaultHelp)
-	u.search = tview.NewInputField().SetLabel("Find: ").SetChangedFunc(func(string) { u.filterObjects() })
-	u.kind = tview.NewDropDown().SetLabel("Type: ").SetOptions([]string{"all", "table", "view", "procedure", "function"}, func(string, int) { u.filterObjects() }).SetCurrentOption(0)
+	u.help = tview.NewTextView().SetText(u.tr(defaultHelp))
+	u.search = tview.NewInputField().SetLabel(u.tr("Find: ")).SetChangedFunc(func(string) { u.filterObjects() })
+	u.kind = tview.NewDropDown().SetLabel(u.tr("Type: ")).SetOptions(u.kindOptions(), func(string, int) { u.filterObjects() }).SetCurrentOption(0)
 	u.objects = tview.NewList().ShowSecondaryText(false)
-	u.objects.SetBorder(true).SetTitle(" Objects · Enter definition ")
+	u.objects.SetChangedFunc(func(i int, _, _ string, _ rune) {
+		if o, ok := u.catalogRows[i]; ok && len(u.tabs) > 0 {
+			u.active().CatalogSelection = o.Kind + " " + o.Label()
+			u.objectDetail.SetText(o.Label())
+		}
+	})
+	u.objects.SetBorder(true).SetTitle(u.tr(" Objects · Enter definition "))
 	left := tview.NewFlex().SetDirection(tview.FlexRow).AddItem(u.search, 1, 0, false).AddItem(u.kind, 1, 0, false).AddItem(u.objects, 0, 1, false)
+	left.AddItem(u.objectDetail, 1, 0, false)
+	u.sidebar = left
 	u.editorHost = tview.NewFlex()
 	u.table = tview.NewTable().SetFixed(1, 0).SetSelectable(true, true)
-	u.table.SetBorder(true).SetTitle(" Results ")
+	u.table.SetBorder(true).SetTitle(u.tr(" Results "))
 	u.table.SetSelectedFunc(func(row, col int) { u.viewCell(row, col) })
 	u.table.SetInputCapture(u.gridKey)
-	center := tview.NewFlex().SetDirection(tview.FlexRow).AddItem(u.editorHost, 0, 3, true).AddItem(u.table, 0, 2, false)
+	u.table.SetSelectionChangedFunc(func(int, int) { u.refreshResultInfo() })
+	u.table.SetSeparator('│')
+	u.resultsHost = tview.NewFlex().SetDirection(tview.FlexRow).AddItem(u.resultInfo, 2, 0, false).AddItem(u.table, 0, 1, true).AddItem(u.resultDetail, 1, 0, false)
+	center := tview.NewFlex().SetDirection(tview.FlexRow).AddItem(u.editorHost, 0, 1, true).AddItem(u.resultsHost, 0, 1, false)
+	u.center = center
 	body := tview.NewFlex().AddItem(left, 34, 0, false).AddItem(center, 0, 1, true)
-	u.layout = tview.NewFlex().SetDirection(tview.FlexRow).AddItem(u.tabsBar, 1, 0, false).AddItem(body, 0, 1, true).AddItem(u.status, 1, 0, false).AddItem(u.help, 1, 0, false)
+	u.body = body
+	u.layout = tview.NewFlex().SetDirection(tview.FlexRow).AddItem(u.contextBar, 1, 0, false).AddItem(u.tabsBar, 1, 0, false).AddItem(body, 0, 1, true).AddItem(u.status, 1, 0, false).AddItem(u.help, 1, 0, false)
 	u.pages = tview.NewPages().AddPage("main", u.layout, true, true)
 	u.app.SetRoot(u.pages, true).EnableMouse(true).EnablePaste(true).SetInputCapture(u.key)
 	u.app.SetMouseCapture(func(event *tcell.EventMouse, action tview.MouseAction) (*tcell.EventMouse, tview.MouseAction) {
@@ -114,6 +147,7 @@ func New(path string, cfg config.Config) *UI {
 	// focus flags, never Application.GetFocus/SetFocus.
 	u.app.SetBeforeDrawFunc(func(screen tcell.Screen) bool {
 		width, height := screen.Size()
+		u.adaptLayout(width, height)
 		u.status.SetRect(0, max(0, height-2), width, 1)
 		u.refreshBars()
 		return false
@@ -170,6 +204,10 @@ func (u *UI) showTab() {
 	u.hideSuggestions()
 	t := u.active()
 	u.editorHost.Clear().AddItem(t.Editor.Area, 0, 1, true)
+	u.restoringCatalog = true
+	u.search.SetText(t.CatalogFilter)
+	u.kind.SetCurrentOption(t.CatalogKind)
+	u.restoringCatalog = false
 	u.filterObjects()
 	u.showResults()
 	u.refreshBars()
@@ -180,19 +218,10 @@ func (u *UI) refreshBars() {
 		return
 	}
 	t := u.active()
-	if !u.leader {
-		if u.table.HasFocus() {
-			u.help.SetText(" Ctrl+C copy menu · y/Y all without/with headers · r/R row · c cell · e export · Ctrl+Q quit ")
-		} else {
-			u.help.SetText(defaultHelp)
-		}
-	}
+	u.help.SetText(u.tr(defaultHelp))
 	var b strings.Builder
 	for i, x := range u.tabs {
-		name := fmt.Sprintf("Query %d", i+1)
-		if x.Path != "" {
-			name = filepath.Base(x.Path)
-		}
+		name := u.queryName(x)
 		if x.Editor.Area.GetText() != x.Saved {
 			name += "*"
 		}
@@ -205,16 +234,13 @@ func (u *UI) refreshBars() {
 	u.tabsBar.SetText(b.String())
 	profile := t.Profile.DisplayName()
 	if profile == "" {
-		profile = "no connection"
+		profile = u.tr("No connection")
 	}
 	busy := ""
 	if t.Busy {
 		busy = " · working"
 	}
-	file := fmt.Sprintf("Query %d", u.current+1)
-	if t.Path != "" {
-		file = filepath.Base(t.Path)
-	}
+	file := u.queryName(t)
 	if t.Editor.Area.GetText() != t.Saved {
 		file += "*"
 	}
@@ -227,7 +253,8 @@ func (u *UI) refreshBars() {
 	if t.SelectingDatabase {
 		database = "(select with F4)"
 	}
-	u.status.SetText(modeStatus(u.palette, t.Editor.Mode, file, profile+" / "+database, t.Status+busy, row+1, column+1, width))
+	u.status.SetText(modeStatus(u.palette, t.Editor.Mode, file, profile+" / "+database, u.tr(t.Status)+busy, row+1, column+1, width))
+	u.refreshWorkspace()
 	u.refreshModeBorders()
 }
 func (u *UI) message(s string) { u.active().Status = s; u.refreshBars() }
@@ -236,11 +263,11 @@ func (u *UI) post(f func())    { u.app.QueueUpdateDraw(f) }
 // Each tab permits one connection operation. Other tabs can work independently.
 func (u *UI) task(t *Tab, label string, work func(context.Context) (func(), error)) {
 	if t.Busy || u.closing {
-		u.message("Session busy; cancel or wait")
+		u.message(u.tr("Session busy; cancel or wait"))
 		return
 	}
 	t.Busy = true
-	t.Status = label
+	t.Status = u.tr(label)
 	ctx, cancel := context.WithCancel(u.ctx)
 	t.Cancel = cancel
 	u.refreshBars()
@@ -255,7 +282,7 @@ func (u *UI) task(t *Tab, label string, work func(context.Context) (func(), erro
 			if err != nil {
 				t.Status = err.Error()
 			} else {
-				t.Status = label + " complete"
+				t.Status = u.tr("Completed") + ": " + u.tr(label)
 			}
 			if apply != nil {
 				apply()
@@ -284,11 +311,11 @@ func (u *UI) quit() {
 	finish := func() {
 		u.closing = true
 		u.cancel()
-		u.message("Closing sessions…")
+		u.message(u.tr("Closing sessions…"))
 		go func() { u.wg.Wait(); u.post(func() { u.app.Stop() }) }()
 	}
 	if dirty {
-		u.confirm("Discard unsaved SQL and quit?", finish)
+		u.confirm(u.tr("Discard unsaved SQL and quit?"), finish)
 	} else {
 		finish()
 	}
@@ -296,7 +323,7 @@ func (u *UI) quit() {
 func (u *UI) closeTab() {
 	t := u.active()
 	if t.Busy {
-		u.message("Cancel execution before closing this tab")
+		u.message(u.tr("Cancel execution before closing this tab"))
 		return
 	}
 	closeIt := func() {
@@ -310,7 +337,7 @@ func (u *UI) closeTab() {
 		}
 	}
 	if t.Editor.Area.GetText() != t.Saved {
-		u.confirm("Discard unsaved SQL in this tab?", closeIt)
+		u.confirm(u.tr("Discard unsaved SQL in this tab?"), closeIt)
 	} else {
 		closeIt()
 	}
@@ -325,7 +352,7 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 				u.app.SetFocus(u.table)
 			}
 			return nil
-		case tcell.KeyF2, tcell.KeyF3, tcell.KeyF4, tcell.KeyF6, tcell.KeyF7, tcell.KeyF8, tcell.KeyCtrlQ:
+		case tcell.KeyF1, tcell.KeyF2, tcell.KeyF3, tcell.KeyF4, tcell.KeyF6, tcell.KeyF7, tcell.KeyF8, tcell.KeyF11, tcell.KeyCtrlP, tcell.KeyCtrlQ:
 			u.dismiss()
 		}
 	}
@@ -357,13 +384,6 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 	if u.customKey(k) {
 		return nil
 	}
-	if u.leader && k.Key() != tcell.KeyRune {
-		u.leader = false
-		u.help.SetText(defaultHelp)
-		if k.Key() == tcell.KeyEscape {
-			return nil
-		}
-	}
 	switch k.Key() {
 	case tcell.KeyCtrlC:
 		u.copyMenu()
@@ -393,9 +413,13 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 		u.invokeSelected()
 		return nil
 	case tcell.KeyF10:
-		if u.active().Cancel != nil {
-			u.active().Cancel()
-		}
+		u.cancelOperation()
+		return nil
+	case tcell.KeyF11:
+		u.layoutMenu()
+		return nil
+	case tcell.KeyCtrlP:
+		u.commandPalette()
 		return nil
 	case tcell.KeyCtrlN:
 		u.newTab(u.active())
@@ -434,50 +458,8 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 		}
 	}
 	if u.app.GetFocus() == u.active().Editor.Area && u.active().Editor.Mode == "NORMAL" && k.Key() == tcell.KeyRune {
-		if u.leader {
-			u.leader = false
-			u.help.SetText(defaultHelp)
-			switch k.Rune() {
-			case 'c':
-				u.chooseConnection()
-			case 'f':
-				u.app.SetFocus(u.search)
-			case 'x':
-				u.execute()
-			case 'p':
-				u.invokeSelected()
-			case 'a':
-				u.applyDefinition()
-			case 'r':
-				u.refreshCatalog()
-			case 'n':
-				u.newTab(u.active())
-			case 'w':
-				u.saveFile()
-			case 'o':
-				u.openFile()
-			case 'q':
-				u.closeTab()
-			case 'h':
-				u.showHistory()
-			case 'e':
-				u.export()
-			case 'b':
-				u.switchDatabase()
-			case 'd':
-				u.disconnect()
-			case 't':
-				u.template()
-			case 'T':
-				u.chooseTheme()
-			case '?':
-				u.showHelp()
-			}
-			return nil
-		}
 		if k.Rune() == ' ' {
-			u.leader = true
-			u.help.SetText(" c connect · f find · x run · p invoke · a apply · r refresh · n new · w save · o open · q close · h history · e export · b database · d disconnect · t template · T themes ")
+			u.commandPalette()
 			return nil
 		}
 	}
@@ -487,35 +469,7 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 const defaultHelp = " F1 help  F2 connect  F3 themes  F4 database  F5 run  F6 objects  F7 editor  F8 results  F9 invoke  F10 cancel "
 
 func (u *UI) filterObjects() {
-	if len(u.tabs) == 0 {
-		return
-	}
-	u.objects.Clear()
-	t := u.active()
-	needle := strings.ToLower(u.search.GetText())
-	u.kind.SetDisabled(t.SelectingDatabase)
-	if t.SelectingDatabase {
-		u.objects.SetTitle(" Databases · Enter select · F4 ")
-		for _, name := range t.Databases {
-			n := name
-			if fuzzy(needle, strings.ToLower(n)) {
-				u.objects.AddItem(n, "database", 0, func() { p := t.Profile; p.Database = n; u.connect(t, p, t.Password) })
-			}
-		}
-		return
-	}
-	u.objects.SetTitle(" Objects · Enter definition ")
-	_, kind := u.kind.GetCurrentOption()
-	for _, object := range t.Catalog {
-		o := object
-		if kind != "" && kind != "all" && o.Kind != kind {
-			continue
-		}
-		if !fuzzy(needle, strings.ToLower(o.Label())) {
-			continue
-		}
-		u.objects.AddItem(o.Kind+" "+o.Label(), "", 0, func() { u.openObject(o) })
-	}
+	u.rebuildCatalog()
 }
 func fuzzy(needle, haystack string) bool {
 	r := []rune(needle)
@@ -535,12 +489,7 @@ func (u *UI) selectedObject() (db.Object, bool) {
 	if n < 0 || n >= u.objects.GetItemCount() {
 		return db.Object{}, false
 	}
-	label, _ := u.objects.GetItemText(n)
-	for _, o := range u.active().Catalog {
-		if label == o.Kind+" "+o.Label() {
-			return o, true
-		}
-	}
-	return db.Object{}, false
+	o, ok := u.catalogRows[n]
+	return o, ok
 }
 func (u *UI) historyPath() string { return filepath.Join(filepath.Dir(u.configPath), "history.json") }
