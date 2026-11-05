@@ -96,6 +96,17 @@ y salida limpia con Ctrl+Q (código 0). Se usó configuración de prueba en `.ca
 Las vistas de `Propuesta-UI/implementacion` representan una pantalla tcell real
 con datos ficticios, no una conexión a una base externa.
 
+Actualización 0.2.1 (issues 1–3): numeración lógica del editor, desplazamiento de
+500 líneas, edición/deshacer, ajuste por palabras con Unicode y CRLF, y posición
+del cursor/selección al alternar ajuste. Preferencias de editor persistidas,
+aplicadas a pestañas nuevas y sin cambios ante error de guardado. Favoritos en
+sección superior independiente de carpetas; botón y `*`, alta/baja persistida y
+aislamiento de perfiles con nombres iguales. Confirmación de salida visible.
+
+PTY Windows: margen visible, SQL largo ajustado con Alt+Z, continuación `1↪`,
+segunda línea numerada `2`, posición lógica `2:10` conservada y salida limpia con
+confirmación. Se usó exclusivamente `.cache/issues-smoke.json`.
+
 ## Pendiente en entornos externos
 
 No se proporcionaron servidores de prueba ni credenciales; Docker no está

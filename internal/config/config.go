@@ -128,6 +128,12 @@ type Config struct {
 	Favorites         []string          `json:"favorites,omitempty"`
 	ConfirmExecution  string            `json:"confirm_execution,omitempty"`
 	Language          string            `json:"language,omitempty"`
+	Editor            EditorOptions     `json:"editor,omitempty"`
+}
+
+type EditorOptions struct {
+	WordWrap    bool  `json:"word_wrap,omitempty"`
+	LineNumbers *bool `json:"line_numbers,omitempty"`
 }
 
 type Layout struct {

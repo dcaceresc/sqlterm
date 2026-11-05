@@ -10,9 +10,10 @@ import (
 )
 
 type connectionRef struct {
-	Folder       string
-	ProfileIndex int
-	FolderNode   bool
+	Folder        string
+	ProfileIndex  int
+	FolderNode    bool
+	FavoriteGroup bool
 }
 
 func connectionRoot(c config.Config, filter string) *tview.TreeNode {
@@ -37,11 +38,6 @@ func connectionRoot(c config.Config, filter string) *tview.TreeNode {
 		return n
 	}
 	filter = strings.ToLower(strings.TrimSpace(filter))
-	for _, path := range config.FolderPaths(c) {
-		if filter == "" || fuzzy(filter, strings.ToLower(path)) {
-			ensure(path)
-		}
-	}
 	indexes := make([]int, len(c.Profiles))
 	for i := range indexes {
 		indexes[i] = i
@@ -64,6 +60,30 @@ func connectionRoot(c config.Config, filter string) *tview.TreeNode {
 		}
 		return strings.ToLower(c.Profiles[indexes[i]].DisplayName()) < strings.ToLower(c.Profiles[indexes[j]].DisplayName())
 	})
+	favoritesLabel := "★ Favorites"
+	if c.Language == "es" {
+		favoritesLabel = "★ Favoritos"
+	}
+	favorites := tview.NewTreeNode(favoritesLabel).SetExpanded(true).SetReference(connectionRef{FolderNode: true, ProfileIndex: -1, FavoriteGroup: true})
+	for _, i := range indexes {
+		p := c.Profiles[i]
+		if stringIndex(c.Favorites, profileID(p)) < 0 || !fuzzy(filter, strings.ToLower(p.DisplayName()+" "+p.Engine+" "+p.Host+" "+p.Database)) {
+			continue
+		}
+		label := "★ " + p.Name
+		if p.Folder != "" {
+			label += " · " + p.Folder
+		}
+		favorites.AddChild(tview.NewTreeNode(tview.Escape(label)).SetReference(connectionRef{Folder: p.Folder, ProfileIndex: i}))
+	}
+	if len(favorites.GetChildren()) > 0 {
+		root.AddChild(favorites)
+	}
+	for _, path := range config.FolderPaths(c) {
+		if filter == "" || fuzzy(filter, strings.ToLower(path)) {
+			ensure(path)
+		}
+	}
 	for _, i := range indexes {
 		p := c.Profiles[i]
 		haystack := strings.ToLower(p.DisplayName() + " " + p.Engine + " " + p.Host + " " + p.Database)
@@ -87,6 +107,7 @@ func (u *UI) connectionBrowser() {
 	search := tview.NewInputField().SetLabel(u.tr("Find: "))
 	details := tview.NewTextView().SetWrap(true)
 	details.SetBorder(true).SetTitle(u.tr(" Selected connection "))
+	preferredIndex := -1
 	rebuild := func(filter string) {
 		target := u.connectionFolder
 		root := connectionRoot(u.cfg, filter)
@@ -104,12 +125,31 @@ func (u *UI) connectionBrowser() {
 			}
 		}
 		if filter == "" {
+			hasFavorites := false
+			if len(root.GetChildren()) > 0 {
+				first := root.GetChildren()[0]
+				if ref, ok := first.GetReference().(connectionRef); ok && ref.FavoriteGroup && len(first.GetChildren()) > 0 {
+					hasFavorites = true
+					tree.SetCurrentNode(first.GetChildren()[0])
+				}
+			}
 			root.Walk(func(n, parent *tview.TreeNode) bool {
-				if ref, ok := n.GetReference().(connectionRef); ok && ref.FolderNode && ref.Folder == target {
+				if ref, ok := n.GetReference().(connectionRef); ok && !hasFavorites && ref.FolderNode && !ref.FavoriteGroup && ref.Folder == target && target != "" {
 					tree.SetCurrentNode(n)
 				}
 				return true
 			})
+		}
+		if preferredIndex >= 0 {
+			picked := false
+			root.Walk(func(n, parent *tview.TreeNode) bool {
+				if ref, ok := n.GetReference().(connectionRef); ok && !ref.FolderNode && ref.ProfileIndex == preferredIndex && !picked {
+					tree.SetCurrentNode(n)
+					picked = true
+				}
+				return true
+			})
+			preferredIndex = -1
 		}
 		u.style(tree)
 	}
@@ -205,7 +245,32 @@ func (u *UI) connectionBrowser() {
 			u.chooseConnection()
 		})
 	}
-	buttons := tview.NewForm().SetHorizontal(true).AddButton(u.tr("+ Add profile"), add).AddButton(u.tr("New folder"), newFolder).AddButton(u.tr("Edit profile"), edit)
+	favorite := func() {
+		n := tree.GetCurrentNode()
+		if n == nil {
+			return
+		}
+		ref, ok := n.GetReference().(connectionRef)
+		if !ok || ref.FolderNode {
+			return
+		}
+		next := u.cfg
+		id := profileID(u.cfg.Profiles[ref.ProfileIndex])
+		next.Favorites = append([]string{}, u.cfg.Favorites...)
+		if i := stringIndex(next.Favorites, id); i >= 0 {
+			next.Favorites = append(next.Favorites[:i], next.Favorites[i+1:]...)
+		} else {
+			next.Favorites = append(next.Favorites, id)
+		}
+		if err := config.Save(u.configPath, next); err != nil {
+			details.SetText(err.Error())
+			return
+		}
+		u.cfg = next
+		preferredIndex = ref.ProfileIndex
+		rebuild(search.GetText())
+	}
+	buttons := tview.NewForm().SetHorizontal(true).AddButton(u.tr("+ Add profile"), add).AddButton(u.tr("New folder"), newFolder).AddButton(u.tr("Edit profile"), edit).AddButton("★ "+u.tr("Favorite"), favorite)
 	buttons.SetBorderPadding(0, 0, 0, 0)
 	panel := tview.NewFlex().SetDirection(tview.FlexRow).AddItem(search, 1, 0, true).AddItem(tree, 0, 1, false).AddItem(details, 5, 0, false).AddItem(buttons, 3, 0, false)
 	panel.SetInputCapture(func(k *tcell.EventKey) *tcell.EventKey {
@@ -247,25 +312,7 @@ func (u *UI) connectionBrowser() {
 		if tree.HasFocus() && k.Key() == tcell.KeyRune {
 			switch k.Rune() {
 			case '*':
-				if n := tree.GetCurrentNode(); n != nil {
-					if ref, ok := n.GetReference().(connectionRef); ok && !ref.FolderNode {
-						p := u.cfg.Profiles[ref.ProfileIndex]
-						id := profileID(p)
-						next := u.cfg
-						next.Favorites = append([]string{}, u.cfg.Favorites...)
-						if i := stringIndex(next.Favorites, id); i >= 0 {
-							next.Favorites = append(next.Favorites[:i], next.Favorites[i+1:]...)
-						} else {
-							next.Favorites = append(next.Favorites, id)
-						}
-						if err := config.Save(u.configPath, next); err != nil {
-							details.SetText(err.Error())
-						} else {
-							u.cfg = next
-							rebuild(search.GetText())
-						}
-					}
-				}
+				favorite()
 				return nil
 			case '+':
 				add()
