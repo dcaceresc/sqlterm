@@ -48,11 +48,14 @@ func TestIntegration(t *testing.T) {
 			a := s.Adapter
 			target := a.Quote(schema) + "." + a.Quote(name)
 			var create string
+			// FIRST_VALUE is reserved in MySQL 8. Quote result aliases using the
+			// engine's identifier rules, just like schema and procedure names.
+			firstAlias, secondAlias := a.Quote("first_value"), a.Quote("second_value")
 			switch engine {
 			case "sqlserver":
-				create = "CREATE PROCEDURE " + target + " @input int, @output int OUTPUT, @optional int=7 AS BEGIN SET NOCOUNT ON; SET @output=@input+1; SELECT @input AS first_value; SELECT @optional AS second_value; RETURN 9; END;"
+				create = "CREATE PROCEDURE " + target + " @input int, @output int OUTPUT, @optional int=7 AS BEGIN SET NOCOUNT ON; SET @output=@input+1; SELECT @input AS " + firstAlias + "; SELECT @optional AS " + secondAlias + "; RETURN 9; END;"
 			case "mysql":
-				create = "CREATE PROCEDURE " + target + "(IN p_input INT, INOUT p_output INT) BEGIN SET p_output=p_input+1; SELECT p_input AS first_value; SELECT p_output AS second_value; END"
+				create = "CREATE PROCEDURE " + target + "(IN p_input INT, INOUT p_output INT) BEGIN SET p_output=p_input+1; SELECT p_input AS " + firstAlias + "; SELECT p_output AS " + secondAlias + "; END"
 			default:
 				create = "CREATE PROCEDURE " + target + "(IN p_input integer, INOUT p_output integer) LANGUAGE plpgsql AS $body$ BEGIN p_output:=p_input+1; END; $body$;"
 			}
@@ -152,6 +155,22 @@ func TestIntegration(t *testing.T) {
 			}
 			if engine == "mysql" && len(sets) != 3 {
 				t.Fatalf("missing mysql result sets: %d", len(sets))
+			}
+			if engine == "mysql" || engine == "sqlserver" {
+				secondValue := "42"
+				if engine == "sqlserver" {
+					secondValue = "7"
+				}
+				for i, expected := range []struct{ column, value string }{{"first_value", "41"}, {"second_value", secondValue}} {
+					set := sets[i]
+					if len(set.Columns) != 1 || set.Columns[0] != expected.column {
+						t.Fatalf("result set %d aliases: got %v, want %s", i+1, set.Columns, expected.column)
+					}
+					values, err := set.Row(0)
+					if err != nil || len(values) != 1 || values[0].Null || values[0].Text != expected.value {
+						t.Fatalf("result set %d values: got %#v (%v), want %s", i+1, values, err, expected.value)
+					}
+				}
 			}
 			// Read and reapply the existing routine using its engine's replacement strategy.
 			plan, e := PrepareDefinition(a, &o, definition)
