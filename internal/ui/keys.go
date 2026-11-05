@@ -21,6 +21,10 @@ func (u *UI) customKey(k *tcell.EventKey) bool {
 			continue
 		}
 		switch action {
+		case "database":
+			u.switchDatabase()
+		case "complete":
+			u.complete()
 		case "theme":
 			u.chooseTheme()
 		case "run":

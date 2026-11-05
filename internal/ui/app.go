@@ -3,6 +3,7 @@ package ui
 import (
 	"context"
 	"fmt"
+	"github.com/atotto/clipboard"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"path/filepath"
@@ -25,6 +26,8 @@ type Tab struct {
 	Object              *db.Object
 	Catalog             []db.Object
 	Columns             map[string][]string
+	Databases           []string
+	SelectingDatabase   bool
 	Results             []*result.Store
 	Messages            []string
 	SelectedSet         int
@@ -44,6 +47,8 @@ type UI struct {
 	table                 *tview.Table
 	cfg                   config.Config
 	vault                 credentials.Store
+	openSession           func(context.Context, config.Profile, string) (*db.Session, error)
+	writeClipboard        func(string) error
 	palette               Palette
 	dialogCancel          func()
 	connectionFolder      string
@@ -52,6 +57,9 @@ type UI struct {
 	current               int
 	leader                bool
 	closing               bool
+	suggestions           *suggestionState
+	suppressSuggestions   bool
+	skipSuggestionMove    bool
 	wg                    sync.WaitGroup
 	ctx                   context.Context
 	cancel                context.CancelFunc
@@ -60,6 +68,8 @@ type UI struct {
 func New(path string, cfg config.Config) *UI {
 	ctx, cancel := context.WithCancel(context.Background())
 	u := &UI{app: tview.NewApplication(), cfg: cfg, configPath: path, ctx: ctx, cancel: cancel, vault: credentials.System{}}
+	u.openSession = db.Connect
+	u.writeClipboard = clipboard.WriteAll
 	if u.cfg.Folders == nil {
 		u.cfg.Folders = []string{"DEV", "QA", "PROD"}
 	}
@@ -82,6 +92,17 @@ func New(path string, cfg config.Config) *UI {
 	u.layout = tview.NewFlex().SetDirection(tview.FlexRow).AddItem(u.tabsBar, 1, 0, false).AddItem(body, 0, 1, true).AddItem(u.status, 1, 0, false).AddItem(u.help, 1, 0, false)
 	u.pages = tview.NewPages().AddPage("main", u.layout, true, true)
 	u.app.SetRoot(u.pages, true).EnableMouse(true).EnablePaste(true).SetInputCapture(u.key)
+	u.app.SetMouseCapture(func(event *tcell.EventMouse, action tview.MouseAction) (*tcell.EventMouse, tview.MouseAction) {
+		if state := u.suggestions; state != nil {
+			if x, y := event.Position(); state.List.InRect(x, y) {
+				consumed, _ := state.List.MouseHandler()(action, event, func(tview.Primitive) {})
+				if consumed {
+					return nil, action
+				}
+			}
+		}
+		return event, action
+	})
 	// tview holds its application lock while drawing. These hooks use widget
 	// focus flags, never Application.GetFocus/SetFocus.
 	u.app.SetBeforeDrawFunc(func(screen tcell.Screen) bool {
@@ -110,8 +131,18 @@ func (u *UI) newTab(from *Tab) {
 	t.Editor.Area.SetBorder(true)
 	u.style(t.Editor.Area)
 	t.Editor.Area.SetChangedFunc(func() { u.refreshBars() })
-	t.Editor.Area.SetMovedFunc(func() { u.refreshBars() })
-	t.Editor.OnMode = func(string) { u.refreshBars() }
+	t.Editor.Area.SetMovedFunc(func() {
+		u.refreshBars()
+		if u.active() == t {
+			u.updateSuggestions(false)
+		}
+	})
+	t.Editor.OnMode = func(mode string) {
+		u.refreshBars()
+		if u.active() == t && mode != "INSERT" {
+			u.hideSuggestions()
+		}
+	}
 	t.Editor.Search = func() { u.searchEditor() }
 	if from != nil {
 		t.Profile = from.Profile
@@ -121,10 +152,15 @@ func (u *UI) newTab(from *Tab) {
 	u.current = len(u.tabs) - 1
 	u.showTab()
 	if from != nil && t.Profile.Name != "" {
-		u.connect(t, t.Profile, t.Password)
+		p := t.Profile
+		if from.SelectingDatabase {
+			p.Database = ""
+		}
+		u.connect(t, p, t.Password)
 	}
 }
 func (u *UI) showTab() {
+	u.hideSuggestions()
 	t := u.active()
 	u.editorHost.Clear().AddItem(t.Editor.Area, 0, 1, true)
 	u.filterObjects()
@@ -137,6 +173,13 @@ func (u *UI) refreshBars() {
 		return
 	}
 	t := u.active()
+	if !u.leader {
+		if u.table.HasFocus() {
+			u.help.SetText(" Ctrl+C copy menu · y/Y all without/with headers · r/R row · c cell · e export · Ctrl+Q quit ")
+		} else {
+			u.help.SetText(defaultHelp)
+		}
+	}
 	var b strings.Builder
 	for i, x := range u.tabs {
 		name := fmt.Sprintf("Query %d", i+1)
@@ -173,7 +216,11 @@ func (u *UI) refreshBars() {
 	if width == 0 {
 		width = 80
 	}
-	u.status.SetText(modeStatus(u.palette, t.Editor.Mode, file, profile+" / "+t.Profile.Database, t.Status+busy, row+1, column+1, width))
+	database := t.Profile.Database
+	if t.SelectingDatabase {
+		database = "(select with F4)"
+	}
+	u.status.SetText(modeStatus(u.palette, t.Editor.Mode, file, profile+" / "+database, t.Status+busy, row+1, column+1, width))
 	u.refreshModeBorders()
 }
 func (u *UI) message(s string) { u.active().Status = s; u.refreshBars() }
@@ -262,6 +309,9 @@ func (u *UI) closeTab() {
 	}
 }
 func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
+	if u.suggestionKey(k) {
+		return nil
+	}
 	if k.Key() == tcell.KeyF3 && !u.closing {
 		if name, _ := u.pages.GetFrontPage(); name == "main" && u.customKey(k) {
 			return nil
@@ -276,6 +326,10 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 	if u.closing {
 		return nil
 	}
+	if k.Key() == tcell.KeyF4 {
+		u.switchDatabase()
+		return nil
+	}
 	if u.customKey(k) {
 		return nil
 	}
@@ -288,6 +342,13 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 	}
 	switch k.Key() {
 	case tcell.KeyCtrlC:
+		if u.table.HasFocus() {
+			u.copyMenu()
+		} else {
+			u.quit()
+		}
+		return nil
+	case tcell.KeyCtrlQ:
 		u.quit()
 		return nil
 	case tcell.KeyF1:
@@ -403,7 +464,7 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 	return k
 }
 
-const defaultHelp = " F1 help  F2 connect  F3 themes  F5 run  F6 objects  F7 editor  F8 results  F9 invoke  F10 cancel "
+const defaultHelp = " F1 help  F2 connect  F3 themes  F4 database  F5 run  F6 objects  F7 editor  F8 results  F9 invoke  F10 cancel "
 
 func (u *UI) filterObjects() {
 	if len(u.tabs) == 0 {
@@ -412,6 +473,18 @@ func (u *UI) filterObjects() {
 	u.objects.Clear()
 	t := u.active()
 	needle := strings.ToLower(u.search.GetText())
+	u.kind.SetDisabled(t.SelectingDatabase)
+	if t.SelectingDatabase {
+		u.objects.SetTitle(" Databases · Enter select · F4 ")
+		for _, name := range t.Databases {
+			n := name
+			if fuzzy(needle, strings.ToLower(n)) {
+				u.objects.AddItem(n, "database", 0, func() { p := t.Profile; p.Database = n; u.connect(t, p, t.Password) })
+			}
+		}
+		return
+	}
+	u.objects.SetTitle(" Objects · Enter definition ")
 	_, kind := u.kind.GetCurrentOption()
 	for _, object := range t.Catalog {
 		o := object
@@ -435,6 +508,9 @@ func fuzzy(needle, haystack string) bool {
 	return i == len(r)
 }
 func (u *UI) selectedObject() (db.Object, bool) {
+	if u.active().SelectingDatabase {
+		return db.Object{}, false
+	}
 	n := u.objects.GetCurrentItem()
 	if n < 0 || n >= u.objects.GetItemCount() {
 		return db.Object{}, false

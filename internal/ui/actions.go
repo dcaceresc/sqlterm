@@ -6,7 +6,6 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"os"
-	"sort"
 	"sqlterm/internal/config"
 	"sqlterm/internal/db"
 	"sqlterm/internal/history"
@@ -94,48 +93,6 @@ func (u *UI) searchEditor() {
 		u.app.SetFocus(t.Editor.Area)
 	})
 }
-func (u *UI) completionList(t *Tab, prefix string, start int, items map[string]string) {
-	names := make([]string, 0, len(items))
-	for name := range items {
-		match := strings.NewReplacer("[", "", "]", "", "`", "", "\"", "").Replace(name)
-		parts := strings.Split(match, ".")
-		if strings.HasPrefix(strings.ToLower(parts[len(parts)-1]), strings.ToLower(prefix)) {
-			names = append(names, name)
-		}
-	}
-	sort.Strings(names)
-	l := tview.NewList()
-	l.SetBorder(true).SetTitle(" Completion · " + prefix + " ")
-	for _, name := range names {
-		n := name
-		l.AddItem(n, items[n], 0, func() {
-			u.dismiss()
-			end := t.Editor.Cursor()
-			text := t.Editor.Area.GetText()
-			if end < len(text) && len(n) > 0 {
-				closing := byte(0)
-				switch n[0] {
-				case '[':
-					closing = ']'
-				case '"':
-					closing = '"'
-				case '`':
-					closing = '`'
-				}
-				if closing != 0 && text[end] == closing {
-					end++
-				}
-			}
-			t.Editor.Area.Replace(start, end, n)
-			u.app.SetFocus(t.Editor.Area)
-		})
-	}
-	if len(names) == 0 {
-		u.message("No completions")
-		return
-	}
-	u.popup(l, 100, min(26, 4+len(names)*2))
-}
 func (u *UI) showHistory() {
 	if !u.cfg.History {
 		u.confirm("Enable local SQL history? Statements may contain sensitive literals. Invocation parameter values are excluded.", func() {
@@ -195,6 +152,10 @@ func (u *UI) showHistory() {
 }
 func (u *UI) template() {
 	t := u.active()
+	if t.SelectingDatabase {
+		u.message("Choose a database first (F4)")
+		return
+	}
 	if t.Session == nil {
 		u.message("Connect first")
 		return
@@ -235,6 +196,10 @@ func (u *UI) template() {
 }
 func (u *UI) applyDefinition() {
 	t := u.active()
+	if t.SelectingDatabase {
+		u.message("Choose a database first (F4)")
+		return
+	}
 	if t.Session == nil {
 		u.message("Connect first")
 		return

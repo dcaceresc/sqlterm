@@ -50,6 +50,26 @@ Prueba nativa de Windows mediante PTY: NORMAL azul con cursor de bloque,
 INSERT verde con cursor de barra, vuelta con Esc y VISUAL violeta; se observaron
 las secuencias de cursor correspondientes y la salida terminó con código 0.
 
+Actualización 0.1.6: copia TSV con/sin cabeceras, orden visible, NULL y caracteres
+especiales; prueba de portapapeles mediante un backend simulado, incluidos errores.
+Perfiles sin BD: enumeración en el explorador, bloqueo del SQL en la base de entrada,
+selección con F4 y posterior carga de objetos, sin modificar el perfil persistido.
+
+Test connection: datos sin guardar, contraseña escrita o recuperada, cierre de la
+conexión temporal, cancelación y errores sin exponer contraseñas. IntelliSense:
+alias, identificadores entre comillas, dialectos, parámetros de procedimientos,
+exclusión de comentarios/cadenas, foco de escritura conservado y aceptación con Tab.
+Las pruebas de flujos de conexión usan drivers simulados, sin servidores reales.
+Prueba nativa Windows mediante PTY: sugerencia automática de SELECT y aceptación
+con Tab conservando INSERT; botón Test connection visible en 80×24, respuesta de
+error al probar 127.0.0.1:1 y salida limpia. No se creó el archivo de configuración
+temporal, confirmando que la prueba no guardó el perfil.
+
+Actualización 0.1.7: reproducido el panic de la conversión UTF-16 de Windows con
+filas TSV que contienen NUL, sin modificar el portapapeles del usuario. Pruebas de
+copia de filas y conjuntos con/sin cabeceras, escape de NUL sin alterar los datos,
+y recuperación de un panic del backend seguida de otra copia en la misma UI.
+
 ## Pendiente en entornos externos
 
 No se proporcionaron servidores de prueba ni credenciales; Docker no está

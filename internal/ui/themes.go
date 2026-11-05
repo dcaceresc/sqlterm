@@ -70,6 +70,9 @@ func (u *UI) applyTheme(id string) {
 		u.style(t.Editor.Area)
 	}
 	u.refreshBars()
+	if u.suggestions != nil {
+		u.style(u.suggestions.List)
+	}
 }
 
 // Style existing instances rather than changing tview's process-global defaults.
@@ -92,6 +95,8 @@ func (u *UI) style(p tview.Primitive) {
 		box.SetTitleColor(t.Accent)
 	}
 	switch w := p.(type) {
+	case *suggestionPopup:
+		u.style(w.list)
 	case *centered:
 		u.style(w.Flex)
 	case *tview.Flex:

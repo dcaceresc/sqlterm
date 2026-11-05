@@ -17,28 +17,59 @@ func (u *UI) connect(t *Tab, p config.Profile, password string) {
 		return
 	}
 	u.task(t, "Connect", func(ctx context.Context) (func(), error) {
-		s, e := db.Connect(ctx, p, password)
+		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+		defer cancel()
+		s, e := u.openSession(ctx, p, password)
 		if e != nil {
 			return func() { u.connectionFailure(p, e) }, e
+		}
+		selectDatabase := strings.TrimSpace(p.Database) == ""
+		var databases []string
+		if selectDatabase {
+			var err error
+			databases, err = s.Adapter.Databases(ctx, s.Conn)
+			if err != nil {
+				s.Close()
+				return nil, err
+			}
 		}
 		return func() {
 			if t.Session != nil {
 				t.Session.Close()
 			}
 			t.Session = s
+			for _, r := range t.Results {
+				r.Close()
+			}
+			t.Results = nil
+			t.Order = nil
+			t.Messages = nil
+			t.SelectedSet = 0
 			t.Profile = s.Profile
 			t.Password = password
 			t.Object = nil
 			t.Catalog = nil
 			t.Columns = map[string][]string{}
+			t.SelectingDatabase = selectDatabase
+			t.Databases = databases
+			t.Original = ""
 			if u.active() == t {
+				u.hideSuggestions()
+				u.search.SetText("")
+				u.kind.SetCurrentOption(0)
 				u.filterObjects()
+				u.showResults()
 			}
-			u.refreshCatalogTab(t)
+			if selectDatabase {
+				t.Status = "Choose a database in the explorer or press F4"
+			} else {
+				u.refreshCatalogTab(t)
+			}
 		}, nil
 	})
 }
 func (u *UI) disconnect() {
+	u.hideSuggestions()
 	t := u.active()
 	if t.Busy {
 		u.message("Cancel execution before disconnecting")
@@ -51,6 +82,8 @@ func (u *UI) disconnect() {
 	t.Password = ""
 	t.Catalog = nil
 	t.Columns = map[string][]string{}
+	t.Databases = nil
+	t.SelectingDatabase = false
 	t.Status = "Disconnected"
 	u.filterObjects()
 	u.refreshBars()
@@ -64,6 +97,18 @@ func (u *UI) refreshCatalogTab(t *Tab) {
 	u.task(t, "Refresh catalog", func(ctx context.Context) (func(), error) {
 		ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 		defer cancel()
+		if t.SelectingDatabase {
+			names, err := t.Session.Adapter.Databases(ctx, t.Session.Conn)
+			if err != nil {
+				return nil, err
+			}
+			return func() {
+				t.Databases = names
+				if u.active() == t {
+					u.filterObjects()
+				}
+			}, nil
+		}
 		objects, e := t.Session.Adapter.Catalog(ctx, t.Session.Conn)
 		if e != nil {
 			return nil, e
@@ -134,6 +179,7 @@ func (u *UI) switchDatabase() {
 		}
 		return func() {
 			l := tview.NewList()
+			t.Databases = names
 			l.SetBorder(true).SetTitle(" Change database · opens a fresh connection ")
 			for _, name := range names {
 				n := name
@@ -147,6 +193,10 @@ func (u *UI) execute() {
 	t := u.active()
 	if t.Session == nil {
 		u.message("Connect first")
+		return
+	}
+	if t.SelectingDatabase {
+		u.message("Choose a database first (F4)")
 		return
 	}
 	text, _, _ := t.Editor.Area.GetSelection()
@@ -231,6 +281,10 @@ func (u *UI) run(t *Tab, sqlText string, work func(context.Context, func(db.Even
 }
 func (u *UI) invokeSelected() {
 	t := u.active()
+	if t.SelectingDatabase {
+		u.message("Choose a database first (F4)")
+		return
+	}
 	if t.Session == nil {
 		u.message("Connect first")
 		return
@@ -292,75 +346,4 @@ func (u *UI) parameterForm(t *Tab, o db.Object, params []db.Parameter) {
 	list.AddItem(form, 0, 1, true)
 	u.popup(list, 110, min(32, 8+len(params)*4))
 }
-func (u *UI) complete() {
-	t := u.active()
-	if t.Session == nil {
-		u.message("Connect first")
-		return
-	}
-	if t.Busy {
-		u.message("Wait for catalog/query operation")
-		return
-	}
-	// Load missing column metadata on demand; canceled work never changes editor text.
-	var missing []db.Object
-	for _, o := range t.Catalog {
-		if (o.Kind == "table" || o.Kind == "view") && mentionsObject(t.Editor.Area.GetText(), o) {
-			if _, ok := t.Columns[o.Label()]; !ok {
-				missing = append(missing, o)
-			}
-		}
-	}
-	show := func() {
-		prefix, start := t.Editor.Prefix()
-		items := map[string]string{}
-		keywords := "SELECT FROM WHERE JOIN LEFT RIGHT INNER OUTER ON GROUP BY ORDER HAVING INSERT INTO VALUES UPDATE SET DELETE CREATE ALTER DROP AS DISTINCT NULL IS NOT AND OR WITH BEGIN COMMIT ROLLBACK CASE WHEN THEN ELSE END UNION ALL EXISTS IN LIKE ASC DESC"
-		switch t.Profile.Engine {
-		case "sqlserver":
-			keywords += " TOP OUTPUT DECLARE EXEC EXECUTE GO PRINT TRY CATCH MERGE"
-		case "mysql":
-			keywords += " LIMIT OFFSET CALL DELIMITER SHOW EXPLAIN REPLACE"
-		case "postgres":
-			keywords += " LIMIT OFFSET CALL RETURNING DO LANGUAGE EXPLAIN"
-		}
-		for _, k := range strings.Fields(keywords) {
-			items[k] = "keyword"
-		}
-		for _, o := range t.Catalog {
-			name := t.Session.Adapter.Quote(o.Schema) + "." + t.Session.Adapter.Quote(o.Name)
-			if start > 0 && t.Editor.Area.GetText()[start-1] == '.' {
-				name = t.Session.Adapter.Quote(o.Name)
-			}
-			items[name] = o.Kind + " " + o.Signature
-			for _, c := range t.Columns[o.Label()] {
-				items[t.Session.Adapter.Quote(c)] = "column · " + o.Label()
-			}
-		}
-		u.completionList(t, prefix, start, items)
-	}
-	if len(missing) == 0 {
-		show()
-		return
-	}
-	u.task(t, "Load columns", func(ctx context.Context) (func(), error) {
-		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
-		defer cancel()
-		columns := map[string][]string{}
-		for _, o := range missing {
-			c, e := t.Session.Adapter.Columns(ctx, t.Session.Conn, o)
-			if e != nil {
-				return nil, e
-			}
-			columns[o.Label()] = c
-		}
-		return func() {
-			for k, v := range columns {
-				t.Columns[k] = v
-			}
-			show()
-		}, nil
-	})
-}
-func mentionsObject(sql string, o db.Object) bool {
-	return strings.Contains(strings.ToLower(sql), strings.ToLower(o.Name))
-}
+func (u *UI) complete() { u.updateSuggestions(true) }

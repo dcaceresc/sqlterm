@@ -79,7 +79,7 @@ func TestProfileFormTrustAndSavedPassword(t *testing.T) {
 	u.pages.SetRect(0, 0, 80, 24)
 	u.pages.Draw(screen)
 	screen.Show()
-	if text := screenText(screen); !strings.Contains(text, "Trust server certificate") || !strings.Contains(text, "Encrypt connection") || strings.Contains(text, "secret with spaces") {
+	if text := screenText(screen); !strings.Contains(text, "Trust server certificate") || !strings.Contains(text, "Encrypt connection") || !strings.Contains(text, "Test connection") || strings.Contains(text, "secret with spaces") {
 		t.Fatal("connection options must fit the small terminal without exposing the password")
 	}
 	saveForm(u, f)

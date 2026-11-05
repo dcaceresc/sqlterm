@@ -31,7 +31,7 @@ func (e *Editor) mode(m string) {
 		e.OnMode(m)
 	}
 }
-func (e *Editor) SetText(s string) { e.Area.SetText(s, false); e.mode("NORMAL") }
+func (e *Editor) SetText(s string) { e.mode("NORMAL"); e.Area.SetText(s, false) }
 func (e *Editor) Cursor() int {
 	_, _, end := e.Area.GetSelection()
 	if e.Mode == "VISUAL" {

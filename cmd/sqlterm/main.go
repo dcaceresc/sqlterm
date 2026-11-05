@@ -8,7 +8,7 @@ import (
 	"sqlterm/internal/ui"
 )
 
-var version = "0.1.5"
+var version = "0.1.7"
 
 func main() {
 	path := flag.String("config", config.DefaultPath(), "configuration file")
