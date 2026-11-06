@@ -9,7 +9,17 @@ import (
 
 // WriteTSV preserves the displayed row order. A nil row list copies all rows.
 // As in CSV export, SQL NULL is \N and text starting with \ is escaped.
+// It intentionally preserves literal text for existing non-spreadsheet consumers.
 func (s *Store) WriteTSV(ctx context.Context, w io.Writer, rows []int, headers bool) error {
+	return s.writeTSV(ctx, w, rows, headers, false)
+}
+
+// WriteSpreadsheetTSV prefixes formula-like fields for safe spreadsheet paste.
+func (s *Store) WriteSpreadsheetTSV(ctx context.Context, w io.Writer, rows []int, headers bool) error {
+	return s.writeTSV(ctx, w, rows, headers, true)
+}
+
+func (s *Store) writeTSV(ctx context.Context, w io.Writer, rows []int, headers, spreadsheetSafe bool) error {
 	c := csv.NewWriter(w)
 	c.Comma = '\t'
 	write := func(record []string) error {
@@ -24,7 +34,11 @@ func (s *Store) WriteTSV(ctx context.Context, w io.Writer, rows []int, headers b
 		return c.Write(record)
 	}
 	if headers {
-		if err := write(s.Columns); err != nil {
+		columns := s.Columns
+		if spreadsheetSafe {
+			columns = spreadsheetSafeRecord(columns)
+		}
+		if err := write(columns); err != nil {
 			return err
 		}
 	}
@@ -54,6 +68,9 @@ func (s *Store) WriteTSV(ctx context.Context, w io.Writer, rows []int, headers b
 					values[j] = `\` + v.Text
 				}
 			}
+		}
+		if spreadsheetSafe {
+			values = spreadsheetSafeRecord(values)
 		}
 		if err = write(values); err != nil {
 			return err

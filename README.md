@@ -47,7 +47,9 @@ terminal habitual; no se requiere una extensión del editor.
 2. Introduce la contraseña en el campo oculto, guarda el perfil y selecciónalo.
    **Test connection** permite verificar los datos antes de guardar; durante la
    prueba se convierte en **Cancel test**. No guarda el perfil ni la contraseña,
-   y cierra la conexión temporal al terminar.
+   y cierra la conexión temporal al terminar. Si cambias motor, servidor, puerto
+   o usuario de un perfil con credencial guardada, debes volver a introducir la
+   contraseña antes de probarlo o guardarlo.
 3. Pulsa **F6** y busca el procedimiento por nombre. Puedes filtrar por tipo.
 4. **Enter** abre su definición. **F9** abre sus parámetros: valor, `NULL` o
    predeterminado cuando el catálogo/definición lo permite.
@@ -171,9 +173,10 @@ el color del cursor requieren soporte del terminal; el indicador de modo y el
 borde siempre se muestran. No requiere una Nerd Font ni iconos especiales.
 
 Resultados: `Enter` muestra la celda completa; `/` busca; `s/S` ordena la columna
-seleccionada ascendente/descendente; `e` exporta; `m` muestra mensajes;
-`[`/`]` cambia de conjunto. La ordenación es lexical y coloca `NULL` primero
-en ascendente; la exportación conserva el orden original del servidor.
+seleccionada ascendente/descendente; `e` abre las opciones de exportación CSV
+segura, CSV literal y JSON; `m` muestra mensajes; `[`/`]` cambia de conjunto.
+La ordenación es lexical y coloca `NULL` primero en ascendente; la exportación
+conserva el orden original del servidor.
 
 Para copiar resultados al portapapeles:
 
@@ -186,10 +189,11 @@ Para copiar resultados al portapapeles:
 | v | Iniciar / quitar selección de un rango de filas; mueve el cursor y usa Ctrl+C |
 | + / - | Ampliar / reducir el ancho de la columna activa |
 
-Enter abre el inspector con el valor completo y un botón de copia. La línea de
-detalle muestra el nombre completo de la columna y su posición. `NULL` indica
-SQL NULL y `""` una cadena vacía. El orden con s/S es léxico y local a las filas
-recibidas. El menú de copia indica el origen, alcance y cantidad de filas.
+Enter abre el inspector con el valor completo y botones de copia segura o
+literal. La línea de detalle muestra el nombre completo de la columna y su
+posición. `NULL` indica SQL NULL y `""` una cadena vacía. El orden con s/S es
+léxico y local a las filas recibidas. El menú de copia indica el origen, alcance
+y cantidad de filas; su opción predeterminada es segura para hojas de cálculo.
 
 El menú de copia se cierra con Esc, Ctrl+C o un clic fuera de él. Al cambiar de
 panel con F6/F7/F8 también se cierra. Ctrl+C permite abrirlo de nuevo desde el
@@ -201,11 +205,17 @@ y cambian de panel. F2/F3/F4 permiten abrir otro selector. Cancelar el selector
 de temas revierte la vista previa.
 
 Las filas se copian como TSV, en el orden visible de la cuadrícula, conservando
-tabulaciones y saltos de línea mediante comillas. SQL NULL usa `\N`, igual que CSV.
-Los caracteres NUL se representan como `\0` al copiar, sin modificar los resultados.
-Los fallos del portapapeles se muestran en la barra de estado y mantienen abierta la aplicación.
-La copia espera a que termine la consulta. En Linux se requiere un proveedor de
-portapapeles compatible disponible en la sesión, como `xclip` o `xsel`.
+tabulaciones y saltos de línea mediante comillas. Los atajos `c`, `r/R`, `y/Y`,
+la selección con `v`, el menú y el botón seguro del inspector anteponen `'` a
+texto cuyo primer carácter significativo (tras espacios o controles) es `=`,
+`+`, `-` o `@`. Así una hoja de cálculo no lo activa como fórmula al pegarlo.
+Esto también protege valores con apariencia numérica negativa, como `-42`; usa
+la opción **Literal** solo cuando necesites el texto exacto y confíes en los datos.
+La transformación afecta únicamente la salida, nunca el SQL ni los resultados
+almacenados. SQL NULL usa `\N`, igual que CSV. Los caracteres NUL se representan
+como `\0` al copiar. Los fallos del portapapeles se muestran en la barra de estado
+y mantienen abierta la aplicación. La copia espera a que termine la consulta.
+En Linux se requiere un proveedor compatible, como `xclip` o `xsel`.
 
 ## Base de datos opcional
 
@@ -310,9 +320,13 @@ independiente. En JSON se guardan `encrypt` y `trust_server_certificate`.
 
 La contraseña se guarda automáticamente en el Administrador de credenciales de
 Windows, Keychain de macOS o Secret Service de Linux. El campo se muestra con
-asteriscos. Al editar, dejarlo vacío conserva la contraseña guardada; introducir
-otra la reemplaza. El JSON contiene únicamente un `credential_id`, nunca la
-contraseña. Al eliminar el perfil también se elimina su credencial.
+asteriscos. Al editar nombre, carpeta o base de datos, dejarlo vacío conserva la
+contraseña guardada. Cambiar motor, servidor, puerto efectivo o usuario exige
+volver a introducirla para probar o guardar; así la credencial anterior no se
+reutiliza con otro destino. Introducir otra contraseña la reemplaza. El JSON
+contiene únicamente un `credential_id`, nunca la contraseña. Al eliminar el
+perfil también se elimina su credencial. Los errores de conexión ocultan tanto
+la contraseña literal como sus formas codificadas dentro de una URL o DSN.
 
 Linux requiere una sesión de Secret Service disponible, por ejemplo GNOME Keyring
 o un proveedor compatible. Si el almacén no está disponible, la aplicación muestra
@@ -329,8 +343,11 @@ los demás atajos predeterminados siguen activos.
 El historial está desactivado por defecto; **Space h** permite activarlo.
 Se guarda junto al perfil, en `history.json`. Puede contener literales sensibles
 escritos en SQL. Los valores del formulario de invocación se excluyen del
-historial. Desactivarlo conserva los registros anteriores; **Clear history**
-los elimina. No se guarda el contenido del editor automáticamente al salir.
+historial. Las actualizaciones reemplazan el archivo de forma atómica y se
+coordinan entre procesos de SQLTerm que usan la misma ruta para no perder
+consultas concurrentes. Desactivarlo conserva los registros anteriores; **Clear
+history** los elimina. No se guarda el contenido del editor automáticamente al
+salir.
 
 ## Scripts y cambios en el servidor
 
@@ -380,10 +397,15 @@ La ordenación conserva en memoria únicamente índices de filas. CSV/JSON recor
 el conjunto completo sin cargarlo entero. La exportación exige un archivo nuevo;
 no sobrescribe archivos existentes y elimina exportaciones parciales canceladas.
 
-CSV representa `NULL` como `\N` y antepone otra barra a textos que empiezan por
-`\`, de modo que `NULL`, cadena vacía y el texto literal `\N` son distinguibles.
-JSON usa `{"columns":[...],"rows":[[...]]}`, conserva nombres de columna repetidos,
-representa SQL NULL como `null` y los valores no nulos como texto.
+Al pulsar `e` se elige explícitamente **Spreadsheet-safe CSV**, **Literal CSV**
+o **JSON**; el modo no depende del sufijo escrito. CSV seguro aplica a cabeceras
+y celdas la misma protección con `'` descrita para la copia. CSV literal conserva
+el texto exacto y advierte que no es apropiado para datos no confiables que vayan
+a abrirse en una hoja de cálculo. Ambos representan `NULL` como `\N` y anteponen
+otra barra a textos que empiezan por `\`, de modo que `NULL`, cadena vacía y el
+texto literal `\N` son distinguibles. JSON no cambia: usa
+`{"columns":[...],"rows":[[...]]}`, conserva nombres repetidos, representa SQL
+NULL como `null` y los valores no nulos como texto.
 
 ## Pruebas
 

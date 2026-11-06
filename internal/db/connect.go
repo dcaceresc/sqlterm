@@ -15,6 +15,7 @@ import (
 	"net/url"
 	"os"
 	"sqlterm/internal/config"
+	"sqlterm/internal/diagnostic"
 	"strconv"
 	"strings"
 	"sync/atomic"
@@ -174,11 +175,5 @@ func sqlServerDSN(p config.Profile, password, addr, mode string) string {
 	return u.String()
 }
 func redact(e error, secrets ...string) error {
-	s := e.Error()
-	for _, v := range secrets {
-		if v != "" {
-			s = strings.ReplaceAll(s, v, "[redacted]")
-		}
-	}
-	return fmt.Errorf("%s", s)
+	return diagnostic.Redact(e, secrets...)
 }

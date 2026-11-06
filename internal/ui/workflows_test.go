@@ -305,10 +305,23 @@ func TestConnectionButtonUsesUnsavedFieldsAndDoesNotSave(t *testing.T) {
 		f := currentForm(u)
 		f.GetFormItem(6).(*tview.InputField).SetText("")
 		f.GetButton(1).InputHandler()(tcell.NewEventKey(tcell.KeyEnter, 0, 0), func(p tview.Primitive) { u.app.SetFocus(p) })
+		if text := f.GetFormItem(10).(*tview.TextView).GetText(false); !strings.Contains(text, "enter the password again") {
+			t.Errorf("changed endpoint did not require a password: %q", text)
+		}
+		f.GetFormItem(2).(*tview.InputField).SetText("old")
+		f.GetFormItem(3).(*tview.InputField).SetText("1433")
+		f.GetButton(1).InputHandler()(tcell.NewEventKey(tcell.KeyEnter, 0, 0), func(p tview.Primitive) { u.app.SetFocus(p) })
 	})
-	<-opened
+	select {
+	case profile := <-opened:
+		if profile.Host != "old" {
+			t.Errorf("restored endpoint was not tested: %+v", profile)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("restored endpoint test did not open connection")
+	}
 	if password := <-closed; password != "stored password" {
-		t.Error("test did not reuse saved password")
+		t.Error("unchanged endpoint did not reuse saved password")
 	}
 	waitUI(t, u, func() bool {
 		return strings.Contains(currentForm(u).GetFormItem(10).(*tview.TextView).GetText(false), "successful")
@@ -330,11 +343,11 @@ func TestConnectionButtonCanCancelAndRedactsErrors(t *testing.T) {
 		f := currentForm(u)
 		f.GetFormItem(2).(*tview.InputField).SetText("localhost")
 		f.GetFormItem(5).(*tview.InputField).SetText("u")
-		f.GetFormItem(6).(*tview.InputField).SetText("secret-value")
+		f.GetFormItem(6).(*tview.InputField).SetText("secret/value")
 		u.openSession = func(ctx context.Context, _ config.Profile, _ string) (*db.Session, error) {
 			close(started)
 			<-ctx.Done()
-			return nil, errors.New("cancelled while sending secret-value")
+			return nil, errors.New("cancelled while sending secret%2Fvalue")
 		}
 		f.GetButton(1).InputHandler()(tcell.NewEventKey(tcell.KeyEnter, 0, 0), func(p tview.Primitive) { u.app.SetFocus(p) })
 	})
@@ -353,8 +366,8 @@ func TestConnectionButtonCanCancelAndRedactsErrors(t *testing.T) {
 	waitUI(t, u, func() bool { return currentForm(u).GetButton(1).GetLabel() == "Test connection" })
 	u.app.QueueUpdateDraw(func() {
 		text := currentForm(u).GetFormItem(10).(*tview.TextView).GetText(false)
-		if !strings.Contains(text, "failed") || strings.Contains(text, "secret-value") {
-			t.Error("test failed to report or redact error")
+		if !strings.Contains(text, "failed") || strings.Contains(text, "secret/value") || strings.Contains(text, "secret%2Fvalue") {
+			t.Error("test failed to report or redact encoded error")
 		}
 		if len(u.cfg.Profiles) != 0 {
 			t.Error("test saved a profile")

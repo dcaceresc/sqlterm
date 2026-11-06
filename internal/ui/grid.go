@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	"path/filepath"
 	"sqlterm/internal/result"
 	"strconv"
 	"strings"
@@ -257,8 +256,27 @@ func (u *UI) export() {
 		u.message(u.tr("Wait until execution finishes"))
 		return
 	}
-	u.prompt(u.tr("Export complete set to new .csv or .json file"), "results.csv", false, func(path string) {
-		format := strings.TrimPrefix(strings.ToLower(filepath.Ext(path)), ".")
-		u.task(t, "Export", func(ctx context.Context) (func(), error) { return nil, s.ExportContext(ctx, path, format) })
+	l := tview.NewList().ShowSecondaryText(false)
+	l.SetBorder(true).SetTitle(u.tr(" Export complete received set "))
+	l.AddItem(u.tr("Spreadsheet-safe CSV · prefixes formula-like text"), "", 0, func() {
+		u.exportPrompt(t, s, "results.csv", "csv", true)
+	})
+	l.AddItem(u.tr("Literal CSV · not safe for untrusted spreadsheet data"), "", 0, func() {
+		u.exportPrompt(t, s, "results.csv", "csv", false)
+	})
+	l.AddItem(u.tr("JSON · literal values unchanged"), "", 0, func() {
+		u.exportPrompt(t, s, "results.json", "json", false)
+	})
+	u.popup(l, 82, 8)
+}
+
+func (u *UI) exportPrompt(t *Tab, s *result.Store, initial, format string, spreadsheetSafe bool) {
+	u.prompt(u.tr("Export complete set to new file"), initial, false, func(path string) {
+		u.task(t, "Export", func(ctx context.Context) (func(), error) {
+			if spreadsheetSafe {
+				return nil, s.ExportSpreadsheetContext(ctx, path, format)
+			}
+			return nil, s.ExportContext(ctx, path, format)
+		})
 	})
 }
