@@ -317,7 +317,9 @@ e edit profile, r rename folder, d delete empty folder, / search.
 Results: [ / ] previous/next result set; Enter inspect cell; m messages;
 / search rows; s sort selected column ascending; S descending; e export.
 Ctrl+C copy menu; y/Y copy all without/with headers; r/R current row;
-c current cell. Clipboard rows are TSV in displayed order.
+c current cell. Copy shortcuts and CSV default to spreadsheet-safe text;
+menus expose literal copy/CSV with an untrusted-data warning. Clipboard rows
+are TSV in displayed order. JSON remains literal and unchanged.
 Sorting is lexical, NULL first ascending. Export includes the complete set.
 
 SQL Server: GO separates batches. MySQL: DELIMITER for routine scripts.
