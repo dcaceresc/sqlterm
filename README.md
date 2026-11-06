@@ -68,8 +68,9 @@ Para consultas libres, **Ctrl+N** crea otra pestaña con una conexión independi
 bloques de 1000 filas por defecto. Al llegar al final de lo cargado, usa
 **↓**, **Ctrl+N**, **PageDown**, **End**, **j** o la rueda hacia abajo para pedir
 un bloque más. **F10** detiene la recepción y conserva las filas parciales para
-copiarlas o exportarlas. Una pestaña admite una operación a la vez; las demás
-pueden ejecutar en paralelo. **Alt+1…9** cambia de pestaña.
+copiarlas o exportarlas. Una sentencia a la vez por pestaña: si la pestaña tiene
+una lectura en pausa, una nueva ejecución la cancela y libera la conexión antes
+de empezar; las demás pestañas pueden ejecutar en paralelo. **Alt+1…9** cambia de pestaña.
 
 ## Capacidades
 
@@ -184,11 +185,24 @@ conserva el orden original del servidor.
 ### Recepción incremental de resultados
 
 Cada ejecución obtiene primero `result_block_size` filas (1000 por defecto) y
-queda en estado **En pausa** sin marcar la pestaña como libre. Solo una intención
-real de desplazamiento al final de las filas cargadas —↓, Ctrl+N, PageDown, End,
-`j` o rueda hacia abajo— solicita el bloque siguiente del conjunto activo. Dibujar
-la interfaz, cambiar de pestaña, seleccionar otro conjunto o actualizar barras no
-solicita datos. Cada pestaña y ejecución conserva su propia solicitud pendiente.
+queda en estado **En pausa** sin bloquear la pestaña. Con la lectura en pausa la
+pestaña cuenta como inactiva: el tiempo mostrado se congela y no hay
+redibujado ni contador periódico. Solo una intención real de desplazamiento al
+final de las filas cargadas —↓, Ctrl+N, PageDown, End, `j` o rueda hacia abajo—
+solicita el bloque siguiente del conjunto activo y reanuda el tiempo desde el
+inicio original, sin reiniciarlo. Dibujar la interfaz, cambiar de pestaña,
+seleccionar otro conjunto o actualizar barras no solicita datos. Cada pestaña y
+ejecución conserva su propia solicitud pendiente.
+
+Una pausa no bloquea: **F5** o **F9** cancelan la lectura pausada, esperan a que
+el controlador cierre las filas y libere la conexión, y después ejecutan la nueva
+sentencia. Lo mismo ocurre con **F4**, desconectar, cerrar pestaña, salir y
+al cambiar o reconectar el perfil. Nunca hay dos sentencias simultáneas en la
+conexión de la pestaña. Mientras se libera la lectura, la barra de estado muestra
+**Liberando la ejecución en pausa…**; si la nueva operación no puede empezar, se
+informa el motivo. Esa espera no tiene tiempo límite: si el controlador no responde
+a la cancelación, la pestaña sigue ocupada con ese estado y F10 solo descarta la
+nueva operación en espera; no puede desbloquear la lectura.
 
 **F10** cancela la lectura pausada, espera la confirmación del controlador y deja
 las filas ya recibidas. La copia, ordenación y exportación mantienen su restricción

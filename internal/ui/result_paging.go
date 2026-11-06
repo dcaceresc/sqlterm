@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
@@ -21,6 +22,8 @@ func (u *UI) setResultPause(t *Tab, e *execution, ev db.Event) {
 		return
 	}
 	e.Pause = &resultPause{Set: ev.Set, Rows: ev.Rows, Token: ev.Token}
+	e.pausedFor = time.Since(e.Started)
+	e.pulsePaused.Store(true)
 	e.Phase = "Paused"
 	t.Status = fmt.Sprintf(u.tr("Paused after %d received rows · scroll at the end for more · F10 stop and keep rows"), ev.Rows)
 	if u.active() == t {
@@ -42,6 +45,7 @@ func (u *UI) requestResultBlock(t *Tab) bool {
 		return false
 	}
 	e.Pause = nil
+	e.pulsePaused.Store(false)
 	e.Phase = "Receiving rows"
 	t.Status = u.tr("Receiving next result block…")
 	u.refreshResultInfo()

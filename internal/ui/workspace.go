@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
@@ -20,6 +21,10 @@ type execution struct {
 	Phase, Error                                     string
 	Pager                                            *db.Pager
 	Pause                                            *resultPause
+	// pulsePaused stops the elapsed-time timer while the read is paused, and
+	// pausedFor keeps the displayed duration frozen at that pause moment.
+	pulsePaused atomic.Bool
+	pausedFor   time.Duration
 }
 
 func (u *UI) queryName(t *Tab) string {
@@ -85,8 +90,12 @@ func (u *UI) refreshResultInfo() {
 	info := u.tr("Not executed") + " · F5 " + u.tr(scope) + " · " + u.tr("Destination above")
 	if e != nil {
 		duration := e.Duration
-		if e.Phase == "Running" || e.Phase == "Receiving rows" || e.Phase == "Paused" || e.Phase == "Cancelling" {
+		switch e.Phase {
+		case "Running", "Receiving rows", "Cancelling":
 			duration = time.Since(e.Started)
+		case "Paused":
+			// A paused read is idle: keep the duration it reached when it paused.
+			duration = e.pausedFor
 		}
 		stale := ""
 		if e.EditorSQL != t.Editor.Area.GetText() {
@@ -142,9 +151,13 @@ func (u *UI) refreshResultInfo() {
 func (u *UI) cancelOperation() {
 	t := u.active()
 	if t.Cancel != nil {
+		// F10 stops everything: it also abandons a replacement that was queued
+		// while the paused read is being released.
+		t.Pending = nil
 		if t.Execution != nil && (t.Execution.Phase == "Running" || t.Execution.Phase == "Receiving rows" || t.Execution.Phase == "Paused") {
 			t.Execution.Phase = "Cancelling"
 			t.Execution.Pause = nil
+			t.Execution.pulsePaused.Store(false)
 		}
 		t.Status = u.tr("Cancelling · waiting for driver")
 		t.Cancel()
@@ -163,6 +176,10 @@ func (u *UI) executionPulse(t *Tab, e *execution) func() {
 			case <-stop:
 				return
 			case <-ticker.C:
+				// A paused read must look idle: no periodic redraw or elapsed tick.
+				if e.pulsePaused.Load() {
+					continue
+				}
 				u.post(func() {
 					if u.active() == t && t.Execution == e {
 						u.refreshResultInfo()

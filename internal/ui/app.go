@@ -43,6 +43,7 @@ type Tab struct {
 	Collapsed           map[string]bool
 	ColumnWidths        map[int]int
 	CopyAnchor          int
+	Pending             func()
 }
 type UI struct {
 	app                                                *tview.Application
@@ -291,7 +292,14 @@ func (u *UI) task(t *Tab, label string, work func(context.Context) (func(), erro
 			if apply != nil {
 				apply()
 			}
+			next := t.Pending
+			t.Pending = nil
 			u.refreshBars()
+			// Work queued while this task held the tab starts only now, after the
+			// task and its driver connection have actually finished.
+			if next != nil && !u.closing {
+				next()
+			}
 		})
 	}()
 }
@@ -326,19 +334,44 @@ func (u *UI) quit() {
 }
 func (u *UI) closeTab() {
 	t := u.active()
-	if t.Busy {
+	// A tab with a running (non-paused) statement is refused before any unsaved
+	// SQL prompt, as before. A paused read is released first and closed after.
+	if t.Busy && !pausedExecution(t) {
 		u.message(u.tr("Cancel execution before closing this tab"))
 		return
 	}
-	closeIt := func() {
+	var closeIt func()
+	closeIt = func() {
+		if t.Busy {
+			if u.releasePausedExecution(t, closeIt) {
+				return
+			}
+			u.message(u.tr("Cancel execution before closing this tab"))
+			return
+		}
+		// The release defers this removal past further input, so the tab is
+		// located by identity instead of the index that is active now.
+		index := -1
+		for i, tab := range u.tabs {
+			if tab == t {
+				index = i
+				break
+			}
+		}
+		if index < 0 {
+			return
+		}
 		u.dispose(t)
-		u.tabs = append(u.tabs[:u.current], u.tabs[u.current+1:]...)
+		u.tabs = append(u.tabs[:index], u.tabs[index+1:]...)
 		if len(u.tabs) == 0 {
 			u.newTab(nil)
-		} else {
-			u.current = min(u.current, len(u.tabs)-1)
-			u.showTab()
+			return
 		}
+		if index < u.current {
+			u.current--
+		}
+		u.current = min(u.current, len(u.tabs)-1)
+		u.showTab()
 	}
 	if t.Editor.Area.GetText() != t.Saved {
 		u.confirm(u.tr("Discard unsaved SQL in this tab?"), closeIt)
