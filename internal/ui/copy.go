@@ -38,7 +38,7 @@ func (u *UI) copyMenuMode(literal bool) {
 	for _, opt := range []struct {
 		label, scope string
 		headers      bool
-	}{{"Cell · 1 value", "cell", false}, {"Row · 1 row without headers", "row", false}, {"Row · 1 row with headers", "row", true}, {fmt.Sprintf(u.tr("Received results · %d rows without headers"), s.Count()), "all", false}, {fmt.Sprintf(u.tr("Received results · %d rows with headers"), s.Count()), "all", true}} {
+	}{{"Cell · 1 value", "cell", false}, {"Cell with header · column + value", "cell-header", false}, {"Row · 1 row without headers", "row", false}, {"Row · 1 row with headers", "row", true}, {fmt.Sprintf(u.tr("Received results · %d rows without headers"), s.Count()), "all", false}, {fmt.Sprintf(u.tr("Received results · %d rows with headers"), s.Count()), "all", true}} {
 		add(opt.label, opt.scope, opt.headers)
 	}
 	if t.CopyAnchor > 0 {
@@ -118,7 +118,7 @@ func (u *UI) copyResultsMode(scope string, headers, literal bool) {
 	}
 	u.task(t, "Copy results", func(ctx context.Context) (func(), error) {
 		var text string
-		if scope == "cell" {
+		if scope == "cell" || scope == "cell-header" {
 			r, err := store.Row(rows[0])
 			if err != nil {
 				return nil, err
@@ -126,11 +126,19 @@ func (u *UI) copyResultsMode(scope string, headers, literal bool) {
 			if col < 0 || col >= len(r) {
 				return nil, fmt.Errorf("select a column first")
 			}
-			text = r[col].Text
-			if r[col].Null {
-				text = `\N`
-			} else if !literal {
-				text = result.SpreadsheetSafeText(text)
+			if scope == "cell-header" {
+				var b strings.Builder
+				if err = store.WriteCellWithHeader(ctx, &b, rows[0], col, !literal); err != nil {
+					return nil, err
+				}
+				text = b.String()
+			} else {
+				text = r[col].Text
+				if r[col].Null {
+					text = `\N`
+				} else if !literal {
+					text = result.SpreadsheetSafeText(text)
+				}
 			}
 		} else {
 			var b strings.Builder
@@ -154,6 +162,9 @@ func (u *UI) copyResultsMode(scope string, headers, literal bool) {
 			t.Status = fmt.Sprintf(u.tr("Copied %d rows to clipboard"), count)
 			if scope == "cell" {
 				t.Status = u.tr("Copied 1 cell to clipboard")
+			}
+			if scope == "cell-header" {
+				t.Status = u.tr("Copied 1 cell with header to clipboard")
 			}
 			if escaped {
 				t.Status += ` (NUL escaped as \0)`

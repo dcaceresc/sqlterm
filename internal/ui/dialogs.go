@@ -314,12 +314,16 @@ Space T themes. Themes preview with arrows; Enter saves, Esc restores.
 Connections: Enter connect/expand, + add profile, n new folder,
 e edit profile, r rename folder, d delete empty folder, / search.
 
-Results: [ / ] previous/next result set; Enter inspect cell; m messages;
+Results: [ / ] previous/next result set; Enter inspect cell and copy the value
+or the column name with the value; m messages;
 / search rows; s sort selected column ascending; S descending; e export.
 Ctrl+C copy menu; y/Y copy all without/with headers; r/R current row;
-c current cell. Copy shortcuts and CSV default to spreadsheet-safe text;
-menus expose literal copy/CSV with an untrusted-data warning. Clipboard rows
-are TSV in displayed order. JSON remains literal and unchanged.
+c current cell. The menu also offers Cell with header: the selected cell's
+column name, a tab and its value in one TSV row, so a paste fills two adjacent
+cells of one spreadsheet row. Copy shortcuts and CSV default to spreadsheet-safe
+text, including both fields of Cell with header; menus expose literal copy/CSV
+with an untrusted-data warning. Clipboard rows are TSV in displayed order. JSON
+remains literal and unchanged.
 Sorting is lexical, NULL first ascending. Export includes the complete set.
 
 SQL Server: GO separates batches. MySQL: DELIMITER for routine scripts.
