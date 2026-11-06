@@ -47,7 +47,9 @@ terminal habitual; no se requiere una extensión del editor.
 2. Introduce la contraseña en el campo oculto, guarda el perfil y selecciónalo.
    **Test connection** permite verificar los datos antes de guardar; durante la
    prueba se convierte en **Cancel test**. No guarda el perfil ni la contraseña,
-   y cierra la conexión temporal al terminar.
+   y cierra la conexión temporal al terminar. Si cambias motor, servidor, puerto
+   o usuario de un perfil con credencial guardada, debes volver a introducir la
+   contraseña antes de probarlo o guardarlo.
 3. Pulsa **F6** y busca el procedimiento por nombre. Puedes filtrar por tipo.
 4. **Enter** abre su definición. **F9** abre sus parámetros: valor, `NULL` o
    predeterminado cuando el catálogo/definición lo permite.
@@ -310,9 +312,13 @@ independiente. En JSON se guardan `encrypt` y `trust_server_certificate`.
 
 La contraseña se guarda automáticamente en el Administrador de credenciales de
 Windows, Keychain de macOS o Secret Service de Linux. El campo se muestra con
-asteriscos. Al editar, dejarlo vacío conserva la contraseña guardada; introducir
-otra la reemplaza. El JSON contiene únicamente un `credential_id`, nunca la
-contraseña. Al eliminar el perfil también se elimina su credencial.
+asteriscos. Al editar nombre, carpeta o base de datos, dejarlo vacío conserva la
+contraseña guardada. Cambiar motor, servidor, puerto efectivo o usuario exige
+volver a introducirla para probar o guardar; así la credencial anterior no se
+reutiliza con otro destino. Introducir otra contraseña la reemplaza. El JSON
+contiene únicamente un `credential_id`, nunca la contraseña. Al eliminar el
+perfil también se elimina su credencial. Los errores de conexión ocultan tanto
+la contraseña literal como sus formas codificadas dentro de una URL o DSN.
 
 Linux requiere una sesión de Secret Service disponible, por ejemplo GNOME Keyring
 o un proveedor compatible. Si el almacén no está disponible, la aplicación muestra

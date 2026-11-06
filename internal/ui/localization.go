@@ -57,7 +57,7 @@ func (u *UI) spanishHelp() map[string]string {
 		"Editor":          "i INSERT · Esc NORMAL · v VISUAL · h/j/k/l · w/b · 0/$ · gg/G · yy/dd · y/d · p · u · Ctrl+R\nCtrl+Space IntelliSense; Tab/Enter aceptar. F5 ejecuta selección o script completo. * indica cambios sin guardar.\nAlt+Z activa/desactiva el ajuste de línea. Los números indican líneas reales del SQL; ↪ marca continuaciones visuales. Ambas preferencias se guardan y aparecen en Ctrl+P.",
 		"Objects":         "Buscar por nombre, esquema y tipo. Enter abre definiciones. Los grupos se expanden/contraen.\nCtrl+P: insertar nombre entre comillas, generar SELECT, invocar, actualizar o catálogo plano.",
 		"Results":         "Enter inspecciona la celda completa. NULL es SQL NULL; cadena vacía es \"\".\n/ buscar · s/S orden léxico de filas recibidas · [/] conjuntos · e exportar · y/Y copiar filas sin/con cabeceras · r/R fila · c celda · v seleccionar rango · +/- ancho de columna\nCtrl+C abre copia. Filas en TSV; NUL se representa como \\0. La exportación incluye todas las filas recibidas.",
-		"Connections":     "F2 perfiles y carpetas · / buscar · + añadir · e editar · n carpeta · r renombrar · d eliminar carpeta vacía · * favorito\nF4 busca bases. La nueva conexión sustituye la anterior solo tras conectar correctamente. Conserva SQL; no conserva transacciones, variables ni tablas temporales.\nF3: flechas vista previa, Enter guardar, Esc restaurar. Ctrl+Q salir; Ctrl+C copia o cancela diálogo.",
+		"Connections":     "F2 perfiles y carpetas · / buscar · + añadir · e editar · n carpeta · r renombrar · d eliminar carpeta vacía · * favorito\nF4 busca bases. La nueva conexión sustituye la anterior solo tras conectar correctamente. Conserva SQL; no conserva transacciones, variables ni tablas temporales.\nSi cambias motor, servidor, puerto o usuario, vuelve a escribir la contraseña antes de probar o guardar.\nF3: flechas vista previa, Enter guardar, Esc restaurar. Ctrl+Q salir; Ctrl+C copia o cancela diálogo.",
 	}
 	intro["All shortcuts"] = strings.Join([]string{intro["Getting started"], intro["Editor"], intro["Objects"], intro["Results"], intro["Connections"],
 		"F10 cancelar y esperar al controlador · F11 distribución · Ctrl+P o Space en NORMAL acciones\nCtrl+N nueva sesión · Alt+1..9 pestaña · Ctrl+O abrir · Ctrl+S guardar\nSpace c/f/x/p/a/r/n/w/o/q/h/e/b/d/t/T conserva los atajos de acciones.\nSQL Server: GO separa lotes. MySQL: DELIMITER en rutinas. PostgreSQL: cuerpos con dollar quoting.\nHistorial opcional; no guarda parámetros de invocación. Contraseñas en el almacén del sistema. Errores técnicos se conservan en el idioma del controlador."},
@@ -126,6 +126,7 @@ var spanish = map[string]string{
 	"Not tested":                                        "Sin probar",
 	"Testing connection…":                               "Probando conexión…",
 	"Enter the password to test this connection":        "Escribe la contraseña para probar esta conexión",
+	"Endpoint changed; enter the password again":        "Cambió el destino; vuelve a escribir la contraseña",
 	"Invalid port":                                      "Puerto inválido",
 	"Duplicate profile name in folder":                  "Nombre de conexión duplicado en carpeta",
 	"Save password":                                     "Guardar contraseña",
