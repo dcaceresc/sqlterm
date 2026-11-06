@@ -35,6 +35,14 @@ func replaceFile(from, to string) error {
 	return os.Rename(from, to)
 }
 
+// isTransientReplaceError reports whether a failed replacement is worth
+// retrying. On POSIX systems rename(2) replaces the destination even while it
+// is open, so the Windows access-denied/sharing class has no counterpart here
+// and a failed rename is always reported immediately.
+func isTransientReplaceError(error) bool {
+	return false
+}
+
 func syncHistoryDir(path string) error {
 	dir, err := os.Open(path)
 	if err != nil {
