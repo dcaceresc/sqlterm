@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"io"
 	"sqlterm/internal/result"
 	"strconv"
 	"strings"
@@ -117,7 +118,9 @@ func (u *UI) viewCell(row, col int) {
 	if v.Null {
 		text = "SQL NULL"
 	}
-	u.inspectText(fmt.Sprintf(u.tr("Cell · row %d · column %d: %s"), row, col+1, s.Columns[col]), text)
+	u.inspectCellText(fmt.Sprintf(u.tr("Cell · row %d · column %d: %s"), row, col+1, s.Columns[col]), s.Columns[col], func(ctx context.Context, w io.Writer, spreadsheetSafe bool) error {
+		return s.WriteCellWithHeader(ctx, w, n, col, spreadsheetSafe)
+	}, text)
 }
 func (u *UI) gridKey(k *tcell.EventKey) *tcell.EventKey {
 	u.resultNavigationDemand(k)
