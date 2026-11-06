@@ -221,7 +221,7 @@ Para copiar resultados al portapapeles:
 
 | Tecla en resultados | Acción |
 | --- | --- |
-| Ctrl+C | Menú para copiar celda, fila o todo el conjunto, con o sin cabeceras |
+| Ctrl+C | Menú para copiar celda, celda con cabecera, fila o todo el conjunto, con o sin cabeceras |
 | y / Y | Todo el conjunto sin / con cabeceras |
 | r / R | Fila actual sin / con cabeceras |
 | c | Celda actual |
@@ -229,10 +229,23 @@ Para copiar resultados al portapapeles:
 | + / - | Ampliar / reducir el ancho de la columna activa |
 
 Enter abre el inspector con el valor completo y botones de copia segura o
-literal. La línea de detalle muestra el nombre completo de la columna y su
+literal del valor, más la copia del nombre de columna con el valor en una sola
+fila TSV (segura por defecto; la variante literal lleva el mismo aviso). La línea
+de detalle muestra el nombre completo de la columna y su
 posición. `NULL` indica SQL NULL y `""` una cadena vacía. El orden con s/S es
 léxico y local a las filas recibidas. El menú de copia indica el origen, alcance
 y cantidad de filas; su opción predeterminada es segura para hojas de cálculo.
+
+El menú de Ctrl+C incluye **Celda con cabecera · columna + valor**, justo después
+de **Celda · 1 valor**. Copia una sola celda como nombre de columna, tabulador y
+valor en una única fila TSV; por ejemplo `nombre_cliente<TAB>ACME S.A.`. Al
+pegarla en una hoja de cálculo, la cabecera y el valor quedan en dos celdas
+contiguas de la misma fila. La cabecera es el nombre real de la columna
+seleccionada en el resultado y respeta el orden visible de la cuadrícula; los
+tabuladores o saltos de línea internos del valor se conservan entre comillas para
+que el pegado siga siendo una sola fila. En el modo seguro (predeterminado) la
+protección se aplica al nombre de la columna y al valor; la variante **Literal**
+del mismo menú deja ambos intactos. SQL NULL sigue representándose como `\N`.
 
 El menú de copia se cierra con Esc, Ctrl+C o un clic fuera de él. Al cambiar de
 panel con F6/F7/F8 también se cierra. Ctrl+C permite abrirlo de nuevo desde el
