@@ -44,6 +44,23 @@ func TestSQLServerCatalogWithoutModernAggregates(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+func TestGeneratedSelectUsesPagingInsteadOfHardcodedRowCaps(t *testing.T) {
+	for _, tc := range []struct {
+		engine, schema, name, want string
+	}{
+		{"sqlserver", "sales", "Order", "SELECT * FROM [sales].[Order];"},
+		{"postgres", "Sales", "Order", `SELECT * FROM "Sales"."Order";`},
+		{"mysql", "sales", "order", "SELECT * FROM `sales`.`order`;"},
+	} {
+		t.Run(tc.engine, func(t *testing.T) {
+			got, err := NewAdapter(tc.engine).Definition(context.Background(), nil, Object{Schema: tc.schema, Name: tc.name, Kind: "table"})
+			if err != nil || got != tc.want {
+				t.Fatalf("Definition() = %q, %v; want %q", got, err, tc.want)
+			}
+		})
+	}
+}
+
 func TestSQLServerTableOnlyCatalogNeedsNoParameterQuery(t *testing.T) {
 	database, mock, err := sqlmock.New()
 	if err != nil {

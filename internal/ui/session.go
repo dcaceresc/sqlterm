@@ -273,14 +273,23 @@ func (u *UI) run(t *Tab, sqlText string, work func(context.Context, func(db.Even
 	if selected, _, _ := t.Editor.Area.GetSelection(); selected != "" {
 		scope = "Execute selection"
 	}
-	e := &execution{ID: u.nextExecution, SQL: sqlText, EditorSQL: t.Editor.Area.GetText(), Source: u.queryName(t), Profile: t.Profile.DisplayName(), Database: t.Profile.Database, Scope: scope, Started: time.Now(), Phase: "Running"}
+	pager, err := db.NewPager(u.cfg.EffectiveResultBlockSize())
+	if err != nil {
+		u.message(err.Error())
+		return
+	}
+	e := &execution{ID: u.nextExecution, SQL: sqlText, EditorSQL: t.Editor.Area.GetText(), Source: u.queryName(t), Profile: t.Profile.DisplayName(), Database: t.Profile.Database, Scope: scope, Started: time.Now(), Phase: "Running", Pager: pager}
 	t.Execution = e
 	u.task(t, "Execute", func(ctx context.Context) (func(), error) {
+		ctx = db.WithPager(ctx, pager)
 		started := time.Now()
 		stopPulse := u.executionPulse(t, e)
 		defer stopPulse()
 		err := work(ctx, func(ev db.Event) {
 			u.post(func() {
+				if t.Execution != e {
+					return
+				}
 				switch ev.Kind {
 				case "columns":
 					t.Results = append(t.Results, ev.Store)
@@ -288,12 +297,14 @@ func (u *UI) run(t *Tab, sqlText string, work func(context.Context, func(db.Even
 						u.showResults()
 					}
 				case "rows":
-					if e.Phase != "Cancelling" {
+					if e.Phase != "Cancelling" && e.Phase != "Paused" {
 						e.Phase = "Receiving rows"
 					}
 					if u.active() == t {
 						u.refreshResultInfo()
 					}
+				case "paused":
+					u.setResultPause(t, e, ev)
 				case "message":
 					if len(t.Messages) < 2000 {
 						t.Messages = append(t.Messages, ev.Message)
@@ -306,7 +317,11 @@ func (u *UI) run(t *Tab, sqlText string, work func(context.Context, func(db.Even
 		elapsed := time.Since(started)
 		cancelled := ctx.Err() == context.Canceled
 		return func() {
+			if t.Execution != e {
+				return
+			}
 			e.Duration = elapsed
+			e.Pause = nil
 			e.Phase = "Completed"
 			if err != nil {
 				e.Phase = "Error"
