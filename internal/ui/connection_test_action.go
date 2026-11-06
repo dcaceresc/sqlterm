@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"github.com/rivo/tview"
 	"sqlterm/internal/config"
+	"sqlterm/internal/diagnostic"
 	"strconv"
 	"strings"
 	"time"
@@ -35,7 +36,11 @@ func testProfileFromForm(f *tview.Form, original config.Profile) (config.Profile
 	p.Encrypt = &encrypt
 	p.TrustServerCertificate = f.GetFormItem(8).(*tview.Checkbox).IsChecked()
 	p.TLS = ""
-	return p, f.GetFormItem(6).(*tview.InputField).GetText(), p.Validate()
+	password := f.GetFormItem(6).(*tview.InputField).GetText()
+	if endpointChangeRequiresPassword(original, p, password) {
+		return p, "", fmt.Errorf("%s", endpointChangedPasswordRequired)
+	}
+	return p, password, p.Validate()
 }
 func (u *UI) testConnection(f *tview.Form, result *tview.TextView, state *Tab, p config.Profile, password string) {
 	if state.Busy {
@@ -68,10 +73,7 @@ func (u *UI) testConnection(f *tview.Form, result *tview.TextView, state *Tab, p
 		}
 		message := successMessage
 		if err != nil {
-			message = err.Error()
-			if password != "" {
-				message = strings.ReplaceAll(message, password, "[redacted]")
-			}
+			message = diagnostic.Redact(err, password).Error()
 			message = failurePrefix + message
 		}
 		return func() { f.GetButton(1).SetLabel(u.tr("Test connection")); result.SetText(message) }, nil

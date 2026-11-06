@@ -211,7 +211,7 @@ func (u *UI) profileForm(index int) {
 			f.SetTitle(u.tr(" ") + e.Error() + " ")
 			return
 		}
-		p = config.Profile{Name: get(0), Folder: folder, Engine: engine, Host: get(2), Port: port, Database: get(4), User: get(5), CredentialID: p.CredentialID, PasswordEnv: p.PasswordEnv, Encrypt: &encrypt, TrustServerCertificate: trust, CAFile: p.CAFile}
+		p := config.Profile{Name: get(0), Folder: folder, Engine: engine, Host: get(2), Port: port, Database: get(4), User: get(5), CredentialID: p.CredentialID, PasswordEnv: p.PasswordEnv, Encrypt: &encrypt, TrustServerCertificate: trust, CAFile: p.CAFile}
 		if e = p.Validate(); e != nil {
 			f.SetTitle(u.tr(" ") + e.Error() + " ")
 			return
@@ -238,7 +238,7 @@ func (u *UI) profileForm(index int) {
 		}
 		profile, secret, err := testProfileFromForm(f, p)
 		if err != nil {
-			testResult.SetText(err.Error())
+			testResult.SetText(u.tr(err.Error()))
 			return
 		}
 		u.testConnection(f, testResult, testState, profile, secret)
@@ -324,6 +324,7 @@ SQL Server: GO separates batches. MySQL: DELIMITER for routine scripts.
 PostgreSQL: dollar-quoted function bodies are supported.
 Blank Database: choose from the explorer or press F4 before executing SQL.
 Connection form: Test connection uses unsaved fields and does not save them.
+Changing engine, host, port or user requires entering the password again before testing or saving.
 Each tab owns a connection. Queries run with the server's transaction rules;
 use BEGIN / COMMIT / ROLLBACK explicitly when needed.
 History is opt-in (Space h). Passwords are never saved in profiles.

@@ -17,6 +17,9 @@ func (u *UI) persistProfile(index int, p config.Profile, password string, replac
 	if index >= 0 {
 		oldID = u.cfg.Profiles[index].CredentialID
 	}
+	if index >= 0 && endpointChangeRequiresPassword(u.cfg.Profiles[index], p, password) {
+		return fmt.Errorf("%s", endpointChangedPasswordRequired)
+	}
 	newID := ""
 	if replaceSecret {
 		newID = uuid.NewString()
