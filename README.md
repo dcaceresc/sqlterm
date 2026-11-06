@@ -335,8 +335,11 @@ los demás atajos predeterminados siguen activos.
 El historial está desactivado por defecto; **Space h** permite activarlo.
 Se guarda junto al perfil, en `history.json`. Puede contener literales sensibles
 escritos en SQL. Los valores del formulario de invocación se excluyen del
-historial. Desactivarlo conserva los registros anteriores; **Clear history**
-los elimina. No se guarda el contenido del editor automáticamente al salir.
+historial. Las actualizaciones reemplazan el archivo de forma atómica y se
+coordinan entre procesos de SQLTerm que usan la misma ruta para no perder
+consultas concurrentes. Desactivarlo conserva los registros anteriores; **Clear
+history** los elimina. No se guarda el contenido del editor automáticamente al
+salir.
 
 ## Scripts y cambios en el servidor
 
