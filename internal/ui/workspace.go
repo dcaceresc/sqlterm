@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"sqlterm/internal/config"
+	"sqlterm/internal/db"
 )
 
 type execution struct {
@@ -17,6 +19,12 @@ type execution struct {
 	Started                                          time.Time
 	Duration                                         time.Duration
 	Phase, Error                                     string
+	Pager                                            *db.Pager
+	Pause                                            *resultPause
+	// pulsePaused stops the elapsed-time timer while the read is paused, and
+	// pausedFor keeps the displayed duration frozen at that pause moment.
+	pulsePaused atomic.Bool
+	pausedFor   time.Duration
 }
 
 func (u *UI) queryName(t *Tab) string {
@@ -61,7 +69,7 @@ func (u *UI) refreshWorkspace() {
 		u.objectDetail.SetText(o.Label())
 	}
 	if u.table.HasFocus() {
-		u.help.SetText(u.tr(" F1 Help  / Find  s/S Sort locally  Ctrl+C Copy  Enter Cell  e Export  F11 Layout "))
+		u.help.SetText(u.tr(" F1 Help  ↓/PgDn/End/j Scroll more  F10 Stop/keep  Ctrl+C Copy  e Export "))
 	} else if u.objects.HasFocus() || u.search.HasFocus() || u.kind.HasFocus() {
 		u.help.SetText(u.tr(" F1 Help  Enter Definition  Ctrl+P Actions  F7 Editor  F8 Results  F11 Layout "))
 	} else if u.lastWidth > 0 && u.lastWidth < 110 {
@@ -82,8 +90,12 @@ func (u *UI) refreshResultInfo() {
 	info := u.tr("Not executed") + " · F5 " + u.tr(scope) + " · " + u.tr("Destination above")
 	if e != nil {
 		duration := e.Duration
-		if e.Phase == "Running" || e.Phase == "Receiving rows" || e.Phase == "Cancelling" {
+		switch e.Phase {
+		case "Running", "Receiving rows", "Cancelling":
 			duration = time.Since(e.Started)
+		case "Paused":
+			// A paused read is idle: keep the duration it reached when it paused.
+			duration = e.pausedFor
 		}
 		stale := ""
 		if e.EditorSQL != t.Editor.Area.GetText() {
@@ -98,7 +110,11 @@ func (u *UI) refreshResultInfo() {
 				}
 			}
 		}
-		info = fmt.Sprintf("#%d %s │ %s / %s │ %s · %s%s%s\n%s · %s · F5 · Ctrl+P", e.ID, e.Source, e.Profile, e.Database, e.Started.Format("15:04:05"), duration.Round(time.Millisecond), stale, partial, u.tr(e.Phase), u.tr(e.Scope))
+		guidance := ""
+		if e.Phase == "Paused" && e.Pause != nil {
+			guidance = fmt.Sprintf(u.tr(" · %d received · scroll at end for more · F10 stop and keep rows"), e.Pause.Rows)
+		}
+		info = fmt.Sprintf("#%d %s │ %s / %s │ %s · %s%s%s\n%s%s · %s · F5 · Ctrl+P", e.ID, e.Source, e.Profile, e.Database, e.Started.Format("15:04:05"), duration.Round(time.Millisecond), stale, partial, u.tr(e.Phase), guidance, u.tr(e.Scope))
 	}
 	u.resultInfo.SetText(tview.Escape(info))
 	s := u.currentStore()
@@ -135,8 +151,13 @@ func (u *UI) refreshResultInfo() {
 func (u *UI) cancelOperation() {
 	t := u.active()
 	if t.Cancel != nil {
-		if t.Execution != nil && (t.Execution.Phase == "Running" || t.Execution.Phase == "Receiving rows") {
+		// F10 stops everything: it also abandons a replacement that was queued
+		// while the paused read is being released.
+		t.Pending = nil
+		if t.Execution != nil && (t.Execution.Phase == "Running" || t.Execution.Phase == "Receiving rows" || t.Execution.Phase == "Paused") {
 			t.Execution.Phase = "Cancelling"
+			t.Execution.Pause = nil
+			t.Execution.pulsePaused.Store(false)
 		}
 		t.Status = u.tr("Cancelling · waiting for driver")
 		t.Cancel()
@@ -155,6 +176,10 @@ func (u *UI) executionPulse(t *Tab, e *execution) func() {
 			case <-stop:
 				return
 			case <-ticker.C:
+				// A paused read must look idle: no periodic redraw or elapsed tick.
+				if e.pulsePaused.Load() {
+					continue
+				}
 				u.post(func() {
 					if u.active() == t && t.Execution == e {
 						u.refreshResultInfo()

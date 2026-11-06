@@ -80,7 +80,7 @@ func (a *adapter) Definition(ctx context.Context, c *sql.Conn, o Object) (string
 	switch a.engine {
 	case "sqlserver":
 		if o.Kind == "table" {
-			return "SELECT TOP (1000) * FROM " + a.qualified(o) + ";", nil
+			return "SELECT * FROM " + a.qualified(o) + ";", nil
 		}
 		e := c.QueryRowContext(ctx, `SELECT OBJECT_DEFINITION(CONVERT(int,@p1))`, o.ID).Scan(&text)
 		if e != nil {
@@ -88,7 +88,7 @@ func (a *adapter) Definition(ctx context.Context, c *sql.Conn, o Object) (string
 		}
 	case "postgres":
 		if o.Kind == "table" {
-			return "SELECT * FROM " + a.qualified(o) + " LIMIT 1000;", nil
+			return "SELECT * FROM " + a.qualified(o) + ";", nil
 		}
 		q := `SELECT pg_get_functiondef($1::oid)`
 		if o.Kind == "view" {
@@ -103,7 +103,7 @@ func (a *adapter) Definition(ctx context.Context, c *sql.Conn, o Object) (string
 		}
 	case "mysql":
 		if o.Kind == "table" {
-			return "SELECT * FROM " + a.qualified(o) + " LIMIT 1000;", nil
+			return "SELECT * FROM " + a.qualified(o) + ";", nil
 		}
 		kind := strings.ToUpper(o.Kind)
 		if kind != "PROCEDURE" && kind != "FUNCTION" && kind != "VIEW" {

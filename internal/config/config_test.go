@@ -1,6 +1,8 @@
 package config
 
 import (
+	"encoding/json"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -70,6 +72,54 @@ func TestDefaultPortsAndOverrides(t *testing.T) {
 		}
 	}
 }
+func TestResultBlockSizeLoadValidationAndPersistence(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		json string
+		want string
+	}{
+		{name: "negative", json: `{"result_block_size":-1}`, want: "result_block_size must be between 1 and 100000"},
+		{name: "too large", json: `{"result_block_size":100001}`, want: "result_block_size must be between 1 and 100000"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "config.json")
+			if err := os.WriteFile(path, []byte(tc.json), 0600); err != nil {
+				t.Fatal(err)
+			}
+			if _, err := Load(path); err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("Load error = %v, want %q", err, tc.want)
+			}
+		})
+	}
+
+	for _, size := range []int{1, 100000} {
+		path := filepath.Join(t.TempDir(), "config.json")
+		if err := os.WriteFile(path, []byte(fmt.Sprintf(`{"result_block_size":%d}`, size)), 0600); err != nil {
+			t.Fatal(err)
+		}
+		loaded, err := Load(path)
+		if err != nil || loaded.ResultBlockSize != size {
+			t.Fatalf("valid boundary %d rejected: %+v, %v", size, loaded, err)
+		}
+	}
+
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := os.WriteFile(path, []byte(`{"history":true}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	loaded, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	encoded, err := json.Marshal(loaded)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(encoded), `"result_block_size":1000`) {
+		t.Fatalf("missing/default block size was not normalized: %s", encoded)
+	}
+}
+
 func TestFolderNormalizationAndDuplicateNames(t *testing.T) {
 	normalized, err := NormalizeFolder(` DEV\ Project / QA `)
 	if err != nil || normalized != "DEV/Project/QA" {

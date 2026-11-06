@@ -1,6 +1,7 @@
 {
   "theme": "tokyo-night",
   "language": "es",
+  "result_block_size": 1000,
   "editor": {"word_wrap": false, "line_numbers": true},
   "layout": {"catalog_width": 30, "editor_percent": 45},
   "folders": ["DEV", "QA", "PROD"],

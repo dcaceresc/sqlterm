@@ -120,6 +120,10 @@ func (u *UI) viewCell(row, col int) {
 	u.inspectText(fmt.Sprintf(u.tr("Cell · row %d · column %d: %s"), row, col+1, s.Columns[col]), text)
 }
 func (u *UI) gridKey(k *tcell.EventKey) *tcell.EventKey {
+	u.resultNavigationDemand(k)
+	if k.Key() == tcell.KeyCtrlN {
+		return tcell.NewEventKey(tcell.KeyDown, 0, k.Modifiers())
+	}
 	if k.Key() != tcell.KeyRune {
 		return k
 	}
@@ -152,12 +156,24 @@ func (u *UI) gridKey(k *tcell.EventKey) *tcell.EventKey {
 		u.refreshResultInfo()
 		return nil
 	case 'y', 'Y':
+		if t.Busy {
+			u.message(u.tr("Press F10 to stop receiving rows before sorting, copying or exporting"))
+			return nil
+		}
 		u.copyResults("all", k.Rune() == 'Y')
 		return nil
 	case 'c':
+		if t.Busy {
+			u.message(u.tr("Press F10 to stop receiving rows before sorting, copying or exporting"))
+			return nil
+		}
 		u.copyResults("cell", false)
 		return nil
 	case 'r', 'R':
+		if t.Busy {
+			u.message(u.tr("Press F10 to stop receiving rows before sorting, copying or exporting"))
+			return nil
+		}
 		u.copyResults("row", k.Rune() == 'R')
 		return nil
 	case 'm':
@@ -185,7 +201,7 @@ func (u *UI) gridKey(k *tcell.EventKey) *tcell.EventKey {
 			return nil
 		}
 		if t.Busy {
-			u.message(u.tr("Wait until execution finishes"))
+			u.message(u.tr("Press F10 to stop receiving rows before sorting, copying or exporting"))
 			return nil
 		}
 		_, col := u.table.GetSelection()
@@ -253,7 +269,7 @@ func (u *UI) export() {
 		return
 	}
 	if t.Busy {
-		u.message(u.tr("Wait until execution finishes"))
+		u.message(u.tr("Press F10 to stop receiving rows before sorting, copying or exporting"))
 		return
 	}
 	l := tview.NewList().ShowSecondaryText(false)
