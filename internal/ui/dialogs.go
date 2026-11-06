@@ -211,7 +211,7 @@ func (u *UI) profileForm(index int) {
 			f.SetTitle(u.tr(" ") + e.Error() + " ")
 			return
 		}
-		p = config.Profile{Name: get(0), Folder: folder, Engine: engine, Host: get(2), Port: port, Database: get(4), User: get(5), CredentialID: p.CredentialID, PasswordEnv: p.PasswordEnv, Encrypt: &encrypt, TrustServerCertificate: trust, CAFile: p.CAFile}
+		p := config.Profile{Name: get(0), Folder: folder, Engine: engine, Host: get(2), Port: port, Database: get(4), User: get(5), CredentialID: p.CredentialID, PasswordEnv: p.PasswordEnv, Encrypt: &encrypt, TrustServerCertificate: trust, CAFile: p.CAFile}
 		if e = p.Validate(); e != nil {
 			f.SetTitle(u.tr(" ") + e.Error() + " ")
 			return
@@ -238,7 +238,7 @@ func (u *UI) profileForm(index int) {
 		}
 		profile, secret, err := testProfileFromForm(f, p)
 		if err != nil {
-			testResult.SetText(err.Error())
+			testResult.SetText(u.tr(err.Error()))
 			return
 		}
 		u.testConnection(f, testResult, testState, profile, secret)
@@ -317,13 +317,16 @@ e edit profile, r rename folder, d delete empty folder, / search.
 Results: [ / ] previous/next result set; Enter inspect cell; m messages;
 / search rows; s sort selected column ascending; S descending; e export.
 Ctrl+C copy menu; y/Y copy all without/with headers; r/R current row;
-c current cell. Clipboard rows are TSV in displayed order.
+c current cell. Copy shortcuts and CSV default to spreadsheet-safe text;
+menus expose literal copy/CSV with an untrusted-data warning. Clipboard rows
+are TSV in displayed order. JSON remains literal and unchanged.
 Sorting is lexical, NULL first ascending. Export includes the complete set.
 
 SQL Server: GO separates batches. MySQL: DELIMITER for routine scripts.
 PostgreSQL: dollar-quoted function bodies are supported.
 Blank Database: choose from the explorer or press F4 before executing SQL.
 Connection form: Test connection uses unsaved fields and does not save them.
+Changing engine, host, port or user requires entering the password again before testing or saving.
 Each tab owns a connection. Queries run with the server's transaction rules;
 use BEGIN / COMMIT / ROLLBACK explicitly when needed.
 History is opt-in (Space h). Passwords are never saved in profiles.

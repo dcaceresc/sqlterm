@@ -141,7 +141,19 @@ func (s *Store) Close() {
 func (s *Store) Export(path, format string) error {
 	return s.ExportContext(context.Background(), path, format)
 }
+
+// ExportContext preserves literal CSV text and JSON for existing consumers.
 func (s *Store) ExportContext(ctx context.Context, path, format string) error {
+	return s.exportContext(ctx, path, format, false)
+}
+
+// ExportSpreadsheetContext makes CSV fields safe to open in spreadsheet apps.
+// JSON remains unchanged because it is not a spreadsheet-oriented format.
+func (s *Store) ExportSpreadsheetContext(ctx context.Context, path, format string) error {
+	return s.exportContext(ctx, path, format, true)
+}
+
+func (s *Store) exportContext(ctx context.Context, path, format string, spreadsheetSafe bool) error {
 	f, e := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if e != nil {
 		return e
@@ -157,7 +169,11 @@ func (s *Store) ExportContext(ctx context.Context, path, format string) error {
 	switch format {
 	case "csv":
 		c := csv.NewWriter(w)
-		if e = c.Write(s.Columns); e != nil {
+		columns := s.Columns
+		if spreadsheetSafe {
+			columns = spreadsheetSafeRecord(columns)
+		}
+		if e = c.Write(columns); e != nil {
 			return e
 		}
 		for i := 0; i < s.Count(); i++ {
@@ -178,6 +194,9 @@ func (s *Store) ExportContext(ctx context.Context, path, format string) error {
 						v[j] = `\` + v[j]
 					}
 				}
+			}
+			if spreadsheetSafe {
+				v = spreadsheetSafeRecord(v)
 			}
 			if len(v) == 1 && v[0] == "" {
 				c.Flush()
