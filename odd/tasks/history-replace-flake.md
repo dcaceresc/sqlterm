@@ -1,0 +1,18 @@
+# History replacement flake
+Objective: remove the intermittent Windows "Access is denied" failure during atomic history replacement under load.
+Branch: fix/history-replace-retry | Base: 8e2cae4 | Delivery: auto-chain / feature-branch-chain (cached user choice, no publishing) | Checks: Go tests, vet, race.
+
+## Specs
+S1. "repara el error de historial"
+S2. Observed failure, reproduced by an independent verifier and by the full suite under contention: `--- FAIL: TestHistoryRetentionAndClear (history_test.go:15: Add 165: Access is denied.)` and `Add 198: Access is denied` in the unmodified `internal/history` package while other packages run in parallel; the same test passes standalone and on rerun.
+S3. Existing guarantees that must not regress: retention of the last 200 entries, atomic same-directory replacement with mode 0600, malformed history left byte-identical, failed replacement keeps the previous readable file with no temporary residue, goroutine and cross-process coordination over one shared lock.
+
+## Tasks
+T1 | S1-S3 | delegated (context backstop) | done | Diagnose and fix the transient Windows replacement failure without weakening the durability guarantees | Risk: item 4 (concurrency) | commit: pending
+T2 | S1-S3 | independent verifier + inline | done | Reproduce the flake and confirm the fix under contention | evidence: verifier reproduced the mechanism at baseline and confirmed the fix
+
+## Log
+L1. User request: "issue 5 no se hara se mantendra ctrl+ w ahora continua con issue 6 y repara el error de historial"
+L2. Scope: history defect only in this branch. Issue 6 proceeds on its own branch afterwards. The flake was already recorded as a follow-up advisory in odd/tasks/review-hardening.md L7 and odd/tasks/issue-4-incremental-results.md L8/L10. Do not weaken tests to hide it, do not disable parallelism, and do not replace the atomic write with an in-place write.
+L3. Prior evidence: the failure happens on the replacement step, not on read or JSON encode; it appears only when the whole suite runs concurrently on Windows, several times in one run, and never standalone (5/5 standalone). Both `Add 165` and `Add 198` were reported. Windows currently replaces through `windows.Rename`; the directory sync is intentionally a no-op there.
+L4. Diagnosis (worker + independent verifier): the bare `Access is denied.` is ERROR_ACCESS_DENIED from MoveFileExW via windows.Rename; an external on-access filter driver (CrowdStrike Falcon, Kaspersky, search indexers) briefly holds the destination, and MoveFileEx cannot replace a destination with any open handle. A standalone os.Rename churn program reproduced it without the history package, ruling out our own readers, temp cleanup and lock churn. Fix: bounded retry (6 attempts, 2ms doubling, 32ms cap) of only isTransientReplaceError (Windows ERROR_ACCESS_DENIED/ERROR_SHARING_VIOLATION, always false on Unix), inside withPathLock, reusing one temp file, original error returned when exhausted. RED: five new behaviour tests failed pre-fix and the original symptom reproduced once at -count=5. GREEN: 15 pass, focused race and vet clean; verifier reproduced the mechanism at baseline (5.3ms failure) and got success after the fix, confirmed atomicity by temp file identity, bounded attempts, no residue, lock identity across failures and Clear, and non-transient errors not retried. Remaining environment noise, NOT product behaviour: t.TempDir teardown intermittently fails with `unlinkat: The directory is not empty.` because filters hold just-unlinked entries; it hits unrelated tests too and was not hidden with harness retries. gofmt -l lists CRLF files repo-wide (autocrlf); content verified clean.

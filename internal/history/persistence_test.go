@@ -104,6 +104,99 @@ func TestConcurrentProcessesRetainEveryEntryAndReadableSnapshots(t *testing.T) {
 	assertEntrySet(t, path, "process", writers, perWriter)
 }
 
+func TestConcurrentGoroutinesAndProcessesRetainEveryEntryWithinCap(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "history.json")
+	const (
+		processWriters   = 2
+		goroutineWriters = 3
+		perWriter        = 30
+	)
+
+	type process struct {
+		cmd    *exec.Cmd
+		output bytes.Buffer
+	}
+	processes := make([]*process, 0, processWriters)
+	for writer := 0; writer < processWriters; writer++ {
+		proc := &process{cmd: exec.Command(os.Args[0], "-test.run=^TestHistoryProcessHelper$")}
+		proc.cmd.Env = append(os.Environ(),
+			"SQLTERM_HISTORY_HELPER=1",
+			"SQLTERM_HISTORY_PATH="+path,
+			fmt.Sprintf("SQLTERM_HISTORY_WRITER=%d", writer),
+			fmt.Sprintf("SQLTERM_HISTORY_COUNT=%d", perWriter),
+		)
+		proc.cmd.Stdout = &proc.output
+		proc.cmd.Stderr = &proc.output
+		if err := proc.cmd.Start(); err != nil {
+			t.Fatal(err)
+		}
+		processes = append(processes, proc)
+	}
+
+	var wg sync.WaitGroup
+	errs := make(chan error, goroutineWriters)
+	for writer := 0; writer < goroutineWriters; writer++ {
+		writer := writer
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for i := 0; i < perWriter; i++ {
+				if err := Add(path, testEntry(fmt.Sprintf("thread-%d-%d", writer, i))); err != nil {
+					errs <- err
+					return
+				}
+			}
+		}()
+	}
+	wg.Wait()
+	for _, proc := range processes {
+		if err := proc.cmd.Wait(); err != nil {
+			t.Fatalf("helper failed: %v\n%s", err, proc.output.Bytes())
+		}
+	}
+	close(errs)
+	for err := range errs {
+		t.Fatal(err)
+	}
+
+	entries, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if want := (processWriters + goroutineWriters) * perWriter; len(entries) != want {
+		t.Fatalf("entry count = %d, want %d", len(entries), want)
+	}
+	assertEntryKeys(t, entries, "process", processWriters, perWriter)
+	assertEntryKeys(t, entries, "thread", goroutineWriters, perWriter)
+
+	// Filling past the cap must keep exactly the newest 200 entries.
+	const finalWrites = 100
+	for i := 0; i < finalWrites; i++ {
+		if err := Add(path, testEntry(fmt.Sprintf("final-%d", i))); err != nil {
+			t.Fatal(err)
+		}
+	}
+	entries, err = Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(entries) != maxEntries {
+		t.Fatalf("entry count = %d, want %d after exceeding the cap", len(entries), maxEntries)
+	}
+	seen := make(map[string]bool, len(entries))
+	for _, entry := range entries {
+		if seen[entry.SQL] {
+			t.Fatalf("duplicate entry retained: %s", entry.SQL)
+		}
+		seen[entry.SQL] = true
+	}
+	for i := 0; i < finalWrites; i++ {
+		if key := fmt.Sprintf("final-%d", i); !seen[key] {
+			t.Fatalf("newest entry %s was trimmed by the cap", key)
+		}
+	}
+}
+
 func TestHistoryProcessHelper(t *testing.T) {
 	if os.Getenv("SQLTERM_HISTORY_HELPER") != "1" {
 		return
@@ -205,6 +298,11 @@ func assertEntrySet(t *testing.T, path, prefix string, writers, perWriter int) {
 	if want := writers * perWriter; len(entries) != want {
 		t.Fatalf("entry count = %d, want %d", len(entries), want)
 	}
+	assertEntryKeys(t, entries, prefix, writers, perWriter)
+}
+
+func assertEntryKeys(t *testing.T, entries []Entry, prefix string, writers, perWriter int) {
+	t.Helper()
 	seen := make(map[string]bool, len(entries))
 	for _, entry := range entries {
 		seen[entry.SQL] = true

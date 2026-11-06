@@ -11,6 +11,18 @@ import (
 
 const maxEntries = 200
 
+// Replacement retry budget. Windows reports a momentary external hold of the
+// destination as ERROR_ACCESS_DENIED from MoveFileEx, so the atomic replacement
+// is retried a small bounded number of times with short backoffs. The whole
+// budget stays well under a tenth of a second and is spent inside the exclusive
+// history lock, so a failure that never clears is still reported honestly
+// instead of stalling other writers.
+const (
+	replaceAttempts  = 6
+	replaceBaseDelay = 2 * time.Millisecond
+	replaceMaxDelay  = 32 * time.Millisecond
+)
+
 type Entry struct {
 	At       time.Time `json:"at"`
 	Profile  string    `json:"profile"`
@@ -115,10 +127,28 @@ func writeAtomic(path string, entries []Entry) (err error) {
 	}
 	temp = nil
 
-	if err = replaceHistoryFile(tempPath, path); err != nil {
+	if err = replaceWithRetry(tempPath, path); err != nil {
 		return err
 	}
 	return syncHistoryDir(dir)
+}
+
+// replaceWithRetry performs the atomic replacement, retrying only the transient
+// error class reported by isTransientReplaceError. The same temporary file is
+// reused across attempts, so every attempt is still a single atomic rename, and
+// the last error is returned unchanged once the budget is exhausted.
+func replaceWithRetry(from, to string) error {
+	delay := replaceBaseDelay
+	for attempt := 1; ; attempt++ {
+		err := replaceHistoryFile(from, to)
+		if err == nil || attempt >= replaceAttempts || !isTransientReplaceError(err) {
+			return err
+		}
+		time.Sleep(delay)
+		if delay *= 2; delay > replaceMaxDelay {
+			delay = replaceMaxDelay
+		}
+	}
 }
 
 func withPathLock(path string, fn func() error) error {

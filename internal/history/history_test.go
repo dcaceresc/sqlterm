@@ -22,7 +22,7 @@ func TestHistoryRetentionAndClear(t *testing.T) {
 	if e = Clear(path); e != nil {
 		t.Fatal(e)
 	}
-	lockPath := filepath.Join(filepath.Dir(path), "."+filepath.Base(path)+".lock")
+	lockPath := lockPathFor(path)
 	if _, e = os.Stat(lockPath); e != nil {
 		t.Fatalf("Clear removed or invalidated the lock file: %v", e)
 	}
