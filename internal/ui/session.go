@@ -13,6 +13,9 @@ import (
 
 func (u *UI) connect(t *Tab, p config.Profile, password string) {
 	if t.Busy {
+		if u.releasePausedExecution(t, func() { u.connect(t, p, password) }) {
+			return
+		}
 		u.message(u.tr("Session busy"))
 		return
 	}
@@ -76,22 +79,29 @@ func (u *UI) connect(t *Tab, p config.Profile, password string) {
 func (u *UI) disconnect() {
 	u.hideSuggestions()
 	t := u.active()
-	if t.Busy {
-		u.message(u.tr("Cancel execution before disconnecting"))
-		return
+	var detach func()
+	detach = func() {
+		if t.Busy {
+			if u.releasePausedExecution(t, detach) {
+				return
+			}
+			u.message(u.tr("Cancel execution before disconnecting"))
+			return
+		}
+		if t.Session != nil {
+			t.Session.Close()
+			t.Session = nil
+		}
+		t.Password = ""
+		t.Catalog = nil
+		t.Columns = map[string][]string{}
+		t.Databases = nil
+		t.SelectingDatabase = false
+		t.Status = "Disconnected"
+		u.filterObjects()
+		u.refreshBars()
 	}
-	if t.Session != nil {
-		t.Session.Close()
-		t.Session = nil
-	}
-	t.Password = ""
-	t.Catalog = nil
-	t.Columns = map[string][]string{}
-	t.Databases = nil
-	t.SelectingDatabase = false
-	t.Status = "Disconnected"
-	u.filterObjects()
-	u.refreshBars()
+	detach()
 }
 func (u *UI) refreshCatalog() { u.refreshCatalogTab(u.active()) }
 func (u *UI) refreshCatalogTab(t *Tab) {
@@ -189,19 +199,30 @@ func (u *UI) switchDatabase() {
 		u.message(u.tr("Connect first"))
 		return
 	}
-	u.task(t, "List databases", func(ctx context.Context) (func(), error) {
-		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
-		defer cancel()
-		names, e := t.Session.Adapter.Databases(ctx, t.Session.Conn)
-		if e != nil {
-			return nil, e
+	var list func()
+	list = func() {
+		if t.Busy {
+			if u.releasePausedExecution(t, list) {
+				return
+			}
+			u.message(u.tr("Session busy; cancel or wait"))
+			return
 		}
-		return func() { t.Databases = names; u.databaseSelector(t, names) }, nil
-	})
+		u.task(t, "List databases", func(ctx context.Context) (func(), error) {
+			ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+			defer cancel()
+			names, e := t.Session.Adapter.Databases(ctx, t.Session.Conn)
+			if e != nil {
+				return nil, e
+			}
+			return func() { t.Databases = names; u.databaseSelector(t, names) }, nil
+		})
+	}
+	list()
 }
 func (u *UI) execute() {
 	t := u.active()
-	if t.Busy {
+	if t.Busy && !pausedExecution(t) {
 		u.message(u.tr("Session busy"))
 		return
 	}
@@ -244,8 +265,35 @@ func (u *UI) execute() {
 		run()
 	}
 }
+
+// pausedExecution reports whether the tab holds a paused read that a new
+// operation may cancel and release instead of being refused as busy.
+func pausedExecution(t *Tab) bool {
+	return t.Busy && t.Cancel != nil && t.Execution != nil && t.Execution.Phase == "Paused"
+}
+
+// releasePausedExecution cancels the paused read holding the tab and runs next
+// only after that task and its driver connection have actually finished, so the
+// single tab connection is free before another statement starts.
+func (u *UI) releasePausedExecution(t *Tab, next func()) bool {
+	if !pausedExecution(t) {
+		return false
+	}
+	e := t.Execution
+	e.Phase = "Cancelling"
+	e.Pause = nil
+	e.pulsePaused.Store(false)
+	t.Pending = next
+	t.Status = u.tr("Releasing paused execution…")
+	u.refreshBars()
+	t.Cancel()
+	return true
+}
 func (u *UI) run(t *Tab, sqlText string, work func(context.Context, func(db.Event)) error, after ...func()) {
 	if t.Busy {
+		if u.releasePausedExecution(t, func() { u.run(t, sqlText, work, after...) }) {
+			return
+		}
 		u.message(u.tr("Session busy"))
 		return
 	}
@@ -362,15 +410,26 @@ func (u *UI) invokeSelected() {
 		u.message(u.tr("Select a procedure or function in Objects first"))
 		return
 	}
-	u.task(t, "Read parameters", func(ctx context.Context) (func(), error) {
-		ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
-		defer cancel()
-		params, e := t.Session.Adapter.Parameters(ctx, t.Session.Conn, o)
-		if e != nil {
-			return nil, e
+	var read func()
+	read = func() {
+		if t.Busy {
+			if u.releasePausedExecution(t, read) {
+				return
+			}
+			u.message(u.tr("Session busy; cancel or wait"))
+			return
 		}
-		return func() { u.parameterForm(t, o, params) }, nil
-	})
+		u.task(t, "Read parameters", func(ctx context.Context) (func(), error) {
+			ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
+			defer cancel()
+			params, e := t.Session.Adapter.Parameters(ctx, t.Session.Conn, o)
+			if e != nil {
+				return nil, e
+			}
+			return func() { u.parameterForm(t, o, params) }, nil
+		})
+	}
+	read()
 }
 func (u *UI) parameterForm(t *Tab, o db.Object, params []db.Parameter) {
 	// Scrollable rows keep routines with many parameters usable on small screens.
