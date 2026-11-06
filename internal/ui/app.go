@@ -141,6 +141,9 @@ func New(path string, cfg config.Config) *UI {
 				}
 			}
 		}
+		if u.resultWheelDemand(event, action) {
+			return nil, action
+		}
 		return event, action
 	})
 	// tview holds its application lock while drawing. These hooks use widget
@@ -391,6 +394,10 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 	}
 	switch k.Key() {
 	case tcell.KeyCtrlC:
+		if u.active().Busy && u.currentStore() != nil {
+			u.message(u.tr("Press F10 to stop receiving rows before sorting, copying or exporting"))
+			return nil
+		}
 		u.copyMenu()
 		return nil
 	case tcell.KeyCtrlQ:
@@ -427,6 +434,9 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 		u.commandPalette()
 		return nil
 	case tcell.KeyCtrlN:
+		if u.table.HasFocus() {
+			return k
+		}
 		u.newTab(u.active())
 		return nil
 	case tcell.KeyCtrlS:

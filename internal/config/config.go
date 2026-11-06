@@ -116,6 +116,11 @@ func (p Profile) TLSMode() string {
 	return "verify"
 }
 
+const (
+	DefaultResultBlockSize = 1000
+	MaxResultBlockSize     = 100000
+)
+
 type Config struct {
 	Profiles          []Profile         `json:"profiles"`
 	History           bool              `json:"history"`
@@ -129,6 +134,21 @@ type Config struct {
 	ConfirmExecution  string            `json:"confirm_execution,omitempty"`
 	Language          string            `json:"language,omitempty"`
 	Editor            EditorOptions     `json:"editor,omitempty"`
+	ResultBlockSize   int               `json:"result_block_size,omitempty"`
+}
+
+func (c Config) EffectiveResultBlockSize() int {
+	if c.ResultBlockSize == 0 {
+		return DefaultResultBlockSize
+	}
+	return c.ResultBlockSize
+}
+
+func ValidateResultBlockSize(size int) error {
+	if size < 1 || size > MaxResultBlockSize {
+		return fmt.Errorf("result_block_size must be between 1 and 100000")
+	}
+	return nil
 }
 
 type EditorOptions struct {
@@ -168,6 +188,12 @@ func Load(path string) (Config, error) {
 	}
 	if c.ConfirmExecution != "" && c.ConfirmExecution != "production" && c.ConfirmExecution != "all" {
 		return c, fmt.Errorf("config: confirm_execution must be empty, production or all")
+	}
+	if c.ResultBlockSize == 0 {
+		c.ResultBlockSize = DefaultResultBlockSize
+	}
+	if err := ValidateResultBlockSize(c.ResultBlockSize); err != nil {
+		return c, fmt.Errorf("config: %w", err)
 	}
 	names := map[string]bool{}
 	for i := range c.Profiles {

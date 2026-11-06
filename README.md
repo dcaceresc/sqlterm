@@ -64,9 +64,12 @@ correcta actualiza el catálogo. Si guardas el archivo antes de aplicarlo, la
 comparación conserva como referencia la definición leída del servidor.
 
 Para consultas libres, **Ctrl+N** crea otra pestaña con una conexión independiente.
-**F5** ejecuta la selección o todo el documento. **F10** cancela. Una pestaña
-admite una operación a la vez; las demás pueden ejecutar en paralelo.
-**Alt+1…9** cambia de pestaña.
+**F5** ejecuta la selección o todo el documento. Los resultados se reciben en
+bloques de 1000 filas por defecto. Al llegar al final de lo cargado, usa
+**↓**, **Ctrl+N**, **PageDown**, **End**, **j** o la rueda hacia abajo para pedir
+un bloque más. **F10** detiene la recepción y conserva las filas parciales para
+copiarlas o exportarlas. Una pestaña admite una operación a la vez; las demás
+pueden ejecutar en paralelo. **Alt+1…9** cambia de pestaña.
 
 ## Capacidades
 
@@ -78,7 +81,7 @@ admite una operación a la vez; las demás pueden ejecutar en paralelo.
 | Editor | Pestañas, archivos `.sql`, modos Vim básicos, deshacer/rehacer, búsqueda, aviso de cambios sin guardar |
 | Asistencia | Palabras del dialecto, objetos, columnas de tablas mencionadas, firmas de rutinas en sugerencias |
 | Ejecución | Selección/documento, lotes, cancelación, errores, duración, conjuntos múltiples, mensajes y filas afectadas |
-| Resultados | Cuadrícula virtual, `NULL` visible, visor de celdas, búsqueda, orden lexical local, CSV/JSON |
+| Resultados | Recepción incremental por desplazamiento, cuadrícula virtual, `NULL` visible, visor de celdas, búsqueda, orden lexical local, CSV/JSON |
 | Historial | Opt-in, máximo 200 consultas, recuperación, borrado y desactivación |
 
 Los parámetros se envían mediante el driver. SQL Server declara variables con
@@ -177,6 +180,28 @@ seleccionada ascendente/descendente; `e` abre las opciones de exportación CSV
 segura, CSV literal y JSON; `m` muestra mensajes; `[`/`]` cambia de conjunto.
 La ordenación es lexical y coloca `NULL` primero en ascendente; la exportación
 conserva el orden original del servidor.
+
+### Recepción incremental de resultados
+
+Cada ejecución obtiene primero `result_block_size` filas (1000 por defecto) y
+queda en estado **En pausa** sin marcar la pestaña como libre. Solo una intención
+real de desplazamiento al final de las filas cargadas —↓, Ctrl+N, PageDown, End,
+`j` o rueda hacia abajo— solicita el bloque siguiente del conjunto activo. Dibujar
+la interfaz, cambiar de pestaña, seleccionar otro conjunto o actualizar barras no
+solicita datos. Cada pestaña y ejecución conserva su propia solicitud pendiente.
+
+**F10** cancela la lectura pausada, espera la confirmación del controlador y deja
+las filas ya recibidas. La copia, ordenación y exportación mantienen su restricción
+mientras la ejecución está activa: pulsa F10 antes de usarlas. Si un conjunto tiene
+un múltiplo exacto del tamaño de bloque, hace falta otro desplazamiento para
+comprobar que terminó. Los conjuntos posteriores y las sentencias siguientes no
+avanzan mientras el conjunto anterior está en pausa. La consulta se ejecuta una
+sola vez y no se modifica con `LIMIT`, `TOP`, `OFFSET` ni reejecuciones; pausar la
+lectura del cliente no garantiza que el servidor deje de procesar internamente.
+
+Los SELECT generados desde tablas del catálogo tampoco añaden un límite SQL fijo:
+usan esta misma recepción incremental y conservan el esquema y las comillas del
+motor.
 
 Para copiar resultados al portapapeles:
 
@@ -310,6 +335,10 @@ o `~/.config/sqlterm/config.json` en Linux, y
 
 `examples/config.json` contiene perfiles locales. Los nombres de motor son
 `sqlserver`, `mysql` y `postgres`; un puerto `0` usa 1433, 3306 o 5432.
+`result_block_size` configura las filas por bloque entre 1 y 100000; si falta o
+vale 0 se usa 1000 para conservar compatibilidad. También se cambia desde
+**Ctrl+P → Tamaño de bloque de resultados** y se guarda solo si el valor y la
+escritura del archivo son válidos.
 El formulario muestra directamente el puerto predeterminado del motor. Al cambiar
 de motor lo actualiza si estaba vacío o tenía el valor habitual; conserva un puerto
 personalizado. Guardar el campo vacío también selecciona el valor predeterminado.

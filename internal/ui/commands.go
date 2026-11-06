@@ -24,6 +24,7 @@ func (u *UI) commands() []command {
 		{"Line numbers", "Show / hide SQL line numbers", "Editor", 0, func() { u.toggleEditorOption(false) }, nil},
 		{"Language / Idioma", "English / Español", "Getting started", 0, u.languageMenu, nil},
 		{"Execution confirmations", "Choose Off / production writes / every F5 execution", "Connections", 0, u.executionPolicyMenu, nil},
+		{"Result block size", "Rows fetched per scroll-driven block (1–100000)", "Results", 0, u.resultBlockSizePrompt, nil},
 		{"Connections", "F2 · profiles and environment folders", "Connections", 'c', u.chooseConnection, nil},
 		{"Search objects", "F6 · filter by name, schema or kind", "Objects", 'f', func() { u.app.SetFocus(u.search) }, nil},
 		{"Execute SQL", "F5 · selection or complete script; destination in top bar", "Editor", 'x', u.execute, connected},
@@ -41,7 +42,13 @@ func (u *UI) commands() []command {
 		{"New routine template", "Create a procedure in the editor", "Objects", 't', u.template, connected},
 		{"Themes", "F3 · preview, Enter save, Esc restore", "Connections", 'T', u.chooseTheme, nil},
 		{"Help", "F1 · context and shortcut search", "Getting started", '?', u.showHelp, nil},
-		{"Copy results", "Ctrl+C · cell, row or received results with headers", "Results", 0, u.copyMenu, results},
+		{"Copy results", "Ctrl+C · cell, row or received results with headers", "Results", 0, func() {
+			if u.active().Busy {
+				u.message(u.tr("Press F10 to stop receiving rows before sorting, copying or exporting"))
+				return
+			}
+			u.copyMenu()
+		}, results},
 		{"Inspect cell", "Enter in results · full value and Copy", "Results", 0, func() { r, c := u.table.GetSelection(); u.viewCell(r, c) }, results},
 		{"View definition", "Inspect selected object without executing it", "Objects", 0, func() {
 			if o, ok := u.selectedObject(); ok {
@@ -124,7 +131,7 @@ func (u *UI) searchableHelp() {
 		}
 		needle := strings.ToLower(filter.GetText())
 		var lines []string
-		intro := map[string]string{"Getting started": "F2 connect → F6 find objects → F7 edit → F5 execute → F8 inspect/copy. Destination stays in the top bar.\nEach tab owns its connection. No read-only guarantee. Use BEGIN / COMMIT / ROLLBACK explicitly.", "Editor": "i INSERT · Esc NORMAL · v VISUAL · h/j/k/l · w/b · 0/$ · gg/G · yy/dd · y/d · p · u · Ctrl+R\nCtrl+Space IntelliSense; Tab/Enter accept. F5 runs selection or full script. * means unsaved changes.\nAlt+Z toggles word wrap. Logical SQL line numbers stay stable; ↪ marks wrapped continuations. Both options are saved and available in Ctrl+P.", "Objects": "Search name, schema and kind; Enter opens definitions. Group rows expand/collapse.\nCtrl+P: insert quoted name, generate SELECT, invoke, refresh or flat catalog.", "Results": "Enter inspects full cell. NULL is SQL NULL; empty string is \"\".\n/ find · s/S lexical sort of received rows · [/] sets · e export · y/Y copy received rows without/with headers · r/R row · c cell\nCtrl+C opens copy menu. Rows are TSV; NUL is escaped as \\0. Export includes all received rows.", "Connections": "F2 profiles and folders · / search · + add · e edit · n folder · r rename · d delete empty folder\nUse * on a profile or the ★ Favorite button. Favorites appear in the top section across folders and remain in their original folders.\nF4 searches databases. New connection replaces old session only after success; SQL is preserved. Transactions, variables and temporary tables do not carry across.\nF3 themes: arrows preview, Enter saves, Esc restores. Ctrl+Q quits; Ctrl+C opens copy or cancels dialog.", "All shortcuts": u.legacyHelp()}
+		intro := map[string]string{"Getting started": "F2 connect → F6 find objects → F7 edit → F5 execute → F8 inspect/copy. Destination stays in the top bar.\nEach tab owns its connection. No read-only guarantee. Use BEGIN / COMMIT / ROLLBACK explicitly.", "Editor": "i INSERT · Esc NORMAL · v VISUAL · h/j/k/l · w/b · 0/$ · gg/G · yy/dd · y/d · p · u · Ctrl+R\nCtrl+Space IntelliSense; Tab/Enter accept. F5 runs selection or full script. * means unsaved changes.\nAlt+Z toggles word wrap. Logical SQL line numbers stay stable; ↪ marks wrapped continuations. Both options are saved and available in Ctrl+P.", "Objects": "Search name, schema and kind; Enter opens definitions. Group rows expand/collapse.\nCtrl+P: insert quoted name, generate SELECT, invoke, refresh or flat catalog.", "Results": "The first configured block is fetched, then only Down/Ctrl+N/PageDown/End/j or wheel-down near the loaded end requests one more block. F10 stops and keeps received rows so they can be copied or exported.\nEnter inspects full cell. NULL is SQL NULL; empty string is \"\".\n/ find · s/S lexical sort of received rows · [/] sets · e export · y/Y copy received rows without/with headers · r/R row · c cell\nCtrl+C opens copy menu. Rows are TSV; NUL is escaped as \\0. Export includes all received rows.", "Connections": "F2 profiles and folders · / search · + add · e edit · n folder · r rename · d delete empty folder\nUse * on a profile or the ★ Favorite button. Favorites appear in the top section across folders and remain in their original folders.\nF4 searches databases. New connection replaces old session only after success; SQL is preserved. Transactions, variables and temporary tables do not carry across.\nF3 themes: arrows preview, Enter saves, Esc restores. Ctrl+Q quits; Ctrl+C opens copy or cancels dialog.", "All shortcuts": u.legacyHelp()}
 		if u.cfg.Language == "es" {
 			intro = u.spanishHelp()
 		}
