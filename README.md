@@ -104,6 +104,7 @@ para `OUT`/`INOUT` y las consulta al terminar `CALL`.
 | Ctrl+P / Space en NORMAL | Paleta de acciones; `/` busca y Tab cambia al buscador |
 | Ctrl+Space | Abrir IntelliSense; también aparece automáticamente al escribir |
 | Alt+Z | Activar / desactivar ajuste de línea (Word Wrap) en el editor |
+| Alt+/ | Comentar / descomentar las líneas completas alcanzadas por la selección |
 | Ctrl+O / Ctrl+S / Ctrl+N | Abrir archivo / guardar / nueva sesión |
 | Ctrl+C / Ctrl+Q | Menú de copia desde cualquier panel / salir |
 | Space c/f/x/p/a/r | Conectar / buscar / ejecutar / invocar / aplicar / actualizar catálogo |
@@ -124,6 +125,33 @@ archivo ya tiene ruta; de lo contrario abre el mismo diálogo. Se solicita
 confirmación antes de sobrescribir otro archivo. No se crean carpetas desde el
 diálogo ni se recuerda la última ubicación entre sesiones: se parte de la carpeta
 del archivo actual o del directorio de trabajo para documentos nuevos.
+
+**Comentar SQL:** selecciona texto en el editor (por ejemplo con `v` y movimientos
+en modo VISUAL) y pulsa **Alt+/**, o abre **Ctrl+P → Comentar selección / Comment
+selection**. Se comentan las líneas completas alcanzadas por la selección,
+respetando su indentación; si la selección termina justo al inicio de otra línea,
+esa última línea no se incluye. Sin selección solo se muestra un aviso: no se
+modifica el documento.
+
+Para comentar todo, usa **Ctrl+P → Comentar todo el documento / Comment whole
+document**. Ambas acciones alternan cada línea: agregan `-- ` después de la
+indentación si no está comentada o quitan un `--` y un espacio opcional si ya lo
+está. En una selección mixta se alterna cada línea por separado. La selección se
+conserva para poder repetir Alt+/ y descomentar las mismas líneas. También se
+alternan las líneas vacías dentro del ámbito; se conservan los saltos de línea y
+no se agrega una línea extra al final.
+
+Las líneas que empiezan con `--` tras la indentación se dibujan con el color
+atenuado del tema, también al ajustar líneas o desplazarse. No se atenúan los
+marcadores dentro de cadenas SQL entre comillas o cuerpos con dollar quoting.
+La selección conserva sus colores para seguir siendo legible. Este color es
+solo visual: no se insertan códigos de formato ni se modifica el SQL al dibujar.
+
+Las acciones solo editan el búfer, sin ejecutar ni guardar SQL. Cada acción se
+deshace de una vez (`u` en
+NORMAL o Ctrl+Z en INSERT) y se rehace con Ctrl+R en NORMAL. Un documento vacío
+no se modifica. El atajo Alt+/ solo actúa con foco en el editor y sin un diálogo
+abierto; Ctrl+P sigue abriendo la paleta de opciones.
 
 Los atajos con **Space** se usan en modo **NORMAL** y con foco en el editor.
 Space abre la paleta y la segunda tecla conserva la acción existente (por ejemplo,

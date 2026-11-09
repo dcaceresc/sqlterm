@@ -421,6 +421,10 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 	if u.customKey(k) {
 		return nil
 	}
+	if k.Key() == tcell.KeyRune && k.Rune() == '/' && k.Modifiers()&tcell.ModAlt != 0 && u.app.GetFocus() == u.active().Editor.Area {
+		u.commentSQL(false)
+		return nil
+	}
 	if k.Key() == tcell.KeyRune && k.Modifiers()&tcell.ModAlt != 0 && (k.Rune() == 'z' || k.Rune() == 'Z') {
 		u.toggleEditorOption(true)
 		return nil
