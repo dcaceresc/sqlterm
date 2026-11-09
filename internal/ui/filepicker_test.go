@@ -224,7 +224,7 @@ func TestSQLFileDialogNavigationKeys(t *testing.T) {
 		p.list.SetCurrentItem(0)
 		fileDialogKey(u, tcell.KeyEnter)
 		if p.path.GetText() != dir {
-			t.Error("parent did not navigate up")
+			t.Errorf("parent did not navigate up: path=%q dir=%q want=%q listFocused=%v focus=%T item=%d", p.path.GetText(), p.dir, dir, p.list.HasFocus(), u.app.GetFocus(), p.list.GetCurrentItem())
 		}
 		fileDialogKey(u, tcell.KeyBacktab)
 		if !p.path.HasFocus() {

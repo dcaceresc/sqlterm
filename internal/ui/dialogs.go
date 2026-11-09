@@ -309,6 +309,9 @@ Esc closes dialogs / returns to NORMAL.
 Editor: i/a/I/A/o insert; Esc normal; v visual (half-open selection).
 h/j/k/l, w/b, 0/$, gg/G move. yy/dd copy/cut line; y/d visual selection;
 x delete; p paste; u undo; Ctrl+R redo; / search forward.
+Alt+/ comments / uncomments each selected line; without selection, shows a notice.
+Ctrl+P → Comment whole document toggles every line; one undo; no SQL execution or file save.
+Selection is kept for repeated toggling. Full-line -- comments use the theme's muted color.
 Space: c connect, f find, x run, p invoke, a apply definition,
 r refresh catalog, n new tab, w save, o open, q close tab,
 h history, e export, b change database, d disconnect, t routine template.

@@ -20,6 +20,7 @@ type View struct {
 	text          string
 	width         int
 	rows          []viewRow
+	commented     []bool
 	complete      bool
 }
 
@@ -70,17 +71,36 @@ func (v *View) Draw(screen tcell.Screen) {
 	// wrapping, cursor placement and IntelliSense anchoring.
 	v.SetBorderPadding(0, 0, gutter, 0)
 	v.TextArea.Draw(screen)
-	if gutter == 0 {
-		return
-	}
 	x, y, width, height := v.GetInnerRect()
 	offset, _ := v.GetOffset()
 	if width <= 0 || height <= 0 {
 		return
 	}
+	if v.text != text || v.commented == nil {
+		v.commented = commentLineFlags(text)
+	}
 	if v.rows == nil || v.text != text || v.width != width || (!v.complete && offset+height >= len(v.rows)) {
 		v.rows, v.complete = layoutRows(text, width, v.wrap, offset+height+256)
 		v.text, v.width = text, width
+	}
+	// Recolor only the text area's visible cells. Its own renderer retains
+	// ownership of Unicode, caret, selection and geometry. Selection styling
+	// takes precedence over comment color, including across wrapped rows.
+	for row := 0; row < height && offset+row < len(v.rows); row++ {
+		line := v.rows[offset+row].line - 1
+		if line >= len(v.commented) || !v.commented[line] {
+			continue
+		}
+		for col := 0; col < width; col++ {
+			main, combining, style, _ := screen.GetContent(x+col, y+row)
+			_, background, _ := style.Decompose()
+			if background == v.GetBackgroundColor() {
+				screen.SetContent(x+col, y+row, main, combining, style.Foreground(v.muted))
+			}
+		}
+	}
+	if gutter == 0 {
+		return
 	}
 	current, _ := v.editor.Position()
 	for i := 0; i < height; i++ {
