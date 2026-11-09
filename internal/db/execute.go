@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/golang-sql/sqlexp"
+	mssql "github.com/microsoft/go-mssqldb"
 	"sqlterm/internal/result"
+	"strings"
 	"time"
 )
 
@@ -55,7 +57,7 @@ func (s *Session) Run(ctx context.Context, statements []Bound, emit func(Event))
 		e = func() error {
 			defer rows.Close()
 			for {
-				if e := scanSet(ctx, rows, emit, &set, paging); e != nil {
+				if e := s.scanSet(ctx, rows, emit, &set, paging); e != nil {
 					return e
 				}
 				if !rows.NextResultSet() {
@@ -82,13 +84,23 @@ func (s *Session) drainMessages(emit func(Event)) {
 		}
 	}
 }
-func scanSet(ctx context.Context, rows *sql.Rows, emit func(Event), set *int, paging *pageRun) error {
+func (s *Session) scanSet(ctx context.Context, rows *sql.Rows, emit func(Event), set *int, paging *pageRun) error {
 	cols, e := rows.Columns()
 	if e != nil {
 		return e
 	}
 	if len(cols) == 0 {
 		return nil
+	}
+	guidColumns := make([]bool, len(cols))
+	if s.Adapter.Engine() == "sqlserver" {
+		types, err := rows.ColumnTypes()
+		if err != nil {
+			return err
+		}
+		for i, column := range types {
+			guidColumns[i] = strings.EqualFold(column.DatabaseTypeName(), "UNIQUEIDENTIFIER")
+		}
 	}
 	store, e := result.New(cols)
 	if e != nil {
@@ -126,6 +138,17 @@ func scanSet(ctx context.Context, rows *sql.Rows, emit func(Event), set *int, pa
 		}
 		r := make([]result.Cell, len(cols))
 		for i, v := range vals {
+			if guidColumns[i] {
+				if raw, ok := v.([]byte); ok {
+					// SQL Server encodes the first three UUID groups little-endian.
+					// Metadata, not byte length, distinguishes GUIDs from binary data.
+					var id mssql.UniqueIdentifier
+					if err := id.Scan(raw); err != nil {
+						return fmt.Errorf("column %q: %w", cols[i], err)
+					}
+					v = id.String()
+				}
+			}
 			r[i] = cell(v)
 		}
 		if e = store.Append(r); e != nil {
@@ -162,7 +185,7 @@ func (s *Session) runSQLServer(parent context.Context, st Bound, emit func(Event
 		}
 		switch m := messages.Message(ctx).(type) {
 		case sqlexp.MsgNext:
-			if e = scanSet(ctx, rows, emit, set, paging); e != nil {
+			if e = s.scanSet(ctx, rows, emit, set, paging); e != nil {
 				return e
 			}
 		case sqlexp.MsgNextResultSet:

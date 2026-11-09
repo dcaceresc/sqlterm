@@ -20,6 +20,7 @@ var fakeDriverID atomic.Int64
 
 type pagingPlan struct {
 	columns    [][]string
+	types      [][]string
 	sets       [][][]driver.Value
 	finalErr   error
 	nextCalls  atomic.Int64
@@ -39,9 +40,11 @@ type pagingState struct {
 	execs     []string
 }
 type pagingRows struct {
-	plan *pagingPlan
-	set  int
-	row  int
+	plan     *pagingPlan
+	set      int
+	row      int
+	ctx      context.Context
+	messages *sqlexp.ReturnMessage
 }
 
 type pagingResult int64
@@ -72,8 +75,8 @@ func (c *pagingConn) QueryContext(ctx context.Context, query string, args []driv
 	c.state.plans[query] = plans[1:]
 	c.state.queries = append(c.state.queries, query)
 	c.state.queryArgs = append(c.state.queryArgs, append([]driver.NamedValue(nil), args...))
-	if c.returnMessages != nil {
-		messages := c.returnMessages
+	messages := c.returnMessages
+	if messages != nil {
 		c.returnMessages = nil
 		if err := sqlexp.ReturnMessageEnqueue(ctx, messages, sqlexp.MsgNext{}); err != nil {
 			return nil, err
@@ -82,7 +85,7 @@ func (c *pagingConn) QueryContext(ctx context.Context, query string, args []driv
 			return nil, err
 		}
 	}
-	return &pagingRows{plan: plan}, nil
+	return &pagingRows{plan: plan, ctx: ctx, messages: messages}, nil
 }
 func (c *pagingConn) ExecContext(_ context.Context, query string, _ []driver.NamedValue) (driver.Result, error) {
 	c.state.mu.Lock()
@@ -93,6 +96,12 @@ func (c *pagingConn) ExecContext(_ context.Context, query string, _ []driver.Nam
 func (r pagingResult) LastInsertId() (int64, error) { return 0, nil }
 func (r pagingResult) RowsAffected() (int64, error) { return int64(r), nil }
 func (r *pagingRows) Columns() []string             { return r.plan.columns[r.set] }
+func (r *pagingRows) ColumnTypeDatabaseTypeName(index int) string {
+	if r.set < len(r.plan.types) && index < len(r.plan.types[r.set]) {
+		return r.plan.types[r.set][index]
+	}
+	return ""
+}
 func (r *pagingRows) Close() error {
 	r.plan.closeCalls.Add(1)
 	return nil
@@ -119,6 +128,12 @@ func (r *pagingRows) NextResultSet() error {
 	}
 	r.set++
 	r.row = 0
+	if r.messages != nil {
+		if err := sqlexp.ReturnMessageEnqueue(r.ctx, r.messages, sqlexp.MsgNext{}); err != nil {
+			return err
+		}
+		return sqlexp.ReturnMessageEnqueue(r.ctx, r.messages, sqlexp.MsgNextResultSet{})
+	}
 	return nil
 }
 

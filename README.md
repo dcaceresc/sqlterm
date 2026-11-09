@@ -85,6 +85,13 @@ de empezar; las demás pestañas pueden ejecutar en paralelo. **Alt+1…9** camb
 | Resultados | Recepción incremental por desplazamiento, cuadrícula virtual, `NULL` visible, visor de celdas, búsqueda, orden lexical local, CSV/JSON |
 | Historial | Opt-in, máximo 200 consultas, recuperación, borrado y desactivación |
 
+En SQL Server, los valores `uniqueidentifier` se muestran como GUID legibles
+(por ejemplo, `01234567-89AB-CDEF-0123-456789ABCDEF`), también en resultados de
+procedimientos y bloques incrementales. `NULL` conserva su representación
+habitual. Las demás columnas binarias no se interpretan como GUID por tener
+16 bytes. Si el driver devuelve un GUID binario con longitud inválida, se
+informa un error de lectura en lugar de mostrar caracteres ilegibles.
+
 Los parámetros se envían mediante el driver. SQL Server declara variables con
 longitud, precisión y escala del catálogo; devuelve las salidas y `RETURN_STATUS`
 como un conjunto adicional. PostgreSQL usa tipos explícitos para resolver
