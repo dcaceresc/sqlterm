@@ -299,6 +299,8 @@ func (u *UI) legacyHelp() string {
 	return fmt.Sprintf(`F2 connections/folders     F3 themes     F4 database     F5 execute SQL
 F6 object search     F7 editor     F8 results     F10 cancel
 Ctrl+N new session     Alt+1..9 switch tabs     Ctrl+O open     Ctrl+S save
+Files: terminal folder browser; Tab/Shift+Tab fields, Enter selects, Esc cancels.
+Ctrl+P → Save SQL as: choose another folder and file name. Ctrl+S saves in place.
 IntelliSense: automatic while typing; Ctrl+Space opens suggestions.
 Up/Down or Ctrl+N/P select; Tab/Enter accept; Esc closes and returns NORMAL.
 Ctrl+Q quit; Ctrl+C opens result copy options from any panel, or closes a dialog.
