@@ -110,6 +110,21 @@ para `OUT`/`INOUT` y las consulta al terminar `CALL`.
 | Space n/w/o/q | Nueva pestaña / guardar / abrir / cerrar pestaña |
 | Space h/e/b/d/t | Historial / exportar / cambiar base / desconectar / plantilla |
 
+**Archivos SQL:** Ctrl+O abre un explorador integrado en la terminal. Entra en las
+carpetas con Enter y selecciona un archivo para abrirlo; `[..]` sube a la carpeta
+padre. Puedes explorar fuera del proyecto; en la raíz de una unidad de Windows
+aparecen las otras unidades disponibles. El campo **Carpeta** también permite
+saltar a una ruta local o de red. Tab/Shift+Tab cambia de campo y Esc cancela.
+Se muestran todos los archivos para permitir también scripts sin extensión `.sql`.
+
+**Guardar como:** abre Ctrl+P y elige **Guardar SQL como / Save SQL as**; navega
+hasta la carpeta de destino, escribe el nombre completo (incluida la extensión
+`.sql` si corresponde) y pulsa **Guardar**. Ctrl+S guarda directamente si el
+archivo ya tiene ruta; de lo contrario abre el mismo diálogo. Se solicita
+confirmación antes de sobrescribir otro archivo. No se crean carpetas desde el
+diálogo ni se recuerda la última ubicación entre sesiones: se parte de la carpeta
+del archivo actual o del directorio de trabajo para documentos nuevos.
+
 Los atajos con **Space** se usan en modo **NORMAL** y con foco en el editor.
 Space abre la paleta y la segunda tecla conserva la acción existente (por ejemplo,
 Space c conecta). Ctrl+P está disponible desde cualquier panel.

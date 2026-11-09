@@ -13,6 +13,14 @@ import (
 )
 
 func (u *UI) saveFile() {
+	u.saveSQLFile(false)
+}
+
+func (u *UI) saveFileAs() {
+	u.saveSQLFile(true)
+}
+
+func (u *UI) saveSQLFile(as bool) {
 	t := u.active()
 	save := func(path string) {
 		if path == "" {
@@ -33,15 +41,15 @@ func (u *UI) saveFile() {
 			write()
 		}
 	}
-	if t.Path != "" {
+	if t.Path != "" && !as {
 		save(t.Path)
 	} else {
-		u.prompt(u.tr("Save SQL file"), "query.sql", false, save)
+		u.pickSQLFile(t.Path, true, save)
 	}
 }
 func (u *UI) openFile() {
 	t := u.active()
-	u.prompt(u.tr("Open SQL file"), "", false, func(path string) {
+	u.pickSQLFile(t.Path, false, func(path string) {
 		open := func() {
 			info, e := os.Stat(path)
 			if e != nil {
