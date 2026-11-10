@@ -55,7 +55,7 @@ func (u *UI) spanishHelp() map[string]string {
 	intro := map[string]string{
 		"Getting started": "F2 conectar → F6 buscar objetos → F7 editar → F5 ejecutar → F8 revisar/copiar. El destino permanece en la barra superior.\nCada pestaña tiene su conexión. No garantiza solo lectura. Usa BEGIN / COMMIT / ROLLBACK explícitamente.",
 		"Editor":          "i INSERT · Esc NORMAL · v VISUAL · h/j/k/l · w/b · 0/$ · gg/G · yy/dd · y/d · p · u · Ctrl+R\nCtrl+Space IntelliSense; Tab/Enter aceptar. F5 ejecuta selección o script completo. * indica cambios sin guardar.\nAlt+Z activa/desactiva el ajuste de línea. Los números indican líneas reales del SQL; ↪ marca continuaciones visuales. Ambas preferencias se guardan y aparecen en Ctrl+P.",
-		"Objects":         "Buscar por nombre, esquema y tipo. Enter abre definiciones. Los grupos se expanden/contraen.\nCtrl+P: insertar nombre entre comillas, generar SELECT, invocar, actualizar o catálogo plano.",
+		"Objects":         "Buscar por nombre, esquema y tipo. Enter abre definiciones. Los grupos se expanden/contraen.\nCtrl+P: insertar nombre entre comillas, generar SELECT, invocar, actualizar o catálogo plano. Nueva plantilla de tabla prepara CREATE TABLE en el editor; revisa y ejecuta con F5.",
 		"Results":         "Se obtiene el primer bloque configurado. Solo ↓/Ctrl+N/PageDown/End/j o la rueda hacia abajo cerca del final solicita un bloque más. F10 detiene la recepción y conserva las filas para copiarlas o exportarlas.\nUna pausa no bloquea la pestaña: F5 o F9 cancela la lectura pausada, espera a que el controlador la cierre y libere la conexión, y luego ejecuta la sentencia nueva. F4, desconectar, cerrar pestaña y salir también la liberan. Copiar, ordenar y exportar siguen requiriendo F10.\nEnter inspecciona la celda completa y permite copiar el valor, o el nombre de columna con el valor en una sola fila TSV (segura por defecto, con variante literal avisada). NULL es SQL NULL; cadena vacía es \"\".\n/ buscar · s/S orden léxico de filas recibidas · [/] conjuntos · e exportar · y/Y copiar filas sin/con cabeceras · r/R fila · c celda · v seleccionar rango · +/- ancho de columna\nCtrl+C abre copia; incluye 'Celda con cabecera': la celda seleccionada como nombre de columna, tabulador y valor en una sola fila TSV (por ejemplo nombre_cliente<TAB>ACME S.A.), lista para pegar en dos celdas contiguas. La cabecera es el nombre de la columna del resultado y respeta el orden visible.\nCopia y CSV son seguros por defecto para hojas de cálculo: la protección ' se aplica al nombre de columna y al valor; el menú ofrece modo literal, que deja ambos intactos. Se antepone ' a texto que empieza por =, +, - o @ tras espacios/controles. NUL se representa como \\0. JSON no cambia.",
 		"Connections":     "F2 perfiles y carpetas · / buscar · + añadir · e editar · n carpeta · r renombrar · d eliminar carpeta vacía · * favorito\nF4 busca bases. La nueva conexión sustituye la anterior solo tras conectar correctamente. Conserva SQL; no conserva transacciones, variables ni tablas temporales.\nSi cambias motor, servidor, puerto o usuario, vuelve a escribir la contraseña antes de probar o guardar.\nF3: flechas vista previa, Enter guardar, Esc restaurar. Ctrl+Q salir; Ctrl+C copia o cancela diálogo.",
 	}
@@ -153,6 +153,7 @@ var spanish = map[string]string{
 	"History error":                                     "Error de historial",
 	"Apply to server":                                   "Aplicar al servidor",
 	"New procedure name (unqualified)":                  "Nombre del procedimiento nuevo (sin esquema)",
+	"New table name (unqualified)":                      "Nombre de la tabla nueva (sin esquema)",
 	"History · Enter loads SQL into current tab":        "Historial · Enter carga SQL en pestaña actual",
 	"Review definition · scroll / Tab to buttons":       "Revisar definición · desplazar / Tab a botones",
 	"IntelliSense · Tab/Enter accept · Esc close":       "IntelliSense · Tab/Enter aceptar · Esc cerrar",
@@ -196,6 +197,7 @@ var spanish = map[string]string{
 	"F4 · new connection; current SQL preserved":                                 "F4 · conexión nueva; conserva SQL actual",
 	"Close this tab's connection":                                                "Cierra la conexión de esta pestaña",
 	"Create a procedure in the editor":                                           "Crear procedimiento en el editor",
+	"Create a table in the editor; review and execute with F5":                   "Crear tabla en el editor; revisar y ejecutar con F5",
 	"F3 · preview, Enter save, Esc restore":                                      "F3 · vista previa, Enter guardar, Esc restaurar",
 	"F1 · context and shortcut search":                                           "F1 · búsqueda de ayuda y atajos",
 	"Ctrl+C · cell, cell with column name, row or received results with headers": "Ctrl+C · celda, celda con cabecera, fila o resultados recibidos con cabeceras",
@@ -285,6 +287,7 @@ var spanish = map[string]string{
 	"Change database":         "Cambiar base",
 	"Disconnect":              "Desconectar",
 	"New routine template":    "Plantilla de rutina",
+	"New table template":      "Nueva plantilla de tabla",
 	"Themes":                  "Temas",
 	"Help":                    "Ayuda",
 	"Copy results":            "Copiar resultados",
