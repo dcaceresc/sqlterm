@@ -22,9 +22,13 @@ type View struct {
 	rows          []viewRow
 	commented     []bool
 	complete      bool
+	syntaxEnabled bool
+	syntaxColors  SyntaxColors
+	syntax        []syntaxKind
 }
 
 type viewRow struct {
+	start        int
 	line         int
 	continuation bool
 }
@@ -78,6 +82,10 @@ func (v *View) Draw(screen tcell.Screen) {
 	}
 	if v.text != text || v.commented == nil {
 		v.commented = commentLineFlags(text)
+		v.syntax = nil
+	}
+	if v.syntaxEnabled && v.syntax == nil {
+		v.syntax = syntaxKinds(text)
 	}
 	if v.rows == nil || v.text != text || v.width != width || (!v.complete && offset+height >= len(v.rows)) {
 		v.rows, v.complete = layoutRows(text, width, v.wrap, offset+height+256)
@@ -98,6 +106,9 @@ func (v *View) Draw(screen tcell.Screen) {
 				screen.SetContent(x+col, y+row, main, combining, style.Foreground(v.muted))
 			}
 		}
+	}
+	if v.syntaxEnabled {
+		v.drawSyntax(screen, text, x, y, width, height, offset)
 	}
 	if gutter == 0 {
 		return
@@ -182,7 +193,7 @@ func layoutRows(text string, width int, wrap bool, limit int) ([]viewRow, bool) 
 		for line+1 < len(physical) && physical[line+1] <= start {
 			line++
 		}
-		rows[i] = viewRow{line: line + 1, continuation: start != physical[line]}
+		rows[i] = viewRow{start: start, line: line + 1, continuation: start != physical[line]}
 	}
 	return rows, len(remaining) == 0
 }

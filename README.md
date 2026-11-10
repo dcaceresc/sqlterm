@@ -9,7 +9,7 @@ consultar su código, modificarlos y ejecutarlos con parámetros.
 Requiere Go 1.23 o posterior para compilar. El binario no necesita Go ni Neovim.
 
 ```powershell
-cd C:\Users\dcaceresc\source\personal\sqlterm
+cd sqlterm/
 go run ./cmd/sqlterm
 ```
 
@@ -62,6 +62,15 @@ terminal habitual; no se requiere una extensión del editor.
 después búscala con F6 para abrirla como objeto del catálogo. Cada aplicación
 correcta actualiza el catálogo. Si guardas el archivo antes de aplicarlo, la
 comparación conserva como referencia la definición leída del servidor.
+
+**Ctrl+P → Nueva plantilla de tabla / New table template** pide el nombre de una
+nueva tabla y prepara `CREATE TABLE` en el editor, sin ejecutarlo. Incluye una
+columna `id` autogenerada como clave primaria y una columna `name` de ejemplo,
+adaptadas a SQL Server, MySQL o PostgreSQL. Usa el esquema `dbo` en SQL Server,
+`public` en PostgreSQL y la base seleccionada en MySQL. Requiere conexión y, en
+MySQL, una base seleccionada. Confirma antes de reemplazar SQL sin guardar.
+Ajusta las columnas y revisa la sentencia antes de ejecutarla con **F5**;
+**Ctrl+P → Actualizar catálogo / Refresh catalog** permite buscar la tabla creada.
 
 Para consultas libres, **Ctrl+N** crea otra pestaña con una conexión independiente.
 **F5** ejecuta la selección o todo el documento. Los resultados se reciben en
@@ -207,6 +216,13 @@ sin añadir saltos al contenido. `↪` marca una continuación de la misma líne
 La posición de la barra de estado conserva la línea y columna reales del SQL.
 **Ctrl+P → Números de línea / Line numbers** permite ocultar o mostrar el margen.
 Ambas preferencias se guardan y se aplican a todas las pestañas, incluidas nuevas.
+
+El SQL se resalta automáticamente: palabras reservadas, cadenas entre comillas
+simples y números tienen colores propios, adaptados al tema de **F3**. **Classic**
+usa como referencia los colores de VS Code Dark+; los demás temas conservan su
+paleta. Las comillas dobles, los corchetes y los acentos graves delimitan
+identificadores y no se colorean como cadenas. El resaltado respeta la selección,
+el ajuste de línea y el desplazamiento; no modifica el SQL ni el historial de deshacer.
 
 En **F2**, selecciona una conexión y pulsa **`*`** o el botón **★ Favorito**.
 Los favoritos aparecen en una sección **★ Favoritos** al principio del árbol,

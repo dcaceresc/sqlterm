@@ -33,8 +33,8 @@ func TestCommentsUseMutedColorAcrossThemes(t *testing.T) {
 		}
 		_, _, style, _ = s.GetContent(x, y+1)
 		fg, bg, _ = style.Decompose()
-		if fg != theme.Foreground || bg != theme.Background {
-			t.Errorf("%s ordinary SQL style changed", theme.ID)
+		if fg != theme.Syntax.Keyword || bg != theme.Background {
+			t.Errorf("%s keyword style did not follow theme", theme.ID)
 		}
 	}
 }

@@ -5,12 +5,14 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"sqlterm/internal/config"
+	"sqlterm/internal/editor"
 )
 
 type Palette struct {
 	ID, Name                                                                        string
 	Background, Surface, Foreground, Muted, Accent, Border, Selection, SelectedText tcell.Color
 	Insert, Visual                                                                  tcell.Color
+	Syntax                                                                          editor.SyntaxColors
 }
 
 func palette(id, name, bg, surface, fg, muted, accent, border, selection, selected string) Palette {
@@ -30,6 +32,21 @@ func palette(id, name, bg, surface, fg, muted, accent, border, selection, select
 	}
 	p.Insert = tcell.GetColor(insert)
 	p.Visual = tcell.GetColor(visual)
+	// Semantic roles follow each theme rather than forcing dark colors onto Light.
+	keyword, str, number := "#7aa2f7", "#9ece6a", "#ff9e64"
+	switch id {
+	case "rose-pine":
+		keyword, str, number = "#c4a7e7", "#f6c177", "#ebbcba"
+	case "nord":
+		keyword, str, number = "#81a1c1", "#a3be8c", "#b48ead"
+	case "gruvbox":
+		keyword, str, number = "#fb4934", "#b8bb26", "#d3869b"
+	case "light":
+		keyword, str, number = "#0000ff", "#a31515", "#098658"
+	case "classic":
+		keyword, str, number = "#569cd6", "#ce9178", "#b5cea8"
+	}
+	p.Syntax = editor.SyntaxColors{Keyword: tcell.GetColor(keyword), String: tcell.GetColor(str), Number: tcell.GetColor(number)}
 	return p
 }
 func (p Palette) ModeColor(mode string) tcell.Color {
