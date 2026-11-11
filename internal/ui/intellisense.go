@@ -131,7 +131,7 @@ func (u *UI) updateSuggestions(explicit bool) {
 		adapter = t.Session.Adapter
 	}
 	ctx := completion.Analyze(sql, t.Editor.Cursor(), engine)
-	if !ctx.InCode || (!explicit && utf8.RuneCountInString(ctx.Prefix) < 2 && len(ctx.Qualifier) == 0) {
+	if !ctx.InCode || (!explicit && utf8.RuneCountInString(ctx.Prefix) < 2 && len(ctx.Qualifier) == 0 && ctx.Want != "parameter") {
 		u.hideSuggestions()
 		return
 	}
