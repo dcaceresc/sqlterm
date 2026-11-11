@@ -303,12 +303,15 @@ Files: terminal folder browser; Tab/Shift+Tab fields, Enter selects, Esc cancels
 Ctrl+P → Save SQL as: choose another folder and file name. Ctrl+S saves in place.
 IntelliSense: automatic while typing; Ctrl+Space opens suggestions.
 Up/Down or Ctrl+N/P select; Tab/Enter accept; Esc closes and returns NORMAL.
-Ctrl+Q quit; Ctrl+C opens result copy options from any panel, or closes a dialog.
+Ctrl+Q quit; Ctrl+C copies selected SQL in editor, opens result copy options elsewhere,
+or closes a dialog. Without an editor selection it shows a notice and keeps the clipboard.
 Esc closes dialogs / returns to NORMAL.
 
 Editor: i/a/I/A/o insert; Esc normal; v visual (half-open selection).
 h/j/k/l, w/b, 0/$, gg/G move. yy/dd copy/cut line; y/d visual selection;
 x delete; p paste; u undo; Ctrl+R redo; / search forward.
+Ctrl+C copies literal selected SQL to the system clipboard, even during query execution.
+It preserves SQL, selection and undo; NUL is escaped as \0 in clipboard text only.
 Alt+/ comments / uncomments each selected line; without selection, shows a notice.
 Ctrl+P → Comment whole document toggles every line; one undo; no SQL execution or file save.
 Selection is kept for repeated toggling. Full-line -- comments use the theme's muted color.

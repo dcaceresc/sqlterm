@@ -67,6 +67,7 @@ type UI struct {
 	vault                                              credentials.Store
 	openSession                                        func(context.Context, config.Profile, string) (*db.Session, error)
 	writeClipboard                                     func(string) error
+	copyingSQL                                         bool
 	palette                                            Palette
 	dialogCancel                                       func()
 	dialogContent                                      tview.Primitive
@@ -431,6 +432,10 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 	}
 	switch k.Key() {
 	case tcell.KeyCtrlC:
+		if u.app.GetFocus() == u.active().Editor.Area {
+			u.copySQLSelection()
+			return nil
+		}
 		if u.active().Busy && u.currentStore() != nil {
 			u.message(u.tr("Press F10 to stop receiving rows before sorting, copying or exporting"))
 			return nil

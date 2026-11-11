@@ -69,9 +69,19 @@ func TestCopyMenuClickOutsideClosesAndFocusesTarget(t *testing.T) {
 			if name, _ := u.pages.GetFrontPage(); name != "main" || u.copyPopup != nil || !target.HasFocus() {
 				t.Fatal("outside click must remove menu and focus clicked panel")
 			}
+			if panel == "editor" {
+				u.active().Editor.Area.Select(0, 0)
+			}
 			dispatch(u, tcell.KeyCtrlC, 0)
+			if panel == "editor" {
+				if u.copyPopup != nil || u.active().Status != "Select SQL text before copying" {
+					t.Fatal("editor Ctrl+C must use SQL selection, not the result menu")
+				}
+				u.app.SetFocus(u.table)
+				dispatch(u, tcell.KeyCtrlC, 0)
+			}
 			if u.copyPopup == nil || u.closing {
-				t.Fatal("copy menu must reopen after changing panels")
+				t.Fatal("copy menu must reopen from a non-editor panel")
 			}
 		})
 	}
