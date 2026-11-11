@@ -59,6 +59,7 @@ func (u *UI) spanishHelp() map[string]string {
 		"Results":         "Se obtiene el primer bloque configurado. Solo ↓/Ctrl+N/PageDown/End/j o la rueda hacia abajo cerca del final solicita un bloque más. F10 detiene la recepción y conserva las filas para copiarlas o exportarlas.\nUna pausa no bloquea la pestaña: F5 o F9 cancela la lectura pausada, espera a que el controlador la cierre y libere la conexión, y luego ejecuta la sentencia nueva. F4, desconectar, cerrar pestaña y salir también la liberan. Copiar, ordenar y exportar siguen requiriendo F10.\nEnter inspecciona la celda completa y permite copiar el valor, o el nombre de columna con el valor en una sola fila TSV (segura por defecto, con variante literal avisada). NULL es SQL NULL; cadena vacía es \"\".\n/ buscar · s/S orden léxico de filas recibidas · [/] conjuntos · e exportar · y/Y copiar filas sin/con cabeceras · r/R fila · c celda · v seleccionar rango · +/- ancho de columna\nCtrl+C abre copia; incluye 'Celda con cabecera': la celda seleccionada como nombre de columna, tabulador y valor en una sola fila TSV (por ejemplo nombre_cliente<TAB>ACME S.A.), lista para pegar en dos celdas contiguas. La cabecera es el nombre de la columna del resultado y respeta el orden visible.\nCopia y CSV son seguros por defecto para hojas de cálculo: la protección ' se aplica al nombre de columna y al valor; el menú ofrece modo literal, que deja ambos intactos. Se antepone ' a texto que empieza por =, +, - o @ tras espacios/controles. NUL se representa como \\0. JSON no cambia.",
 		"Connections":     "F2 perfiles y carpetas · / buscar · + añadir · e editar · n carpeta · r renombrar · d eliminar carpeta vacía · * favorito\nF4 busca bases. La nueva conexión sustituye la anterior solo tras conectar correctamente. Conserva SQL; no conserva transacciones, variables ni tablas temporales.\nSi cambias motor, servidor, puerto o usuario, vuelve a escribir la contraseña antes de probar o guardar.\nF3: flechas vista previa, Enter guardar, Esc restaurar. Ctrl+Q salir; Ctrl+C copia o cancela diálogo.",
 	}
+	intro["Editor"] += "\nCtrl+C copia la selección SQL al portapapeles del sistema; sin selección muestra un aviso y no copia nada. Conserva texto, selección y deshacer; funciona aunque haya una consulta en curso. NUL se representa como \\0 solo en el texto copiado."
 	intro["Editor"] += "\nAlt+/ comenta o descomenta cada línea seleccionada con --; sin selección solo muestra un aviso. Ctrl+P → Comentar todo el documento alterna todas las líneas. Conserva indentación y selección para repetir la acción; permite deshacer y no ejecuta ni guarda SQL. Los comentarios de línea usan el color atenuado del tema; la selección conserva sus colores."
 	intro["Editor"] += "\nArchivos: Ctrl+O explora carpetas; Ctrl+S guarda. Ctrl+P → Guardar SQL como elige otro destino. Tab/Shift+Tab cambia de campo; Enter selecciona; Esc cancela."
 	intro["All shortcuts"] = strings.Join([]string{intro["Getting started"], intro["Editor"], intro["Objects"], intro["Results"], intro["Connections"],
@@ -68,7 +69,12 @@ func (u *UI) spanishHelp() map[string]string {
 }
 
 var spanish = map[string]string{
-	"Comment selection": "Comentar selección",
+	"Select SQL text before copying":                 "Selecciona texto SQL antes de copiar",
+	"SQL clipboard copy already in progress":         "Ya hay una copia SQL al portapapeles en curso",
+	"Copied SQL selection to clipboard":              "Selección SQL copiada al portapapeles",
+	"Could not copy SQL: %s":                         "No se pudo copiar el SQL: %s",
+	"(NUL escaped as \\0)":                           "(NUL representado como \\0)",
+	"Comment selection":                              "Comentar selección",
 	"Alt+/ · comment / uncomment each selected line": "Alt+/ · comentar / descomentar cada línea seleccionada",
 	"Comment whole document":                         "Comentar todo el documento",
 	"Comment / uncomment each SQL line":              "Comentar / descomentar cada línea SQL",

@@ -122,7 +122,7 @@ para `OUT`/`INOUT` y las consulta al terminar `CALL`.
 | Alt+Z | Activar / desactivar ajuste de línea (Word Wrap) en el editor |
 | Alt+/ | Comentar / descomentar las líneas completas alcanzadas por la selección |
 | Ctrl+O / Ctrl+S / Ctrl+N | Abrir archivo / guardar / nueva sesión |
-| Ctrl+C / Ctrl+Q | Menú de copia desde cualquier panel / salir |
+| Ctrl+C / Ctrl+Q | Copiar selección SQL en editor; menú de copia en otros paneles / salir |
 | Space c/f/x/p/a/r | Conectar / buscar / ejecutar / invocar / aplicar / actualizar catálogo |
 | Space n/w/o/q | Nueva pestaña / guardar / abrir / cerrar pestaña |
 | Space h/e/b/d/t | Historial / exportar / cambiar base / desconectar / plantilla |
@@ -141,6 +141,20 @@ archivo ya tiene ruta; de lo contrario abre el mismo diálogo. Se solicita
 confirmación antes de sobrescribir otro archivo. No se crean carpetas desde el
 diálogo ni se recuerda la última ubicación entre sesiones: se parte de la carpeta
 del archivo actual o del directorio de trabajo para documentos nuevos.
+
+**Copiar SQL:** con foco en el editor, selecciona el texto (por ejemplo con `v` y
+movimientos en modo VISUAL) y pulsa **Ctrl+C** para copiarlo al portapapeles del
+sistema. Se copia literalmente, conservando Unicode y saltos de línea, sin
+cabeceras, formato TSV ni protección de fórmulas de hojas de cálculo. No se cambia
+el texto, la selección, el historial de deshacer ni el estado de guardado, y no se
+ejecuta SQL. Funciona también mientras haya una consulta en curso.
+
+Sin selección, se muestra un aviso y no se sobrescribe el portapapeles; no se
+copia automáticamente todo el documento. La copia se ejecuta fuera del bucle de
+interfaz y se evita iniciar otra copia SQL mientras la anterior está en curso.
+Los errores se muestran en la barra de estado. Un NUL se representa como `\0`
+solo en el texto copiado, con un aviso; el SQL original no se altera. El comando
+Vim `y` conserva su portapapeles interno y no cambia de comportamiento.
 
 **Comentar SQL:** selecciona texto en el editor (por ejemplo con `v` y movimientos
 en modo VISUAL) y pulsa **Alt+/**, o abre **Ctrl+P → Comentar selección / Comment
@@ -314,8 +328,9 @@ protección se aplica al nombre de la columna y al valor; la variante **Literal*
 del mismo menú deja ambos intactos. SQL NULL sigue representándose como `\N`.
 
 El menú de copia se cierra con Esc, Ctrl+C o un clic fuera de él. Al cambiar de
-panel con F6/F7/F8 también se cierra. Ctrl+C permite abrirlo de nuevo desde el
-editor, objetos o resultados; Ctrl+Q sale de la aplicación.
+panel con F6/F7/F8 también se cierra. Ctrl+C permite abrirlo de nuevo desde
+objetos o resultados; en el editor copia la selección SQL, no abre ese menú.
+Ctrl+Q sale de la aplicación.
 
 Los selectores de conexiones (F2), temas (F3) y bases (F4) siguen el mismo
 comportamiento: clic fuera, Esc o Ctrl+C cancelan; F6/F7/F8 cierran el selector
