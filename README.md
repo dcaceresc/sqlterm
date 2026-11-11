@@ -380,7 +380,12 @@ Sin conexión ofrece palabras SQL; los objetos y sus columnas requieren catálog
 Obtiene columnas del catálogo al necesitarlas y reconoce referencias y alias simples
 de `FROM`, `JOIN`, `UPDATE` e `INTO`, por ejemplo `SELECT c.Na` con
 `FROM dbo.Customers c`. Para SQL Server también sugiere parámetros nombrados tras
-`EXEC procedimiento @pa`. No ejecuta el SQL escrito para generar sugerencias.
+`EXEC procedimiento ` (con un espacio al final): la lista muestra los nombres y
+tipos disponibles y vuelve a aparecer tras una coma entre argumentos. Escribe `@`
+o `@pa` para filtrar; **Tab** o **Enter** inserta `@parametro = ` para que completes
+el valor. No abre automáticamente esa lista en un valor vacío después de `=`.
+Necesita el procedimiento en el catálogo de la base activa; **Space r** lo actualiza.
+No ejecuta el SQL escrito para generar sugerencias.
 
 No es un servidor de lenguaje ni un analizador semántico completo: no infiere
 columnas de CTE o subconsultas complejas, ni muestra diagnósticos equivalentes al

@@ -93,6 +93,63 @@ func TestSQLServerProcedureParameters(t *testing.T) {
 		t.Fatal("routine context leaked across statements")
 	}
 }
+func TestProcedureParametersAtEmptyArgumentPosition(t *testing.T) {
+	objects := []db.Object{{Schema: "dbo", Name: "Report", Kind: "procedure", Signature: "@id int, @name nvarchar"}}
+	for _, sql := range []string{
+		"EXEC dbo.Report |", "EXECUTE Report |", "EXEC [dbo].[Report] |",
+		"EXEC @status = dbo.Report |", "EXEC dbo.Report @|",
+		"EXEC dbo.Report @id = 1, |", "EXEC dbo.Report @id = COALESCE(1, 2), |",
+	} {
+		t.Run(sql, func(t *testing.T) {
+			ctx := analyzeMarker(sql, "sqlserver")
+			items := Suggestions(ctx, db.NewAdapter("sqlserver"), objects, nil)
+			if ctx.Want != "parameter" || len(items) != 2 ||
+				items[0].Text != "@id = " || items[0].Detail != "parameter · @id int" ||
+				items[1].Text != "@name = " || items[1].Detail != "parameter · @name nvarchar" {
+				t.Fatalf("parameter guidance missing: context=%#v items=%#v", ctx, items)
+			}
+			original := strings.Replace(sql, "|", "", 1)
+			if got := original[:ctx.Start] + items[0].Text + original[ctx.End:]; !strings.HasSuffix(got, "@id = ") {
+				t.Fatalf("parameter inserted at wrong position: %q", got)
+			}
+		})
+	}
+}
+
+func TestEmptyParameterGuidanceDoesNotAppearInValuesOrOtherStatements(t *testing.T) {
+	for _, sql := range []string{
+		"EXEC dbo.Report @id = |", "EXEC dbo.Report @name = 'value' |",
+		"EXEC dbo.Report @id = COALESCE(1, |", "EXEC dbo.Report @id = 1 |",
+		"EXEC dbo.Report; SELECT |", "EXEC dbo.Report\nGO\nSELECT |",
+		"EXEC dbo.Report -- comment |", "EXEC dbo.Report @name = 'text |",
+	} {
+		t.Run(sql, func(t *testing.T) {
+			ctx := analyzeMarker(sql, "sqlserver")
+			if ctx.Want == "parameter" {
+				t.Fatalf("parameter guidance outside an argument position: %#v", ctx)
+			}
+		})
+	}
+}
+
+func TestProcedureParameterDetailPreservesCommaInType(t *testing.T) {
+	objects := []db.Object{{Schema: "dbo", Name: "Report", Kind: "procedure", Signature: "@amount decimal(10,2), @name nvarchar"}}
+	ctx := analyzeMarker("EXEC dbo.Report |", "sqlserver")
+	items := Suggestions(ctx, db.NewAdapter("sqlserver"), objects, nil)
+	if len(items) != 2 || items[0].Detail != "parameter · @amount decimal(10,2)" {
+		t.Fatalf("incorrect parameter metadata: %#v", items)
+	}
+}
+
+func TestProcedureContextStopsAtGoBeforeAtPrefix(t *testing.T) {
+	objects, columns := fixture()
+	ctx := analyzeMarker("EXEC dbo.Report\nGO\nSELECT @|", "sqlserver")
+	items := Suggestions(ctx, db.NewAdapter("sqlserver"), objects, columns)
+	if len(ctx.Routine) != 0 || len(items) != 0 {
+		t.Fatalf("procedure context leaked across GO: context=%#v items=%#v", ctx, items)
+	}
+}
+
 func TestStatementKeywordRanksBeforeSimilarTable(t *testing.T) {
 	objects, columns := fixture()
 	objects = append(objects, db.Object{Schema: "dbo", Name: "SelectAudit", Kind: "table"})

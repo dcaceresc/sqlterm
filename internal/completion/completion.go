@@ -249,11 +249,12 @@ func Analyze(sql string, cursor int, engines ...string) Context {
 			ctx.References = append(ctx.References, ref)
 		}
 	}
+	routineEnd := 0
 	for i, t := range ts {
 		if t.Start >= ctx.Start {
 			break
 		}
-		if t.Text == ";" {
+		if t.Text == ";" || engine == "sqlserver" && batchSeparator(sql, t) {
 			ctx.Routine = nil
 		}
 		if t.Kind == "identifier" && !t.Quoted {
@@ -266,12 +267,77 @@ func Analyze(sql string, cursor int, engines ...string) Context {
 				parts, end := chain(ts, j)
 				if len(parts) > 0 && end > j && ts[end-1].End < ctx.Start {
 					ctx.Routine = parts
+					routineEnd = ts[end-1].End
 				}
 			}
 		}
 	}
+	if engine == "sqlserver" && len(ctx.Routine) > 0 && (ctx.Prefix == "" || strings.HasPrefix(ctx.Prefix, "@")) &&
+		parameterPosition(sql, all, routineEnd, ctx.Start) {
+		ctx.Want = "parameter"
+	}
 	return ctx
 }
+
+// parameterPosition distinguishes an argument-name slot from an argument value.
+// Keep string tokens here: a completed string is still a value, not an empty slot.
+func parameterPosition(sql string, all []Token, routineEnd, cursor int) bool {
+	slot, depth := true, 0
+	for _, t := range all {
+		if t.Start < routineEnd || t.Start >= cursor || t.Kind == "comment" {
+			continue
+		}
+		if t.Text == ";" || batchSeparator(sql, t) {
+			return false
+		}
+		if t.Kind == "symbol" {
+			switch t.Text {
+			case "(":
+				depth++
+			case ")":
+				depth = max(0, depth-1)
+			}
+		}
+		slot = t.Kind == "symbol" && t.Text == "," && depth == 0
+	}
+	return slot
+}
+
+func batchSeparator(sql string, t Token) bool {
+	if t.Kind != "identifier" || t.Quoted || !strings.EqualFold(t.Text, "GO") {
+		return false
+	}
+	start := strings.LastIndexByte(sql[:t.Start], '\n') + 1
+	end := len(sql)
+	if n := strings.IndexByte(sql[t.End:], '\n'); n >= 0 {
+		end = t.End + n
+	}
+	return strings.EqualFold(strings.TrimSpace(sql[start:end]), "GO")
+}
+
+// Split only between parameters, not inside a type such as decimal(10,2).
+func parameterSignatures(signature string) []string {
+	var parts []string
+	start, depth := 0, 0
+	for _, t := range tokens(signature, "sqlserver") {
+		if t.Kind != "symbol" {
+			continue
+		}
+		switch t.Text {
+		case "(":
+			depth++
+		case ")":
+			depth = max(0, depth-1)
+		case ",":
+			if depth == 0 {
+				parts = append(parts, signature[start:t.Start])
+				start = t.End
+			}
+		}
+	}
+	return append(parts, signature[start:])
+}
+
 func ColumnSources(ctx Context, objects []db.Object) []db.Object {
 	out := References(ctx, objects)
 	seen := map[string]bool{}
@@ -329,7 +395,7 @@ func Suggestions(ctx Context, a db.Adapter, objects []db.Object, columns map[str
 			items[c.Text] = c
 		}
 	}
-	if a.Engine() == "sqlserver" && len(ctx.Routine) > 0 && strings.HasPrefix(ctx.Prefix, "@") {
+	if a.Engine() == "sqlserver" && len(ctx.Routine) > 0 && (ctx.Want == "parameter" || strings.HasPrefix(ctx.Prefix, "@")) {
 		name := ctx.Routine[len(ctx.Routine)-1]
 		schema := ""
 		if len(ctx.Routine) > 1 {
@@ -337,7 +403,7 @@ func Suggestions(ctx Context, a db.Adapter, objects []db.Object, columns map[str
 		}
 		for _, o := range objects {
 			if (o.Kind == "procedure" || o.Kind == "function") && strings.EqualFold(o.Name, name) && (schema == "" || strings.EqualFold(o.Schema, schema)) {
-				for _, part := range strings.Split(o.Signature, ",") {
+				for _, part := range parameterSignatures(o.Signature) {
 					fields := strings.Fields(part)
 					if len(fields) > 0 && strings.HasPrefix(fields[0], "@") {
 						add(Candidate{Text: fields[0] + " = ", Name: fields[0], Label: fields[0], Detail: "parameter · " + strings.TrimSpace(part)})
