@@ -134,9 +134,11 @@ aparecen las otras unidades disponibles. El campo **Carpeta** también permite
 saltar a una ruta local o de red. Tab/Shift+Tab cambia de campo y Esc cancela.
 Se muestran todos los archivos para permitir también scripts sin extensión `.sql`.
 
-**Guardar como:** abre Ctrl+P y elige **Guardar SQL como / Save SQL as**; navega
-hasta la carpeta de destino, escribe el nombre completo (incluida la extensión
-`.sql` si corresponde) y pulsa **Guardar**. Ctrl+S guarda directamente si el
+**Guardar como:** pulsa **Ctrl+Shift+S**, o abre Ctrl+P y elige **Guardar SQL como
+/ Save SQL as**; navega hasta la carpeta de destino, escribe el nombre completo
+(incluida la extensión `.sql` si corresponde) y pulsa **Guardar**. El atajo solo
+funciona cuando la terminal distingue la combinación: si informa Ctrl+Shift+S
+como Ctrl+S, se realiza el guardado normal. **Ctrl+S** guarda directamente si el
 archivo ya tiene ruta; de lo contrario abre el mismo diálogo. Se solicita
 confirmación antes de sobrescribir otro archivo. Durante la sesión, cada guardado
 correcto recuerda su carpeta: el siguiente **Guardar como** empieza allí y conserva

@@ -389,6 +389,14 @@ func (u *UI) closeTab() {
 		closeIt()
 	}
 }
+func saveAsShortcut(k *tcell.EventKey) bool {
+	modifiers := k.Modifiers()
+	if k.Key() == tcell.KeyCtrlS {
+		return modifiers == tcell.ModShift || modifiers == tcell.ModCtrl|tcell.ModShift
+	}
+	return k.Key() == tcell.KeyRune && (k.Rune() == 's' || k.Rune() == 'S') && modifiers == tcell.ModCtrl|tcell.ModShift
+}
+
 func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 	if u.dialogContent != nil {
 		switch k.Key() {
@@ -422,6 +430,10 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 		return k
 	}
 	if u.closing {
+		return nil
+	}
+	if saveAsShortcut(k) {
+		u.saveFileAs()
 		return nil
 	}
 	if k.Key() == tcell.KeyF4 {

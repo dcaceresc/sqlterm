@@ -61,10 +61,10 @@ func (u *UI) spanishHelp() map[string]string {
 	}
 	intro["Editor"] += "\nCtrl+C copia la selección SQL al portapapeles del sistema; sin selección muestra un aviso y no copia nada. Conserva texto, selección y deshacer; funciona aunque haya una consulta en curso. NUL se representa como \\0 solo en el texto copiado."
 	intro["Editor"] += "\nAlt+/ comenta o descomenta cada línea seleccionada con --; sin selección solo muestra un aviso. Ctrl+P → Comentar todo el documento alterna todas las líneas. Conserva indentación y selección para repetir la acción; permite deshacer y no ejecuta ni guarda SQL. Los comentarios de línea usan el color atenuado del tema; la selección conserva sus colores."
-	intro["Editor"] += "\nArchivos: Ctrl+O explora carpetas; Ctrl+S guarda. Ctrl+P → Guardar SQL como elige otro destino. Tab/Shift+Tab cambia de campo; Enter selecciona; Esc cancela."
+	intro["Editor"] += "\nArchivos: Ctrl+O explora carpetas; Ctrl+S guarda directamente en la ruta actual. Ctrl+Shift+S o Ctrl+P → Guardar SQL como elige otro destino. Si la terminal informa Ctrl+Shift+S como Ctrl+S, se realiza un guardado normal. Tab/Shift+Tab cambia de campo; Enter selecciona; Esc cancela."
 	intro["Editor"] += "\nSQL Server: EXEC procedimiento seguido de espacio muestra parámetros y tipos; @ filtra, Tab/Enter inserta @nombre = . Reaparece tras una coma entre argumentos; no ejecuta SQL."
 	intro["All shortcuts"] = strings.Join([]string{intro["Getting started"], intro["Editor"], intro["Objects"], intro["Results"], intro["Connections"],
-		"F10 cancelar y esperar al controlador · F11 distribución · Ctrl+P o Space en NORMAL acciones\nCtrl+N nueva sesión · Alt+1..9 pestaña · Ctrl+O abrir · Ctrl+S guardar\nSpace c/f/x/p/a/r/n/w/o/q/h/e/b/d/t/T conserva los atajos de acciones.\nSQL Server: GO separa lotes. MySQL: DELIMITER en rutinas. PostgreSQL: cuerpos con dollar quoting.\nHistorial opcional; no guarda parámetros de invocación. Contraseñas en el almacén del sistema. Errores técnicos se conservan en el idioma del controlador."},
+		"F10 cancelar y esperar al controlador · F11 distribución · Ctrl+P o Space en NORMAL acciones\nCtrl+N nueva sesión · Alt+1..9 pestaña · Ctrl+O abrir · Ctrl+S guardar en la ruta actual · Ctrl+Shift+S guardar como\nSpace c/f/x/p/a/r/n/w/o/q/h/e/b/d/t/T conserva los atajos de acciones.\nSQL Server: GO separa lotes. MySQL: DELIMITER en rutinas. PostgreSQL: cuerpos con dollar quoting.\nHistorial opcional; no guarda parámetros de invocación. Contraseñas en el almacén del sistema. Errores técnicos se conservan en el idioma del controlador."},
 		"\n\n")
 	return intro
 }
@@ -196,7 +196,8 @@ var spanish = map[string]string{
 	"Review SQL before applying changes to the server":                           "Revisar SQL antes de aplicar cambios al servidor",
 	"Retry loading database objects":                                             "Reintentar carga de objetos",
 	"Ctrl+N · independent database connection":                                   "Ctrl+N · conexión independiente",
-	"Ctrl+S · changes marked *":                                                  "Ctrl+S · cambios marcados *",
+	"Ctrl+S · save directly to the current path":                                 "Ctrl+S · guardar directamente en la ruta actual",
+	"Ctrl+Shift+S · choose another folder or file name":                          "Ctrl+Shift+S · elegir otra carpeta o nombre de archivo",
 	"Ctrl+O · load file":                                                         "Ctrl+O · cargar archivo",
 	"Checks unsaved SQL":                                                         "Comprueba SQL sin guardar",
 	"Opt-in local SQL history":                                                   "Historial SQL local opcional",
