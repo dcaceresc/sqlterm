@@ -22,6 +22,10 @@ type sqlFileDialog struct {
 }
 
 func (u *UI) pickSQLFile(initial string, save bool, done func(string)) {
+	u.pickSQLFileFrom(initial, "", save, done)
+}
+
+func (u *UI) pickSQLFileFrom(initial, preferredDir string, save bool, done func(string)) {
 	dir, err := os.Getwd()
 	if err != nil {
 		u.message(err.Error())
@@ -35,6 +39,13 @@ func (u *UI) pickSQLFile(initial string, save bool, done func(string)) {
 			return
 		}
 		dir, name = filepath.Dir(absolute), filepath.Base(absolute)
+	}
+	if preferredDir != "" {
+		if absolute, absErr := filepath.Abs(preferredDir); absErr == nil {
+			if info, statErr := os.Stat(absolute); statErr == nil && info.IsDir() {
+				dir = absolute
+			}
+		}
 	}
 	if save && name == "" {
 		name = "query.sql"

@@ -74,6 +74,7 @@ type UI struct {
 	dialogContent                                      tview.Primitive
 	copyPopup                                          *tview.List
 	connectionFolder                                   string
+	lastSavedSQLDir                                    string
 	configPath                                         string
 	tabs                                               []*Tab
 	current                                            int

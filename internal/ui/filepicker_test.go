@@ -122,6 +122,171 @@ func fileDialogKey(u *UI, key tcell.Key) {
 	}
 }
 
+func TestSQLFileDialogRemembersSuccessfulSaveDirectoryForSession(t *testing.T) {
+	dirA := t.TempDir()
+	dirB := t.TempDir()
+	u := runningUI(t, config.Config{})
+	u.app.QueueUpdateDraw(func() {
+		first := u.active()
+		first.Editor.SetText("select 'first'")
+		u.saveFileAs()
+		p := u.dialogContent.(*sqlFileDialog)
+		p.navigate(dirA)
+		p.name.SetText("first.sql")
+		p.submit()
+		firstPath := filepath.Join(dirA, "first.sql")
+		contents, err := os.ReadFile(firstPath)
+		if err != nil || string(contents) != "select 'first'" || first.Path != firstPath || first.Saved != "select 'first'" || first.Editor.Area.GetText() != first.Saved {
+			t.Errorf("first save state: contents=%q err=%v path=%q saved=%q editor=%q", contents, err, first.Path, first.Saved, first.Editor.Area.GetText())
+		}
+
+		first.Editor.SetText("select 'direct'")
+		u.saveFile()
+		contents, err = os.ReadFile(firstPath)
+		if err != nil || string(contents) != "select 'direct'" || u.dialogContent != nil {
+			t.Errorf("plain save must remain direct: contents=%q err=%v dialog=%T", contents, err, u.dialogContent)
+		}
+
+		u.newTab(nil)
+		second := u.active()
+		second.Editor.SetText("select 'second'")
+		u.saveFileAs()
+		p = u.dialogContent.(*sqlFileDialog)
+		if p.dir != dirA || p.name.GetText() != "query.sql" {
+			t.Errorf("new tab save as starts at dir=%q name=%q, want %q and query.sql", p.dir, p.name.GetText(), dirA)
+		}
+		u.dismiss()
+
+		second.Path = filepath.Join(dirB, "existing-name.sql")
+		second.Saved = "old"
+		second.Editor.SetText("select 'renamed'")
+		u.saveFileAs()
+		p = u.dialogContent.(*sqlFileDialog)
+		if p.dir != dirA || p.name.GetText() != "existing-name.sql" {
+			t.Errorf("existing tab save as starts at dir=%q name=%q, want %q and existing-name.sql", p.dir, p.name.GetText(), dirA)
+		}
+		p.submit()
+		secondPath := filepath.Join(dirA, "existing-name.sql")
+		contents, err = os.ReadFile(secondPath)
+		if err != nil || string(contents) != "select 'renamed'" || second.Path != secondPath || second.Saved != "select 'renamed'" || second.Editor.Area.GetText() != second.Saved {
+			t.Errorf("second save state: contents=%q err=%v path=%q saved=%q editor=%q", contents, err, second.Path, second.Saved, second.Editor.Area.GetText())
+		}
+
+		directPath := filepath.Join(dirB, "direct.sql")
+		second.Path = directPath
+		second.Editor.SetText("select 'direct in B'")
+		u.saveFile()
+		contents, err = os.ReadFile(directPath)
+		if err != nil || string(contents) != "select 'direct in B'" || second.Path != directPath || second.Saved != "select 'direct in B'" || u.dialogContent != nil {
+			t.Errorf("direct save state: contents=%q err=%v path=%q saved=%q dialog=%T", contents, err, second.Path, second.Saved, u.dialogContent)
+		}
+		u.newTab(nil)
+		u.saveFileAs()
+		p = u.dialogContent.(*sqlFileDialog)
+		if p.dir != dirB || p.name.GetText() != "query.sql" {
+			t.Errorf("direct save did not update remembered directory: dir=%q name=%q", p.dir, p.name.GetText())
+		}
+		u.dismiss()
+
+		u.active().Path = filepath.Join(dirA, "open-from-here.sql")
+		u.openFile()
+		p = u.dialogContent.(*sqlFileDialog)
+		if p.dir != dirA || p.name.GetText() != "open-from-here.sql" {
+			t.Errorf("open dialog changed by save memory: dir=%q name=%q", p.dir, p.name.GetText())
+		}
+		u.dismiss()
+	})
+
+	fresh := New(filepath.Join(t.TempDir(), "config.json"), config.Config{})
+	defer fresh.cancel()
+	fresh.saveFileAs()
+	p := fresh.dialogContent.(*sqlFileDialog)
+	if p.dir == dirA {
+		t.Errorf("new UI session unexpectedly remembered %q", dirA)
+	}
+	fresh.dismiss()
+}
+
+func TestSQLFileDialogOnlyRemembersSuccessfulSaves(t *testing.T) {
+	dirA := t.TempDir()
+	dirB := t.TempDir()
+	target := filepath.Join(dirB, "existing.sql")
+	if err := os.WriteFile(target, []byte("original"), 0600); err != nil {
+		t.Fatal(err)
+	}
+	u := runningUI(t, config.Config{})
+	u.app.QueueUpdateDraw(func() {
+		tab := u.active()
+		tab.Editor.SetText("saved in A")
+		u.saveFileAs()
+		p := u.dialogContent.(*sqlFileDialog)
+		p.navigate(dirA)
+		p.name.SetText("remember.sql")
+		p.submit()
+		rememberedPath := filepath.Join(dirA, "remember.sql")
+
+		tab.Path = filepath.Join(dirB, "current.sql")
+		tab.Saved = "saved elsewhere"
+		tab.Editor.SetText("still dirty")
+		u.saveFileAs()
+		p = u.dialogContent.(*sqlFileDialog)
+		p.navigate(dirB)
+		fileDialogKey(u, tcell.KeyEscape)
+		u.saveFileAs()
+		p = u.dialogContent.(*sqlFileDialog)
+		if p.dir != dirA {
+			t.Errorf("cancel/navigation changed remembered directory to %q", p.dir)
+		}
+		p.name.SetText(target)
+		p.submit()
+		fileDialogKey(u, tcell.KeyEnter)
+		currentPath := filepath.Join(dirB, "current.sql")
+		if tab.Path != currentPath || tab.Saved != "saved elsewhere" || tab.Editor.Area.GetText() != "still dirty" {
+			t.Errorf("rejected overwrite changed document: path=%q saved=%q editor=%q", tab.Path, tab.Saved, tab.Editor.Area.GetText())
+		}
+		contents, err := os.ReadFile(target)
+		if err != nil || string(contents) != "original" {
+			t.Errorf("rejected overwrite changed target: contents=%q err=%v", contents, err)
+		}
+
+		u.saveFileAs()
+		p = u.dialogContent.(*sqlFileDialog)
+		if p.dir != dirA {
+			t.Errorf("overwrite rejection changed remembered directory to %q", p.dir)
+		}
+		p.name.SetText(filepath.Join(dirB, "missing", "failed.sql"))
+		p.submit()
+		if tab.Path != currentPath || tab.Saved != "saved elsewhere" || tab.Editor.Area.GetText() != "still dirty" {
+			t.Errorf("failed write changed document: path=%q saved=%q editor=%q", tab.Path, tab.Saved, tab.Editor.Area.GetText())
+		}
+		u.saveFileAs()
+		p = u.dialogContent.(*sqlFileDialog)
+		if p.dir != dirA {
+			t.Errorf("failed write changed remembered directory to %q", p.dir)
+		}
+		u.dismiss()
+		contents, err = os.ReadFile(rememberedPath)
+		if err != nil || string(contents) != "saved in A" {
+			t.Errorf("failed operations changed successful save: contents=%q err=%v", contents, err)
+		}
+
+		movedDir := filepath.Join(filepath.Dir(dirA), "moved-remembered-directory")
+		if err := os.Rename(dirA, movedDir); err != nil {
+			t.Errorf("rename remembered directory: %v", err)
+			return
+		}
+		u.saveFileAs()
+		p = u.dialogContent.(*sqlFileDialog)
+		if p.dir != dirB || p.name.GetText() != "current.sql" {
+			t.Errorf("missing remembered directory fallback: dir=%q name=%q", p.dir, p.name.GetText())
+		}
+		if tab.Path != currentPath || tab.Saved != "saved elsewhere" || tab.Editor.Area.GetText() != "still dirty" {
+			t.Error("fallback dialog changed document state")
+		}
+		u.dismiss()
+	})
+}
+
 func TestSQLFileDialogProtections(t *testing.T) {
 	dir := t.TempDir()
 	target := filepath.Join(dir, "existing.sql")

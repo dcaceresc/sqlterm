@@ -6,6 +6,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"os"
+	"path/filepath"
 	"sqlterm/internal/config"
 	"sqlterm/internal/db"
 	"sqlterm/internal/history"
@@ -33,6 +34,7 @@ func (u *UI) saveSQLFile(as bool) {
 			}
 			t.Path = path
 			t.Saved = t.Editor.Area.GetText()
+			u.lastSavedSQLDir = filepath.Dir(path)
 			u.message(u.tr("Saved ") + path)
 		}
 		if _, e := os.Stat(path); e == nil && path != t.Path {
@@ -44,7 +46,7 @@ func (u *UI) saveSQLFile(as bool) {
 	if t.Path != "" && !as {
 		save(t.Path)
 	} else {
-		u.pickSQLFile(t.Path, true, save)
+		u.pickSQLFileFrom(t.Path, u.lastSavedSQLDir, true, save)
 	}
 }
 func (u *UI) openFile() {

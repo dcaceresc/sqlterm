@@ -138,9 +138,12 @@ Se muestran todos los archivos para permitir también scripts sin extensión `.s
 hasta la carpeta de destino, escribe el nombre completo (incluida la extensión
 `.sql` si corresponde) y pulsa **Guardar**. Ctrl+S guarda directamente si el
 archivo ya tiene ruta; de lo contrario abre el mismo diálogo. Se solicita
-confirmación antes de sobrescribir otro archivo. No se crean carpetas desde el
-diálogo ni se recuerda la última ubicación entre sesiones: se parte de la carpeta
-del archivo actual o del directorio de trabajo para documentos nuevos.
+confirmación antes de sobrescribir otro archivo. Durante la sesión, cada guardado
+correcto recuerda su carpeta: el siguiente **Guardar como** empieza allí y conserva
+el nombre del archivo de la pestaña, o usa `query.sql` en una pestaña nueva. Abrir
+archivos mantiene su ubicación habitual. No se crean carpetas desde el diálogo ni
+se recuerda la ubicación al iniciar otra sesión; si la carpeta recordada deja de
+existir, se usa la carpeta del archivo actual o el directorio de trabajo.
 
 **Copiar SQL:** con foco en el editor, selecciona el texto (por ejemplo con `v` y
 movimientos en modo VISUAL) y pulsa **Ctrl+C** para copiarlo al portapapeles del
