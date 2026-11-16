@@ -73,6 +73,7 @@ func (u *UI) testConnection(f *tview.Form, result *tview.TextView, state *Tab, p
 		}
 		message := successMessage
 		if err != nil {
+			_ = diagnostic.LogError(u.configPath, "Test connection", err, password)
 			message = diagnostic.Redact(err, password).Error()
 			message = failurePrefix + message
 		}

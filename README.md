@@ -482,6 +482,18 @@ contiene únicamente un `credential_id`, nunca la contraseña. Al eliminar el
 perfil también se elimina su credencial. Los errores de conexión ocultan tanto
 la contraseña literal como sus formas codificadas dentro de una URL o DSN.
 
+### Registro de errores
+
+Los errores técnicos completos se agregan a `sqlterm-errors.log`, junto al archivo
+de configuración seleccionado (también al usar `--config`). El archivo se crea
+solo cuando ocurre un error y crece por anexado; SQLTerm no lo rota. Puedes
+eliminarlo manualmente cuando ya no lo necesites.
+
+SQLTerm oculta las contraseñas conocidas, incluidas sus formas codificadas, y no
+agrega por separado el SQL, los resultados, la configuración ni los DSN. Aun así,
+el texto devuelto por el servidor puede incluir fragmentos de SQL o datos. Revisa
+el registro antes de compartirlo y elimínalo si contiene información sensible.
+
 Linux requiere una sesión de Secret Service disponible, por ejemplo GNOME Keyring
 o un proveedor compatible. Si el almacén no está disponible, la aplicación muestra
 el error y no guarda contraseñas en texto plano. Los perfiles anteriores siguen

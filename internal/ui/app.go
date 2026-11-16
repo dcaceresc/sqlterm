@@ -10,6 +10,7 @@ import (
 	"sqlterm/internal/config"
 	"sqlterm/internal/credentials"
 	"sqlterm/internal/db"
+	"sqlterm/internal/diagnostic"
 	"sqlterm/internal/editor"
 	"sqlterm/internal/result"
 	"strings"
@@ -88,7 +89,10 @@ type UI struct {
 func New(path string, cfg config.Config) *UI {
 	ctx, cancel := context.WithCancel(context.Background())
 	u := &UI{app: tview.NewApplication(), cfg: cfg, configPath: path, ctx: ctx, cancel: cancel, vault: credentials.System{}}
-	u.openSession = db.Connect
+	u.openSession = func(ctx context.Context, profile config.Profile, password string) (*db.Session, error) {
+		session, err := db.Connect(ctx, profile, password)
+		return session, diagnostic.Redact(err, password)
+	}
 	u.writeClipboard = clipboard.WriteAll
 	if u.cfg.Folders == nil {
 		u.cfg.Folders = []string{"DEV", "QA", "PROD"}
@@ -277,11 +281,15 @@ func (u *UI) task(t *Tab, label string, work func(context.Context) (func(), erro
 	ctx, cancel := context.WithCancel(u.ctx)
 	t.Cancel = cancel
 	u.refreshBars()
+	password := t.Password
 	u.wg.Add(1)
 	go func() {
 		defer u.wg.Done()
 		defer cancel()
 		apply, err := work(ctx)
+		if err != nil {
+			_ = diagnostic.LogError(u.configPath, label, err, password)
+		}
 		u.post(func() {
 			t.Busy = false
 			t.Cancel = nil
