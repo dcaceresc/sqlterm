@@ -44,18 +44,47 @@ func TestSQLServerCatalogWithoutModernAggregates(t *testing.T) {
 		t.Fatal(err)
 	}
 }
-func TestGeneratedSelectUsesPagingInsteadOfHardcodedRowCaps(t *testing.T) {
+func TestTableDefinitions(t *testing.T) {
 	for _, tc := range []struct {
-		engine, schema, name, want string
+		engine, schema, name string
 	}{
-		{"sqlserver", "sales", "Order", "SELECT * FROM [sales].[Order];"},
-		{"postgres", "Sales", "Order", `SELECT * FROM "Sales"."Order";`},
-		{"mysql", "sales", "order", "SELECT * FROM `sales`.`order`;"},
+		{"sqlserver", "sales", "Order"},
+		{"postgres", "Sales", "Order"},
+		{"mysql", "sales", "order"},
 	} {
 		t.Run(tc.engine, func(t *testing.T) {
-			got, err := NewAdapter(tc.engine).Definition(context.Background(), nil, Object{Schema: tc.schema, Name: tc.name, Kind: "table"})
-			if err != nil || got != tc.want {
-				t.Fatalf("Definition() = %q, %v; want %q", got, err, tc.want)
+			database, mock, err := sqlmock.New()
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer database.Close()
+			conn, err := database.Conn(context.Background())
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer conn.Close()
+			a := NewAdapter(tc.engine)
+			target := a.Quote(tc.schema) + "." + a.Quote(tc.name)
+			want := "CREATE TABLE " + target + " (\n    id int NOT NULL,\n    CONSTRAINT pk PRIMARY KEY (id)\n);"
+			if tc.engine == "mysql" {
+				mock.ExpectQuery("SHOW CREATE TABLE").WillReturnRows(sqlmock.NewRows([]string{"Table", "Create Table"}).AddRow(tc.name, want)).RowsWillBeClosed()
+			} else {
+				columns := "FROM sys.columns"
+				constraints := "FROM sys.key_constraints"
+				indexes := "FROM sys.indexes"
+				if tc.engine == "postgres" {
+					columns, constraints, indexes = "FROM pg_attribute", "FROM pg_constraint", "FROM pg_index"
+				}
+				mock.ExpectQuery(columns).WithArgs("42").WillReturnRows(sqlmock.NewRows([]string{"definition"}).AddRow("id int NOT NULL")).RowsWillBeClosed()
+				mock.ExpectQuery(constraints).WithArgs("42").WillReturnRows(sqlmock.NewRows([]string{"definition"}).AddRow("CONSTRAINT pk PRIMARY KEY (id)")).RowsWillBeClosed()
+				mock.ExpectQuery(indexes).WithArgs("42").WillReturnRows(sqlmock.NewRows([]string{"definition"})).RowsWillBeClosed()
+			}
+			got, err := a.Definition(context.Background(), conn, Object{Schema: tc.schema, Name: tc.name, Kind: "table", ID: "42"})
+			if err != nil || got != want {
+				t.Fatalf("Definition() = %q, %v; want %q", got, err, want)
+			}
+			if err = mock.ExpectationsWereMet(); err != nil {
+				t.Fatal(err)
 			}
 		})
 	}

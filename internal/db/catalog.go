@@ -80,7 +80,7 @@ func (a *adapter) Definition(ctx context.Context, c *sql.Conn, o Object) (string
 	switch a.engine {
 	case "sqlserver":
 		if o.Kind == "table" {
-			return "SELECT * FROM " + a.qualified(o) + ";", nil
+			return a.tableDefinition(ctx, c, o)
 		}
 		e := c.QueryRowContext(ctx, `SELECT OBJECT_DEFINITION(CONVERT(int,@p1))`, o.ID).Scan(&text)
 		if e != nil {
@@ -88,7 +88,7 @@ func (a *adapter) Definition(ctx context.Context, c *sql.Conn, o Object) (string
 		}
 	case "postgres":
 		if o.Kind == "table" {
-			return "SELECT * FROM " + a.qualified(o) + ";", nil
+			return a.tableDefinition(ctx, c, o)
 		}
 		q := `SELECT pg_get_functiondef($1::oid)`
 		if o.Kind == "view" {
@@ -102,11 +102,8 @@ func (a *adapter) Definition(ctx context.Context, c *sql.Conn, o Object) (string
 			text.String = "CREATE OR REPLACE VIEW " + a.qualified(o) + " AS\n" + text.String
 		}
 	case "mysql":
-		if o.Kind == "table" {
-			return "SELECT * FROM " + a.qualified(o) + ";", nil
-		}
 		kind := strings.ToUpper(o.Kind)
-		if kind != "PROCEDURE" && kind != "FUNCTION" && kind != "VIEW" {
+		if kind != "TABLE" && kind != "PROCEDURE" && kind != "FUNCTION" && kind != "VIEW" {
 			return "", unsupported(kind)
 		}
 		r, e := c.QueryContext(ctx, "SHOW CREATE "+kind+" "+a.qualified(o))

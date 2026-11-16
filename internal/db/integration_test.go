@@ -47,6 +47,44 @@ func TestIntegration(t *testing.T) {
 			o := Object{Schema: schema, Name: name, Kind: "procedure"}
 			a := s.Adapter
 			target := a.Quote(schema) + "." + a.Quote(name)
+			t.Run("table-definition", func(t *testing.T) {
+				table := Object{Schema: schema, Name: name + "_table", Kind: "table"}
+				tableTarget := a.Quote(schema) + "." + a.Quote(table.Name)
+				ddl := "CREATE TABLE " + tableTarget + " (id int NOT NULL PRIMARY KEY, amount decimal(10,2) DEFAULT 7, CHECK (amount >= 0))"
+				if _, err := s.Conn.ExecContext(ctx, ddl); err != nil {
+					t.Fatal(err)
+				}
+				defer func() {
+					cleanup, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+					defer cancel()
+					if _, err := s.Conn.ExecContext(cleanup, "DROP TABLE "+tableTarget); err != nil {
+						t.Error(err)
+					}
+				}()
+				objects, err := a.Catalog(ctx, s.Conn)
+				if err != nil {
+					t.Fatal(err)
+				}
+				for _, item := range objects {
+					if item.Name == table.Name && item.Schema == schema {
+						table = item
+						break
+					}
+				}
+				definition, err := a.Definition(ctx, s.Conn, table)
+				if err != nil {
+					t.Fatal(err)
+				}
+				for _, fragment := range []string{"CREATE TABLE", table.Name, "id", "amount", "PRIMARY KEY", "DEFAULT", "CHECK"} {
+					if !strings.Contains(definition, fragment) {
+						t.Errorf("missing %q in table definition: %s", fragment, definition)
+					}
+				}
+				columns, err := a.Columns(ctx, s.Conn, table)
+				if err != nil || len(columns) != 2 {
+					t.Fatalf("table changed while reading definition: %v, %v", columns, err)
+				}
+			})
 			var create string
 			// FIRST_VALUE is reserved in MySQL 8. Quote result aliases using the
 			// engine's identifier rules, just like schema and procedure names.

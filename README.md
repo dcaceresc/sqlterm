@@ -293,6 +293,18 @@ avanzan mientras el conjunto anterior está en pausa. La consulta se ejecuta una
 sola vez y no se modifica con `LIMIT`, `TOP`, `OFFSET` ni reejecuciones; pausar la
 lectura del cliente no garantiza que el servidor deje de procesar internamente.
 
+En **Objetos**, un clic o **Enter** sobre una tabla abre su definición `CREATE TABLE`
+en el editor, sin ejecutarla. **Ctrl+P → Generar SELECT** conserva la generación de
+consultas por separado. MySQL muestra `SHOW CREATE TABLE`; SQL Server y PostgreSQL
+reconstruyen columnas, restricciones e índices desde los metadatos visibles.
+Estos scripts sirven para inspección, no como copia de seguridad ni migración completa:
+no incluyen permisos, triggers ni todas las opciones físicas del motor. PostgreSQL
+no reconstruye tablas particionadas, heredadas o externas; informa que su definición
+no está disponible. Las opciones especiales de SQL Server (por ejemplo tablas
+temporales del sistema, índices columnstore y particionado) no se reconstruyen.
+**Aplicar definición** no permite modificar tablas; no ejecutes el `CREATE TABLE`
+sobre la tabla existente.
+
 Los SELECT generados desde tablas del catálogo tampoco añaden un límite SQL fijo:
 usan esta misma recepción incremental y conservan el esquema y las comillas del
 motor.
