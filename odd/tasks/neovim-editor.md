@@ -11,12 +11,12 @@ S5. Prior user requirement: "dejame verificarlo porque vere que comando es mejor
 S6. User clarification: "si yo hago control v para pegar un texto en modo normal entra a modo insert".
 
 ## Tasks
-T1 | S1-S6 | done | parent: freeze existing-work baseline, confirm integration boundaries and dependency/input feasibility | commit: pending
+T1 | S1-S6 | done | parent: freeze existing-work baseline, confirm integration boundaries and dependency/input feasibility | commit: dc9a81d (dependency/terminal slice)
 T2 | S1-S3,S5 | done | writer: isolated Neovim process/RPC session, buffer and UI event model, deterministic and real-process checks | commit: pending
 T3 | S1-S3,S5 | done | parent: embed Neovim pane and wire coherent editor snapshots into existing SQLTerm workflows | commit: pending
 T4 | S4,S6 | done | writer: Windows terminal input with bracketed paste; preserve keyboard, mouse, resize and terminal restoration | commit: pending
-T5 | S1-S6 | in_progress | parent + independent verifier: end-to-end editor/SQL/paste regression checks and documentation | commit: pending
-T6 | S1-S6 | pending | parent: reviewable feature-only commits, applicable native review and final evidence | commit: pending
+T5 | S1-S6 | pending | parent + independent verifier: end-to-end editor/SQL/paste regression checks and documentation | commit: pending
+T6 | S1-S6 | in_progress | parent: reviewable feature-only commits, applicable native review and final evidence | commit: pending
 
 ## Log
 L1. User request verbatim: "quiero ocupar neovim como editor".
@@ -34,3 +34,6 @@ L10. T1 evidence: background job-1 exit0; pinned artifacts downloaded and sum-ve
 L11. T2 worker mwnn9vcj-8-dhne delivered internal/nvim (6 files,1059 lines); focused real-process/deterministic checks exit0 (6 top-level,13 subtests), RED observed missing APIs. Remaining broad/race and integration verification belongs T5. T4 worker mwnn9vcp-9-tur2 delivered public-parser/tview dispatch regression and opt-in Windows diagnostic; focused checks and10 repetitions pass. Native actual Windows Terminal acceptance intentionally not run and remains T5. Their code surfaces are disjoint; neither changed manifests/editor/UI. Native ASSESS escalates item4 and requires independent verification; native assessment itself remains unavailable due untracked selection.
 
 L12. T3 implementation evidence: native Editor.Area compatibility projection plus real linegrid rendering, input/mouse/paste, per-tab lifecycle and fail-closed SQL/save guards wired; CLI now constructs NewWithNeovim. Public adapter tests observed RED before API implementation, then found lone-g timeout; parent fixed RPC barrier with fast nvim_get_mode and ErrInputPending (per-key gg now passes). Existing UI/editor tests exposed theme dispatch and focus-identity regressions introduced by wrapper; both fixed, full focused packages pass. Three real-process UI integration tests pass for bracketed paste/Normal/one-undo, ggVG/save/tab isolation, and blocked blockwise/stale execution+save. Last confirmed SQL remains cached; no automatic legacy fallback. Native startup uses an isolated nofile SQL buffer and requires Neovim0.11+. Final suite/vet/race/cross-build job-2 now running; no claim of Windows keyboard acceptance.
+
+L13. Job-2 exit0: full go test ./... -count=1 and go vet pass; targeted race passes for adapter/UI/parser but nvim package reports no matching direct tests under that regex (do not claim its direct tests ran under race). Windows amd64, Linux amd64 and macOS arm64 CLI builds pass. Native keyboard diagnostic remains intentionally unrun. The exact staged dependency/terminal candidate materialized at .cache/neovim-candidates/terminal also passed a fresh full suite before commit dc9a81d (284+/54-, lockfiles excluded slice280).
+L14. Native review of dc9a81d: abbreviated base rejected (no mutation), corrected full base and committed-only scope required explicit untracked exclusion, then START failed candidate-owner-preparation-failed/provider-unavailable. lineage_created=false, mutation_performed=false, no authority and no approval; automatic_retry=false. Do not retry that candidate. Continue ordinary authorized implementation, retain independent-verification requirement and report native review unavailable.

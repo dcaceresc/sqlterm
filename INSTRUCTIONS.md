@@ -429,6 +429,8 @@ Los parámetros del formulario son texto o `NULL` y el servidor realiza la conve
 
 ## Pruebas
 
+Para comprobar el transporte nativo en Windows Terminal, ejecuta `./scripts/verify-windows-terminal.ps1` desde PowerShell y sigue sus indicaciones de pegado, teclas, mouse y redimensionado. Es una comprobación interactiva opcional: las pruebas automáticas del parser no sustituyen esa evidencia ni prueban la restauración real de consola.
+
 Para las comprobaciones habituales:
 
 ```sh
