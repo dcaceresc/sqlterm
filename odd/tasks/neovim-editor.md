@@ -1,0 +1,36 @@
+# Embedded Neovim editor
+Status: implementation authorized; feature branch `feat/neovim-editor`.
+Replace the SQL editing engine in-place, preserving SQLTerm's connection and result workflows.
+
+## Specs
+S1. User: "quiero ocupar neovim como editor".
+S2. User selection: "Neovim integrado en SQLTerm (recomendado)". Option description: "Conservar conexiones y resultados; reemplazar únicamente el editor SQL por Neovim."
+S3. User selection: "Neovim aislado para SQLTerm (recomendado)". Option description: "Modos y comandos reales de Neovim, sin cargar ni modificar tu configuración personal de LazyVim."
+S4. User selection: "Incluir Ctrl+V de Windows Terminal (recomendado)". Option description: "Adaptar también la capa de terminal y verificar pegado, teclado, mouse y redimensionado."
+S5. Prior user requirement: "dejame verificarlo porque vere que comando es mejor, lo que si hay que modificar es la asimilacion con lazyvim, cuando yo copio no deberia entrar en modo insertar si estoy en modo nromal o visual, para ir al inicio de archivo usar gg, seleccionar la linea ctual completa V (mayustucla) seleccionar todo el archivo ggVG".
+S6. User clarification: "si yo hago control v para pegar un texto en modo normal entra a modo insert".
+
+## Tasks
+T1 | S1-S6 | done | parent: freeze existing-work baseline, confirm integration boundaries and dependency/input feasibility | commit: pending
+T2 | S1-S3,S5 | done | writer: isolated Neovim process/RPC session, buffer and UI event model, deterministic and real-process checks | commit: pending
+T3 | S1-S3,S5 | done | parent: embed Neovim pane and wire coherent editor snapshots into existing SQLTerm workflows | commit: pending
+T4 | S4,S6 | done | writer: Windows terminal input with bracketed paste; preserve keyboard, mouse, resize and terminal restoration | commit: pending
+T5 | S1-S6 | in_progress | parent + independent verifier: end-to-end editor/SQL/paste regression checks and documentation | commit: pending
+T6 | S1-S6 | pending | parent: reviewable feature-only commits, applicable native review and final evidence | commit: pending
+
+## Log
+L1. User request verbatim: "quiero ocupar neovim como editor".
+L2. User selected "Neovim integrado en SQLTerm (recomendado)" after comparison with a SQLTerm plugin for Neovim/LazyVim.
+L3. User selected "Neovim aislado para SQLTerm (recomendado)" and "Incluir Ctrl+V de Windows Terminal (recomendado)".
+L4. Environment evidence: Neovim v0.12.6 installed at C:/Program Files/Neovim/bin/nvim. Starting Git HEAD 8cf2d6e on master; feature branch created without discarding worktree changes.
+L5. Existing pending work before this feature: connection-tree controls, comment shortcuts/help, and basic Vim-line selection. Preserve these edits and do not silently commit unrelated connection/comment changes. The standalone Vim-emulation work is superseded only where replacement by Neovim requires it, not by blanket rollback.
+L6. Prior modal verification history: an independent run passed legacy differentials but found two defects; parent reproduced and fixed them. Corrected-candidate independent continuation ran no commands because it demanded commit-bound inputs/outside-workspace scratch. Do not reuse old proof or retry that unavailable invocation. This feature is a new candidate; independently verify its committed work units without bypassing isolation requirements or reading/writing outside the authorized workspace.
+L7. Architecture evidence: UI mounts Editor.View and focuses Editor.Area; production SQL/file/completion/comment workflows consume TextArea text, UTF-8 byte offsets, selection and replace operations. Neovim must become the editing authority, not an external suspended editor or a second unsynchronized buffer. tcell2.8.1's native Windows EnablePaste is a no-op, so embedding alone does not solve terminal-owned Ctrl+V.
+L8. Source-verified input route: tcell/v2 v2.13.10 includes the maintained Windows terminfo/VT redesign and split-UTF8 paste-loop correction, remains compatible with tview's v2 event types, and requires Go1.24. Local Go1.27.4 satisfies it. Parent validated exact go.mod/go.sum backups before starting artifact download, pinned dependency upgrade and migration tests in background job-1. Recovery means restoring only those known-owned dependency changes from the validated snapshots, never blanket restoring source.
+L9. Planned Neovim boundary: a dedicated internal/nvim package owns child/RPC, immutable snapshots and line-grid frames; Editor/UI adapters own tview drawing/focus and application shortcuts. Register event handlers before UI attach; preserve UTF8 byte offsets at SQLTerm boundaries. Parent owns go.mod/go.sum; parallel writers must not edit dependency manifests or UI/editor source.
+
+L10. T1 evidence: background job-1 exit0; pinned artifacts downloaded and sum-verified, go mod verify passed, full go test ./... passed after dependency upgrade. Go module minimum increased to1.24. T2 and T4 now run as disjoint parallel units; visible todo groups their execution into one active entry.
+
+L11. T2 worker mwnn9vcj-8-dhne delivered internal/nvim (6 files,1059 lines); focused real-process/deterministic checks exit0 (6 top-level,13 subtests), RED observed missing APIs. Remaining broad/race and integration verification belongs T5. T4 worker mwnn9vcp-9-tur2 delivered public-parser/tview dispatch regression and opt-in Windows diagnostic; focused checks and10 repetitions pass. Native actual Windows Terminal acceptance intentionally not run and remains T5. Their code surfaces are disjoint; neither changed manifests/editor/UI. Native ASSESS escalates item4 and requires independent verification; native assessment itself remains unavailable due untracked selection.
+
+L12. T3 implementation evidence: native Editor.Area compatibility projection plus real linegrid rendering, input/mouse/paste, per-tab lifecycle and fail-closed SQL/save guards wired; CLI now constructs NewWithNeovim. Public adapter tests observed RED before API implementation, then found lone-g timeout; parent fixed RPC barrier with fast nvim_get_mode and ErrInputPending (per-key gg now passes). Existing UI/editor tests exposed theme dispatch and focus-identity regressions introduced by wrapper; both fixed, full focused packages pass. Three real-process UI integration tests pass for bracketed paste/Normal/one-undo, ggVG/save/tab isolation, and blocked blockwise/stale execution+save. Last confirmed SQL remains cached; no automatic legacy fallback. Native startup uses an isolated nofile SQL buffer and requires Neovim0.11+. Final suite/vet/race/cross-build job-2 now running; no claim of Windows keyboard acceptance.

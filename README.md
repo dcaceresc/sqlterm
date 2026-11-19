@@ -21,4 +21,6 @@ Linux y Windows son las plataformas principales. Go permite compilar el proyecto
 
 ## Instalación y uso
 
+Compilar desde el código fuente requiere **Go 1.24 o posterior**. El backend Windows actualizado negocia pegado delimitado con terminales compatibles; las pruebas automáticas del parser no sustituyen la comprobación interactiva de Windows Terminal.
+
 Sigue la [instalación recomendada](INSTRUCTIONS.md#instalación-recomendada) para instalar una vez desde el repositorio y después ejecutar `sqlterm` desde cualquier carpeta. La guía también cubre configuración, atajos, automatización, pruebas y límites actuales.
