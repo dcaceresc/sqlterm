@@ -139,6 +139,8 @@ func (u *UI) style(p tview.Primitive) {
 		if w == u.status {
 			w.SetBackgroundColor(t.Surface)
 		}
+	case *editor.Area:
+		u.style(w.TextArea)
 	case *tview.TextArea:
 		w.SetTextStyle(tcell.StyleDefault.Foreground(t.Foreground).Background(t.Background)).SetSelectedStyle(selected).SetPlaceholderStyle(tcell.StyleDefault.Foreground(t.Muted).Background(t.Background))
 	case *tview.InputField:

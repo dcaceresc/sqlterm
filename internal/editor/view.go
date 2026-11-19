@@ -10,10 +10,10 @@ import (
 	"github.com/rivo/uniseg"
 )
 
-// View draws the gutter around the original TextArea. SQL, undo, selection,
-// cursor and input handlers remain owned by that TextArea.
+// View dibuja la grilla publicada por Neovim cuando está activo.
+// El adaptador de pruebas conserva el dibujo original de TextArea.
 type View struct {
-	*tview.TextArea
+	*Area
 	editor        *Editor
 	numbers, wrap bool
 	muted, active tcell.Color
@@ -34,6 +34,11 @@ type viewRow struct {
 }
 
 func (e *Editor) SetWordWrap(enabled bool) {
+	if e.native != nil {
+		e.View.wrap = enabled
+		e.nativeEdit(func() error { return e.native.session.Configure(e.View.numbers, enabled) })
+		return
+	}
 	if e.View.wrap == enabled {
 		return
 	}
@@ -49,8 +54,13 @@ func (e *Editor) SetWordWrap(enabled bool) {
 	}
 	e.Area.SetOffset(max(0, row-max(1, height)+1), columnOffset)
 }
-func (e *Editor) WordWrap() bool                              { return e.View.wrap }
-func (e *Editor) SetLineNumbers(enabled bool)                 { e.View.numbers = enabled }
+func (e *Editor) WordWrap() bool { return e.View.wrap }
+func (e *Editor) SetLineNumbers(enabled bool) {
+	e.View.numbers = enabled
+	if e.native != nil {
+		e.nativeEdit(func() error { return e.native.session.Configure(enabled, e.View.wrap) })
+	}
+}
 func (v *View) SetLineNumberColors(muted, active tcell.Color) { v.muted, v.active = muted, active }
 
 // Position reports the SQL location, independent of soft wrapping.
@@ -65,6 +75,10 @@ func (e *Editor) Position() (row, column int) {
 }
 
 func (v *View) Draw(screen tcell.Screen) {
+	if v.editor.native != nil {
+		v.drawNeovim(screen)
+		return
+	}
 	text := v.GetText()
 	gutter := 0
 	digits := max(2, len(strconv.Itoa(strings.Count(text, "\n")+1)))

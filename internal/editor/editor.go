@@ -9,7 +9,7 @@ import (
 )
 
 type Editor struct {
-	Area        *tview.TextArea
+	Area        *Area
 	View        *View
 	Mode        string
 	Clipboard   string
@@ -18,11 +18,15 @@ type Editor struct {
 	pending     rune
 	OnMode      func(string)
 	Search      func()
+	native      *nativeEditor
+	OnRedraw    func()
+	OnError     func(error)
 }
 
 func New() *Editor {
-	e := &Editor{Area: tview.NewTextArea().SetWrap(false), Mode: "NORMAL"}
-	e.View = &View{TextArea: e.Area, editor: e, numbers: true}
+	e := &Editor{Mode: "NORMAL"}
+	e.Area = &Area{TextArea: tview.NewTextArea().SetWrap(false), editor: e}
+	e.View = &View{Area: e.Area, editor: e, numbers: true}
 	e.Area.SetInputCapture(e.Handle)
 	return e
 }
@@ -33,8 +37,17 @@ func (e *Editor) mode(m string) {
 		e.OnMode(m)
 	}
 }
-func (e *Editor) SetText(s string) { e.mode("NORMAL"); e.Area.SetText(s, false) }
+func (e *Editor) SetText(s string) error {
+	if e.native == nil {
+		e.mode("NORMAL")
+	}
+	e.Area.SetText(s, false)
+	return e.Err()
+}
 func (e *Editor) Cursor() int {
+	if e.native != nil {
+		return e.native.snapshot.Cursor
+	}
 	_, _, end := e.Area.GetSelection()
 	if e.Mode == "VISUAL" {
 		return e.pos
@@ -74,6 +87,10 @@ func lineEnd(s string, p int) int {
 	return p + n
 }
 func (e *Editor) Handle(k *tcell.EventKey) *tcell.EventKey {
+	if e.native != nil {
+		e.nativeKey(k)
+		return nil
+	}
 	if k.Key() == tcell.KeyEscape {
 		p := e.Cursor()
 		e.Area.Select(p, p)
