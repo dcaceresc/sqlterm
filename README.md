@@ -8,7 +8,7 @@ No pretende ser un cliente universal ni reemplazar todas las herramientas de adm
 
 - Perfiles de conexión organizados por carpetas, favoritos y entorno.
 - Catálogo de tablas, vistas, procedimientos y funciones.
-- Editor integrado con modos Vim básicos, pestañas y archivos SQL.
+- Editor Neovim real integrado en el panel SQL, aislado de la configuración personal, con pestañas y archivos SQL.
 - Invocación parametrizada y edición de procedimientos y funciones según el motor.
 - IntelliSense basado en el dialecto, el catálogo y las referencias simples del SQL.
 - Ejecución cancelable con múltiples conjuntos de resultados y recepción incremental.
@@ -21,6 +21,6 @@ Linux y Windows son las plataformas principales. Go permite compilar el proyecto
 
 ## Instalación y uso
 
-Compilar desde el código fuente requiere **Go 1.24 o posterior**. El backend Windows actualizado negocia pegado delimitado con terminales compatibles; las pruebas automáticas del parser no sustituyen la comprobación interactiva de Windows Terminal.
+Requiere **Neovim 0.11 o posterior** (`nvim` en `PATH`). Compilar desde el código fuente requiere **Go 1.24 o posterior**. SQLTerm conserva sus paneles de conexiones y resultados; cada pestaña SQL tiene una sesión Neovim aislada.
 
 Sigue la [instalación recomendada](INSTRUCTIONS.md#instalación-recomendada) para instalar una vez desde el repositorio y después ejecutar `sqlterm` desde cualquier carpeta. La guía también cubre configuración, atajos, automatización, pruebas y límites actuales.

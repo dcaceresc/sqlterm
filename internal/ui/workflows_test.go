@@ -41,6 +41,7 @@ func runningUI(t *testing.T, c config.Config) *UI {
 		for _, tab := range u.tabs {
 			u.dispose(tab)
 		}
+		u.nativeWG.Wait()
 	})
 	return u
 }

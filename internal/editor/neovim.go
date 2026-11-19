@@ -64,6 +64,13 @@ func (e *Editor) EnableNeovim(options nvim.Options) error {
 
 func (e *Editor) IsNeovim() bool { return e.native != nil }
 
+func (e *Editor) SetNeovimTheme(theme nvim.Theme) error {
+	if e.native == nil || e.native.session == nil {
+		return nil
+	}
+	return e.native.session.SetTheme(theme)
+}
+
 // Err evita que una selección desconocida o un hijo muerto se conviertan en ejecutar todo.
 func (e *Editor) Err() error {
 	if n := e.native; n != nil {
@@ -160,6 +167,15 @@ func (e *Editor) Close() error {
 		return n.session.Close()
 	}
 	return nil
+}
+
+// Complete aplica una sugerencia sin reiniciar la sesión de inserción.
+func (e *Editor) Complete(start, end int, text string) {
+	if n := e.native; n != nil && e.Mode == "INSERT" {
+		e.nativeEdit(func() error { return n.session.CompleteInsert(start, end, text) })
+		return
+	}
+	e.Area.Replace(start, end, text)
 }
 
 func (e *Editor) nativeKey(k *tcell.EventKey) {

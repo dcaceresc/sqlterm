@@ -32,20 +32,9 @@ func TestEditorSQLCopySelectionIsLiteralAndPreservesEditor(t *testing.T) {
 				tab.Editor.SetText(original)
 				tab.Saved = original
 				tab.Path = filepath.Join(t.TempDir(), "query.sql")
-				tab.Editor.Clipboard = "internal Vim clipboard"
+				tab.Editor.Mode = tt.mode
 				start := len("prefix\n")
-				if tt.mode == "VISUAL" {
-					tab.Editor.Area.Select(start, start)
-					tab.Editor.Handle(tcell.NewEventKey(tcell.KeyRune, 'v', 0))
-					for range tt.text {
-						tab.Editor.Handle(tcell.NewEventKey(tcell.KeyRune, 'l', 0))
-					}
-				} else {
-					if tt.mode == "INSERT" {
-						tab.Editor.Handle(tcell.NewEventKey(tcell.KeyRune, 'i', 0))
-					}
-					tab.Editor.Area.Select(start, start+len(tt.text))
-				}
+				tab.Editor.Area.Select(start, start+len(tt.text))
 				_, from, to = tab.Editor.Area.GetSelection()
 				u.writeClipboard = func(text string) error { copied <- text; return nil }
 				u.app.SetFocus(tab.Editor.Area)
@@ -65,7 +54,7 @@ func TestEditorSQLCopySelectionIsLiteralAndPreservesEditor(t *testing.T) {
 			u.app.QueueUpdateDraw(func() {
 				tab := u.active()
 				_, gotFrom, gotTo := tab.Editor.Area.GetSelection()
-				if tab.Editor.Area.GetText() != original || tab.Saved != original || filepath.Base(tab.Path) != "query.sql" || tab.Editor.Mode != tt.mode || gotFrom != from || gotTo != to || tab.Editor.Clipboard != "internal Vim clipboard" {
+				if tab.Editor.Area.GetText() != original || tab.Saved != original || filepath.Base(tab.Path) != "query.sql" || tab.Editor.Mode != tt.mode || gotFrom != from || gotTo != to {
 					t.Error("copy changed editor state")
 				}
 				if tab.Busy || tab.Cancel != nil || tab.Session != nil || u.dialogContent != nil || u.app.GetFocus() != tab.Editor.Area {

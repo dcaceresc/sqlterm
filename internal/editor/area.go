@@ -41,11 +41,6 @@ func (a *Area) GetSelection() (string, int, int) {
 	return a.TextArea.GetSelection()
 }
 
-func (a *Area) HasSelection() bool {
-	text, _, _ := a.GetSelection()
-	return text != ""
-}
-
 func (a *Area) Select(start, end int) *Area {
 	if n := a.editor.native; n != nil {
 		a.editor.nativeEdit(func() error { return n.session.Select(start, end) })

@@ -85,6 +85,9 @@ func (u *UI) applyTheme(id string) {
 	}
 	for _, t := range u.tabs {
 		u.style(t.Editor.Area)
+		if err := t.Editor.SetNeovimTheme(u.palette.neovimTheme()); err != nil {
+			t.Status = fmt.Sprintf("Neovim theme: %v", err)
+		}
 	}
 	u.refreshBars()
 	if u.suggestions != nil {

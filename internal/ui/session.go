@@ -169,7 +169,10 @@ func (u *UI) openObject(o db.Object) {
 				cols, _ = t.Session.Adapter.Columns(ctx, t.Session.Conn, o)
 			}
 			return func() {
-				t.Editor.SetText(text)
+				if err := t.Editor.SetText(text); err != nil {
+					u.message(err.Error())
+					return
+				}
 				t.Saved = text
 				t.Original = text
 				t.Path = ""
@@ -222,6 +225,9 @@ func (u *UI) switchDatabase() {
 }
 func (u *UI) execute() {
 	t := u.active()
+	if !u.editorReady(t) {
+		return
+	}
 	if t.Busy && !pausedExecution(t) {
 		u.message(u.tr("Session busy"))
 		return
@@ -234,9 +240,10 @@ func (u *UI) execute() {
 		u.message(u.tr("Choose a database first (F4)"))
 		return
 	}
-	text, _, _ := t.Editor.Area.GetSelection()
-	if text == "" {
-		text = t.Editor.Area.GetText()
+	text, err := t.Editor.ExecutionText()
+	if err != nil {
+		u.message(err.Error())
+		return
 	}
 	statements, e := db.SplitScript(t.Profile.Engine, text)
 	if e != nil {

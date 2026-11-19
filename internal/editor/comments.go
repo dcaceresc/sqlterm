@@ -36,12 +36,16 @@ func (e *Editor) CommentLines(all bool) bool {
 		to++
 	}
 	e.Area.Replace(from, to, replacement)
+	if n := e.native; n != nil && !all {
+		if e.Err() != nil {
+			return false
+		}
+		// La selección por líneas incluye el salto final sin aproximar un rango por caracteres.
+		e.nativeEdit(func() error { return n.session.SelectCommentLines(from, from+len(replacement)) })
+		return e.Err() == nil
+	}
 	// Keep the affected lines selected so another invocation toggles the same
 	// scope without requiring the user to rebuild a visual selection.
 	e.Area.Select(from, from+len(replacement))
-	e.pending = 0
-	if e.Mode == "VISUAL" {
-		e.anchor, e.pos = from, from+len(replacement)
-	}
 	return true
 }

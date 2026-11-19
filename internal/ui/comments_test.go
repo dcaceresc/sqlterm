@@ -18,20 +18,20 @@ func TestCommentSelectionShortcutAndPalette(t *testing.T) {
 		tab.Path = filepath.Join(t.TempDir(), "query.sql")
 		originalPath := tab.Path
 		u.app.SetFocus(tab.Editor.Area)
-		event := tcell.NewEventKey(tcell.KeyRune, '/', tcell.ModAlt)
+		event := tcell.NewEventKey(tcell.KeyRune, '}', tcell.ModCtrl)
 		if u.key(event) != nil {
-			t.Error("Alt+/ must be consumed in editor")
+			t.Error("Ctrl+} must be consumed in editor")
 		}
 		if tab.Editor.Area.GetText() != tab.Saved || tab.Status != "Select SQL text before commenting" {
 			t.Error("no selection must show a notice without editing")
 		}
 		tab.Editor.Area.Select(0, 6)
 		if u.key(event) != nil || tab.Editor.Area.GetText() != "-- select ñ;\nselect 2;" {
-			t.Error("Alt+/ did not comment selection")
+			t.Error("Ctrl+} did not comment selection")
 		}
 		u.key(event)
 		if tab.Editor.Area.GetText() != tab.Saved {
-			t.Error("second Alt+/ must uncomment the same selection")
+			t.Error("second Ctrl+} must uncomment the same selection")
 		}
 		u.key(event)
 		if tab.Saved != "select ñ;\nselect 2;" || tab.Path != originalPath || tab.Busy || tab.Session != nil {
@@ -71,7 +71,7 @@ func TestCommentShortcutDoesNotAffectOtherPanelsOrDialogs(t *testing.T) {
 		tab.Editor.SetText("select 1;")
 		tab.Editor.Area.Select(0, 6)
 		u.app.SetFocus(u.search)
-		event := tcell.NewEventKey(tcell.KeyRune, '/', tcell.ModAlt)
+		event := tcell.NewEventKey(tcell.KeyRune, '}', tcell.ModCtrl)
 		u.key(event)
 		if tab.Editor.Area.GetText() != "select 1;" {
 			t.Error("shortcut edited SQL outside editor")
@@ -83,13 +83,37 @@ func TestCommentShortcutDoesNotAffectOtherPanelsOrDialogs(t *testing.T) {
 		}
 		u.dismiss()
 		u.app.SetFocus(tab.Editor.Area)
-		tab.Editor.Search = func() { tab.Status = "search called" }
 		key := tcell.NewEventKey(tcell.KeyRune, '/', 0)
-		if out := u.key(key); out != nil {
-			tab.Editor.Handle(out)
+		if got := u.key(key); got != key {
+			t.Error("plain / must be passed through to the editor")
 		}
-		if tab.Status != "search called" {
-			t.Error("plain / must retain editor search")
+	})
+}
+
+func TestCommentDocumentShortcut(t *testing.T) {
+	u := runningUI(t, config.Config{})
+	u.app.QueueUpdateDraw(func() {
+		tab := u.active()
+		tab.Editor.SetText("select 1;\nselect 2;")
+		tab.Saved = tab.Editor.Area.GetText()
+		u.app.SetFocus(tab.Editor.Area)
+		event := tcell.NewEventKey(tcell.KeyRune, '}', tcell.ModCtrl|tcell.ModShift)
+		if u.key(event) != nil || tab.Editor.Area.GetText() != "-- select 1;\n-- select 2;" {
+			t.Error("Ctrl+Shift+} must comment the whole editor without a selection")
+		}
+		u.key(event)
+		if tab.Editor.Area.GetText() != tab.Saved || tab.Busy || tab.Session != nil {
+			t.Error("document toggle must restore SQL without saving or executing")
+		}
+		for _, event := range []*tcell.EventKey{
+			tcell.NewEventKey(tcell.KeyRune, '}', 0),
+			tcell.NewEventKey(tcell.KeyRune, '}', tcell.ModShift),
+			tcell.NewEventKey(tcell.KeyRune, '/', tcell.ModAlt),
+			tcell.NewEventKey(tcell.KeyRune, '}', tcell.ModCtrl|tcell.ModAlt),
+		} {
+			if u.key(event) != event || tab.Editor.Area.GetText() != tab.Saved {
+				t.Errorf("unbound event %v must pass through without editing SQL", event)
+			}
 		}
 	})
 }

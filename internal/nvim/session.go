@@ -119,9 +119,6 @@ func (s *Session) snapshot() (Snapshot, error) {
 	return Snapshot{Text: text, Cursor: cursor, Mode: mode, ChangedTick: integer(raw[4]), Selection: Selection{SelectionKind(integer(raw[5])), integer(raw[6]), integer(raw[7])}}, nil
 }
 
-// Cursor devuelve el desplazamiento UTF-8 en bytes dentro del texto.
-func (s *Session) Cursor() (int, error) { p, err := s.Snapshot(); return p.Cursor, err }
-
 // SetText sustituye todo el buffer y coloca el cursor en el inicio en modo Normal.
 func (s *Session) SetText(text string) error { return s.move("set", 0, 0, text) }
 

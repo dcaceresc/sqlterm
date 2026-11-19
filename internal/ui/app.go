@@ -15,6 +15,7 @@ import (
 	"sqlterm/internal/result"
 	"strings"
 	"sync"
+	"sync/atomic"
 )
 
 type Tab struct {
@@ -79,6 +80,9 @@ type UI struct {
 	tabs                                               []*Tab
 	current                                            int
 	closing                                            bool
+	nativeEditors                                      bool
+	nativeWG                                           sync.WaitGroup
+	nativeEventPending                                 atomic.Bool
 	suggestions                                        *suggestionState
 	suppressSuggestions                                bool
 	skipSuggestionMove                                 bool
@@ -157,6 +161,7 @@ func New(path string, cfg config.Config) *UI {
 	// focus flags, never Application.GetFocus/SetFocus.
 	u.app.SetBeforeDrawFunc(func(screen tcell.Screen) bool {
 		width, height := screen.Size()
+		u.nativeEventPending.Store(false)
 		u.adaptLayout(width, height)
 		u.status.SetRect(0, max(0, height-2), width, 1)
 		u.refreshBars()
@@ -174,6 +179,7 @@ func (u *UI) Run() error {
 	for _, t := range u.tabs {
 		u.dispose(t)
 	}
+	u.nativeWG.Wait()
 	return err
 }
 func (u *UI) active() *Tab { return u.tabs[u.current] }
@@ -195,13 +201,17 @@ func (u *UI) newTab(from *Tab) {
 			u.hideSuggestions()
 		}
 	}
-	t.Editor.Search = func() { u.searchEditor() }
 	if from != nil {
 		t.Profile = from.Profile
 		t.Password = from.Password
 	}
 	u.tabs = append(u.tabs, t)
 	u.current = len(u.tabs) - 1
+	if u.nativeEditors {
+		if err := u.activateNeovim(t); err != nil {
+			t.Status = fmt.Sprintf("Neovim: %v", err)
+		}
+	}
 	u.showTab()
 	if from != nil && t.Profile.Name != "" {
 		p := t.Profile
@@ -314,6 +324,10 @@ func (u *UI) task(t *Tab, label string, work func(context.Context) (func(), erro
 	}()
 }
 func (u *UI) dispose(t *Tab) {
+	if t.Editor.IsNeovim() {
+		u.nativeWG.Add(1)
+		go func() { defer u.nativeWG.Done(); _ = t.Editor.Close() }()
+	}
 	for _, s := range t.Results {
 		s.Close()
 	}
@@ -397,6 +411,19 @@ func saveAsShortcut(k *tcell.EventKey) bool {
 	return k.Key() == tcell.KeyRune && (k.Rune() == 's' || k.Rune() == 'S') && modifiers == tcell.ModCtrl|tcell.ModShift
 }
 
+func commentShortcut(k *tcell.EventKey) bool {
+	modifiers := k.Modifiers()
+	if k.Key() == tcell.KeyCtrlRightSq {
+		return modifiers == 0 || modifiers == tcell.ModCtrl || modifiers == tcell.ModShift || modifiers == tcell.ModCtrl|tcell.ModShift
+	}
+	return k.Key() == tcell.KeyRune && k.Rune() == '}' && (modifiers == tcell.ModCtrl || modifiers == tcell.ModCtrl|tcell.ModShift)
+}
+
+func neovimCommentShortcut(k *tcell.EventKey) bool {
+	// Win32 puede informar el carácter de control 29 o el corchete con Ctrl.
+	return k.Modifiers() == tcell.ModCtrl && (k.Key() == tcell.KeyGS || k.Key() == tcell.KeyRune && k.Rune() == ']')
+}
+
 func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 	if u.dialogContent != nil {
 		switch k.Key() {
@@ -443,8 +470,8 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 	if u.customKey(k) {
 		return nil
 	}
-	if k.Key() == tcell.KeyRune && k.Rune() == '/' && k.Modifiers()&tcell.ModAlt != 0 && u.app.GetFocus() == u.active().Editor.Area {
-		u.commentSQL(false)
+	if e := u.active().Editor; u.app.GetFocus() == e.Area && (commentShortcut(k) || e.IsNeovim() && neovimCommentShortcut(k)) {
+		u.commentSQL(k.Modifiers()&tcell.ModShift != 0)
 		return nil
 	}
 	if k.Key() == tcell.KeyRune && k.Modifiers()&tcell.ModAlt != 0 && (k.Rune() == 'z' || k.Rune() == 'Z') {
@@ -532,12 +559,6 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 				u.current = n
 				u.showTab()
 			}
-			return nil
-		}
-	}
-	if u.app.GetFocus() == u.active().Editor.Area && u.active().Editor.Mode == "NORMAL" && k.Key() == tcell.KeyRune {
-		if k.Rune() == ' ' {
-			u.commandPalette()
 			return nil
 		}
 	}

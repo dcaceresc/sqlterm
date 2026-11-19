@@ -164,7 +164,7 @@ func (u *UI) connectionBrowser() {
 				}
 				details.SetText(fmt.Sprintf(u.tr("%s · %s\n%s:%d · %s\nUser: %s · * toggle favorite"), p.DisplayName(), p.Engine, p.Host, p.EffectivePort(), database, p.User))
 			} else {
-				details.SetText(u.tr("Folder: ") + ref.Folder + "\n" + u.tr("←/→ collapse/expand · Enter connects profiles") + "\n" + u.tr("/ search · + add · n folder · e edit"))
+				details.SetText(u.tr("Folder: ") + ref.Folder + "\n" + u.tr("Enter collapses/expands folders or connects profiles") + "\n" + u.tr("/ search · + add · n folder · e edit"))
 			}
 		}
 	})
@@ -303,10 +303,7 @@ func (u *UI) connectionBrowser() {
 				return nil
 			}
 		}
-		if tree.HasFocus() && (k.Key() == tcell.KeyLeft || k.Key() == tcell.KeyRight) {
-			if n := tree.GetCurrentNode(); n != nil {
-				n.SetExpanded(k.Key() == tcell.KeyRight)
-			}
+		if tree.HasFocus() && (k.Key() == tcell.KeyLeft || k.Key() == tcell.KeyRight || (k.Key() == tcell.KeyRune && k.Rune() == ' ')) {
 			return nil
 		}
 		if tree.HasFocus() && k.Key() == tcell.KeyRune {
