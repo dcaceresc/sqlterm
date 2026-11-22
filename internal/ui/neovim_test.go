@@ -28,7 +28,21 @@ func runningNeovimUI(t *testing.T) *UI {
 	return u
 }
 
-func TestNeovimUISpaceMovesCursorAndCtrlPOpensPalette(t *testing.T) {
+func TestNeovimUIStartupWelcomeKeepsSQLEmpty(t *testing.T) {
+	u := runningNeovimUI(t)
+	u.app.QueueUpdateDraw(func() {
+		e := u.active().Editor
+		if u.active().Status != "Welcome to SQLTerm" || e.Area.GetText() != "" || u.active().Saved != "" || u.active().Path != "" || e.Mode != "NORMAL" {
+			t.Errorf("startup: status=%q text=%q saved=%q path=%q mode=%s", u.active().Status, e.Area.GetText(), u.active().Saved, u.active().Path, e.Mode)
+		}
+		u.newTab(nil)
+		if u.active().Status != "Disconnected" {
+			t.Errorf("new tab must not repeat startup welcome: %q", u.active().Status)
+		}
+	})
+}
+
+func TestNeovimUISpaceAndCtrlPOpenPalette(t *testing.T) {
 	if testing.Short() {
 		t.Skip("requires installed Neovim")
 	}
@@ -41,13 +55,33 @@ func TestNeovimUISpaceMovesCursorAndCtrlPOpensPalette(t *testing.T) {
 			return
 		}
 		dispatchModified(u, tcell.KeyRune, ' ', 0)
-		if u.dialogContent != nil || e.Cursor() != 1 || e.Mode != "NORMAL" || e.Area.GetText() != text {
-			t.Errorf("Space must reach Neovim: dialog=%T cursor=%d mode=%s text=%q", u.dialogContent, e.Cursor(), e.Mode, e.Area.GetText())
+		if u.dialogContent == nil || e.Cursor() != 0 || e.Mode != "NORMAL" || e.Area.GetText() != text {
+			t.Errorf("Space must open actions without editing: dialog=%T cursor=%d mode=%s text=%q", u.dialogContent, e.Cursor(), e.Mode, e.Area.GetText())
 			return
 		}
+		dispatchModified(u, tcell.KeyEscape, 0, 0)
 		dispatchModified(u, tcell.KeyCtrlP, 0, 0)
-		if u.dialogContent == nil || e.Cursor() != 1 || e.Mode != "NORMAL" || e.Area.GetText() != text {
+		if u.dialogContent == nil || e.Cursor() != 0 || e.Mode != "NORMAL" || e.Area.GetText() != text {
 			t.Error("Ctrl+P must open the palette without editing SQL or moving the editor cursor")
+		}
+	})
+}
+
+func TestNeovimUISpacePreservesInsertAndSearch(t *testing.T) {
+	u := runningNeovimUI(t)
+	u.app.QueueUpdateDraw(func() {
+		e := u.active().Editor
+		dispatchModified(u, tcell.KeyRune, 'i', 0)
+		dispatchModified(u, tcell.KeyRune, ' ', 0)
+		if u.dialogContent != nil || e.Mode != "INSERT" || e.Area.GetText() != " " {
+			t.Errorf("INSERT Space: dialog=%T mode=%s text=%q", u.dialogContent, e.Mode, e.Area.GetText())
+		}
+		dispatchModified(u, tcell.KeyEscape, 0, 0)
+		u.app.SetFocus(u.search)
+		u.search.SetText("")
+		dispatchModified(u, tcell.KeyRune, ' ', 0)
+		if u.dialogContent != nil || u.search.GetText() != " " {
+			t.Errorf("search Space: dialog=%T text=%q", u.dialogContent, u.search.GetText())
 		}
 	})
 }

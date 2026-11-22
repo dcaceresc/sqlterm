@@ -67,7 +67,7 @@ func Start(o Options) (*Session, error) {
 		return nil, err
 	}
 	defer null.Close()
-	cmd := exec.Command(o.Binary, "--embed", "--clean", "-i", "NONE", "-n", "--cmd", "set noexrc noundofile noswapfile nobackup nowritebackup shada= virtualedit=onemore")
+	cmd := exec.Command(o.Binary, "--embed", "--clean", "-i", "NONE", "-n", "--cmd", "set noexrc noundofile noswapfile nobackup nowritebackup shada= virtualedit=onemore shortmess+=I")
 	cmd.Dir = o.Dir
 	cmd.Stderr = null
 	for _, v := range cmd.Environ() {

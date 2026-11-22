@@ -148,7 +148,7 @@ La selección sigue la semántica nativa de Neovim: `v` incluye el carácter act
 
 En Windows Terminal, el backend actualizado usa pegado delimitado: Ctrl+V interceptado por la terminal llega como texto literal, no como comandos Vim, y no activa INSERT desde NORMAL. Cuando Ctrl+V llega como una tecla normal a Neovim, conserva su significado nativo de selección visual por bloques. La ejecución SQL no admite selecciones por bloques: muestra un error en lugar de ejecutar el documento completo.
 
-Los atajos globales de SQLTerm (F1–F11, Ctrl+P, Ctrl+S, Ctrl+Shift+S, Ctrl+O, Ctrl+C, Ctrl+Q, Ctrl+N, Alt+Z) mantienen prioridad. En Neovim, Espacio no abre la paleta; usa Ctrl+P. Los demás comandos del editor los interpreta Neovim. La sesión está aislada de tu configuración, pero Neovim no es un sandbox: sus comandos Ex siguen siendo comandos reales.
+Los atajos globales de SQLTerm (F1–F11, Ctrl+P, Ctrl+S, Ctrl+Shift+S, Ctrl+O, Ctrl+C, Ctrl+Q, Ctrl+N, Alt+Z) mantienen prioridad. Con el editor en modo NORMAL, Espacio abre la paleta de acciones; pulsa la letra de una acción para ejecutarla o Esc para cerrar. En INSERT, Espacio sigue escribiendo espacios. Ctrl+P continúa disponible desde cualquier panel. Los demás comandos del editor los interpreta Neovim. La sesión está aislada de tu configuración, pero Neovim no es un sandbox: sus comandos Ex siguen siendo comandos reales.
 
 Si falta `nvim`, el inicio falla con un error; no se sustituye silenciosamente por el editor emulado. Si el hijo termina, se conserva el último texto confirmado y se bloquean guardado y ejecución desde datos obsoletos. Los errores al cargar texto no cambian la ruta ni el estado de guardado.
 
@@ -325,6 +325,8 @@ Cada conjunto se almacena en una carpeta temporal privada con un índice de offs
 
 ## IntelliSense
 
+Al iniciar, SQLTerm muestra su bienvenida en la barra de estado y mantiene el SQL vacío; no muestra la introducción de Neovim. Actualmente no restaura pestañas ni archivos de una ejecución anterior. Abre tus archivos con **Ctrl+O**.
+
 En INSERT aparecen sugerencias después de escribir dos caracteres o un punto. **Ctrl+Space** las abre manualmente. Las flechas o **Ctrl+N/P** recorren la lista; **Tab** o **Enter** aceptan y **Esc** la cierra y vuelve a NORMAL.
 
 Se sugieren palabras del dialecto, esquemas, tablas, vistas y rutinas con firma. Sin conexión solo hay palabras SQL. Los objetos y columnas requieren catálogo. SQLTerm reconoce referencias y alias simples en `FROM`, `JOIN`, `UPDATE` e `INTO`, y obtiene columnas cuando son necesarias.
@@ -361,7 +363,7 @@ La paleta ofrece **Language / Idioma**. Los mensajes técnicos del motor, el SQL
 | F5 / F9 / F10 | Ejecutar / invocar / cancelar |
 | F6 / F7 / F8 | Objetos / editor / resultados |
 | F11 | Cambiar distribución y tamaño de paneles |
-| Ctrl+P | Paleta de acciones (Espacio se envía a Neovim) |
+| Espacio (editor en NORMAL) / Ctrl+P | Paleta de acciones |
 | Ctrl+Space | Abrir IntelliSense |
 | Alt+Z | Alternar ajuste de línea |
 | Ctrl+} | Comentar o descomentar selección |
@@ -374,7 +376,7 @@ La paleta ofrece **Language / Idioma**. Los mensajes técnicos del motor, el SQL
 | Ctrl+P → n/w/o/q | Nueva pestaña / guardar / abrir / cerrar pestaña |
 | Ctrl+P → h/e/b/d/t | Historial / exportar / cambiar base / desconectar / plantilla |
 
-**Ctrl+P** abre la paleta desde cualquier panel. Pulsa la letra de la acción una vez abierta.
+**Espacio** abre la paleta con el editor enfocado en modo NORMAL, sin cambiar el SQL ni mover el cursor. **Ctrl+P** la abre desde cualquier panel. Pulsa la letra de la acción una vez abierta; **Esc** cierra el menú.
 
 `keys` permite alias globales con nombres de teclas especiales de tcell, por ejemplo `"run": "Ctrl-E"` o `"apply": "F12"`. Las acciones admitidas son `run`, `connect`, `invoke`, `cancel`, `help`, `save`, `open`, `new`, `apply`, `refresh`, `theme`, `database` y `complete`. F4 queda reservado para bases. Los alias tienen prioridad y los atajos predeterminados restantes continúan activos.
 

@@ -321,7 +321,7 @@ Ctrl+} comments / uncomments each selected line; without selection, shows a noti
 Ctrl+Shift+} toggles every line; one undo; no SQL execution or file save.
 Ctrl+] / Ctrl+Shift+] control-code events are also accepted. If the terminal cannot distinguish these chords, use Ctrl+P comment actions.
 Selection is kept for repeated toggling. Full-line -- comments use the theme's muted color.
-Ctrl+P opens actions; Space goes to Neovim.
+Space in the NORMAL editor opens actions; Ctrl+P works from any panel. INSERT Space keeps typing.
 Action keys in the palette: c connect, f find, x run, p invoke, a apply definition,
 r refresh catalog, n new tab, w save, o open, q close tab,
 h history, e export, b change database, d disconnect, t routine template.

@@ -185,6 +185,9 @@ func (u *UI) Run() error {
 func (u *UI) active() *Tab { return u.tabs[u.current] }
 func (u *UI) newTab(from *Tab) {
 	t := &Tab{Editor: editor.New(), Columns: map[string][]string{}, Status: "Disconnected"}
+	if len(u.tabs) == 0 {
+		t.Status = "Welcome to SQLTerm"
+	}
 	u.configureEditor(t)
 	t.Editor.Area.SetBorder(true)
 	u.style(t.Editor.Area)
@@ -476,6 +479,10 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 	}
 	if k.Key() == tcell.KeyRune && k.Modifiers()&tcell.ModAlt != 0 && (k.Rune() == 'z' || k.Rune() == 'Z') {
 		u.toggleEditorOption(true)
+		return nil
+	}
+	if e := u.active().Editor; k.Key() == tcell.KeyRune && k.Rune() == ' ' && k.Modifiers() == 0 && u.app.GetFocus() == e.Area && e.IsNeovim() && e.Mode == "NORMAL" {
+		u.commandPalette()
 		return nil
 	}
 	switch k.Key() {
