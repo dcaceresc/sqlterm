@@ -32,9 +32,6 @@ func modeTestUI(t *testing.T) (*UI, *cursorScreen) {
 	t.Cleanup(func() { u.cancel(); s.Fini() })
 	return u, s
 }
-func modeKey(u *UI, key tcell.Key, r rune) {
-	u.active().Editor.Area.InputHandler()(tcell.NewEventKey(key, r, 0), func(p tview.Primitive) { u.app.SetFocus(p) })
-}
 func badgeBackground(u *UI, s *cursorScreen) tcell.Color {
 	x, y, _, _ := u.status.GetRect()
 	_, _, style, _ := s.GetContent(x+1, y)
@@ -52,18 +49,18 @@ func TestModesChangeBadgeBorderAndCursorInEveryTheme(t *testing.T) {
 		if normal != p.Accent || s.shape != tcell.CursorStyleSteadyBlock || s.color != p.Accent {
 			t.Fatalf("%s: NORMAL not styled", p.ID)
 		}
-		modeKey(u, tcell.KeyRune, 'i')
+		u.active().Editor.Mode = "INSERT"
 		u.app.ForceDraw()
 		insert := badgeBackground(u, s)
 		if e.Mode != "INSERT" || insert == normal || insert != p.Insert || s.shape != tcell.CursorStyleSteadyBar || s.color != p.Insert || e.Area.GetBorderColor() != p.Insert {
 			t.Fatalf("%s: INSERT not visibly different", p.ID)
 		}
-		modeKey(u, tcell.KeyEscape, 0)
+		u.active().Editor.Mode = "NORMAL"
 		u.app.ForceDraw()
 		if badgeBackground(u, s) != normal || s.shape != tcell.CursorStyleSteadyBlock {
-			t.Fatal("Esc did not restore NORMAL appearance")
+			t.Fatal("NORMAL appearance was not restored")
 		}
-		modeKey(u, tcell.KeyRune, 'v')
+		u.active().Editor.Mode = "VISUAL"
 		u.app.ForceDraw()
 		visual := badgeBackground(u, s)
 		if visual == normal || visual == insert || visual != p.Visual || s.shape != tcell.CursorStyleSteadyBlock || e.Area.GetBorderColor() != p.Visual {
@@ -72,14 +69,14 @@ func TestModesChangeBadgeBorderAndCursorInEveryTheme(t *testing.T) {
 		if e.Area.GetText() != "SELECT 1;" {
 			t.Fatal("changing mode altered SQL")
 		}
-		modeKey(u, tcell.KeyEscape, 0)
+		u.active().Editor.Mode = "NORMAL"
 	}
 }
 func TestModeAppearanceFollowsFocusTabAndTheme(t *testing.T) {
 	u, s := modeTestUI(t)
 	first := u.active()
 	first.Editor.SetText("SELECT 1;")
-	modeKey(u, tcell.KeyRune, 'i')
+	u.active().Editor.Mode = "INSERT"
 	u.app.ForceDraw()
 	u.app.SetFocus(u.search)
 	u.app.ForceDraw()

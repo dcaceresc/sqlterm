@@ -13,6 +13,9 @@ func (u *UI) copySQLSelection() {
 		return
 	}
 	tab := u.active()
+	if !u.editorReady(tab) {
+		return
+	}
 	text, _, _ := tab.Editor.Area.GetSelection()
 	if text == "" {
 		u.message(u.tr("Select SQL text before copying"))

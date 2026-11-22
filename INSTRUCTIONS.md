@@ -24,7 +24,7 @@ Esta guía explica cómo instalar, configurar y usar SQLTerm. El cliente está o
 
 ## Instalación recomendada
 
-Instala SQLTerm una vez desde la raíz del repositorio y después ejecútalo desde cualquier carpeta. Go 1.23 o posterior solo es necesario para compilar o instalar desde el código fuente; el binario instalado no necesita Go ni Neovim.
+Instala SQLTerm una vez desde la raíz del repositorio y después ejecútalo desde cualquier carpeta. Go 1.24 o posterior solo es necesario para compilar o instalar desde el código fuente. El binario instalado no necesita Go, pero sí **Neovim 0.11 o posterior**, disponible como `nvim` en `PATH`. Comprueba la dependencia con `nvim --version` antes de iniciar SQLTerm.
 
 ```sh
 go install ./cmd/sqlterm
@@ -118,9 +118,9 @@ Estas automatizaciones configuran cachés locales de Go bajo `.cache/build`, `.c
 5. Pulsa **F6** para buscar un procedimiento, función, tabla o vista por nombre y filtrar por tipo.
 6. **Enter** abre la definición del objeto. En rutinas, **F9** abre el formulario de parámetros y permite usar un valor, `NULL` o el valor predeterminado cuando el catálogo o la definición lo permite.
 7. Ejecuta la rutina desde el formulario. `[` y `]` cambian entre conjuntos, incluidos los parámetros de salida y el retorno cuando el motor los ofrece.
-8. Para editar una definición, pulsa **F7**, entra en INSERT con `i`, escribe y vuelve a NORMAL con **Esc**. **Space a** muestra los cambios y el SQL exacto antes de aplicarlo.
+8. Para editar una definición, pulsa **F7**, entra en INSERT con `i`, escribe y vuelve a NORMAL con **Esc**. **Ctrl+P → a** muestra los cambios y el SQL exacto antes de aplicarlo.
 
-**Space t** genera una plantilla de procedimiento. Revísala y usa **Space a** para aplicarla; una aplicación correcta actualiza el catálogo. Si guardas el archivo antes de aplicar, la comparación conserva como referencia la definición leída del servidor.
+**Ctrl+P → t** genera una plantilla de procedimiento. Revísala y usa **Ctrl+P → a** para aplicarla; una aplicación correcta actualiza el catálogo. Si guardas el archivo antes de aplicar, la comparación conserva como referencia la definición leída del servidor.
 
 Para consultas libres, **Ctrl+N** crea otra pestaña con conexión independiente. **F5** ejecuta la selección o el documento completo. Solo se ejecuta una sentencia a la vez por pestaña, mientras que otras pestañas pueden trabajar en paralelo.
 
@@ -128,21 +128,31 @@ Para consultas libres, **Ctrl+N** crea otra pestaña con conexión independiente
 
 ### Modos y selección
 
-El editor ofrece controles Vim básicos:
+El panel SQL usa un proceso **Neovim real por pestaña**, iniciado con `--embed --clean -i NONE -n`. No carga ni modifica tu configuración personal de LazyVim y no conserva swap, shada ni historial de deshacer en disco. Neovim controla los modos, movimientos, registros y deshacer; SQLTerm conserva las conexiones, resultados y las acciones de archivos y ejecución.
+
+Controles principales:
 
 - `i a I A o`: insertar.
 - **Esc**: volver a NORMAL.
-- `v`: iniciar selección VISUAL.
-- `hjkl`, `w b`, `0 $`, `gg G`: mover el cursor.
+- `v`: iniciar selección VISUAL por caracteres.
+- `V` (mayúscula): seleccionar la línea lógica completa, incluido su salto de línea si existe; `j` y `k` extienden la selección por líneas.
+- `gg`: ir al inicio del archivo; `G`: ir al final. `ggVG` selecciona todo el archivo.
+- `hjkl`, `w b`, `0 $`: mover el cursor.
 - `yy` y `dd`: copiar o cortar una línea.
-- `y` y `d`: operar sobre la selección.
+- `y` y `d`: copiar o cortar la selección y volver a NORMAL.
 - `x`: borrar; `p`: pegar; `u`: deshacer.
 - **Ctrl+R** en NORMAL: rehacer.
 - `/`: buscar con vuelta al inicio.
 
-La selección visual usa un intervalo semiabierto: `vl` selecciona un carácter. El portapapeles de `y` es interno al editor; no implementa macros, registros ni comandos Ex.
+La selección sigue la semántica nativa de Neovim: `v` incluye el carácter actual y `V` selecciona líneas completas. `y` usa los registros de Neovim y vuelve a NORMAL; Ctrl+C copia al portapapeles del sistema sin cambiar el modo ni la selección. Usa Ctrl+S y Ctrl+Shift+S para guardar desde SQLTerm: el buffer de Neovim es temporal y no tiene una ruta propia.
 
-**Alt+Z** activa o desactiva el ajuste visual de línea sin modificar el contenido. `↪` indica una continuación de la misma línea y la barra de estado conserva la línea y columna reales. La paleta permite mostrar u ocultar los números de línea. Estas preferencias se guardan y se aplican a todas las pestañas.
+En Windows Terminal, el backend actualizado usa pegado delimitado: Ctrl+V interceptado por la terminal llega como texto literal, no como comandos Vim, y no activa INSERT desde NORMAL. Cuando Ctrl+V llega como una tecla normal a Neovim, conserva su significado nativo de selección visual por bloques. La ejecución SQL no admite selecciones por bloques: muestra un error en lugar de ejecutar el documento completo.
+
+Los atajos globales de SQLTerm (F1–F11, Ctrl+P, Ctrl+S, Ctrl+Shift+S, Ctrl+O, Ctrl+C, Ctrl+Q, Ctrl+N, Alt+Z) mantienen prioridad. En Neovim, Espacio no abre la paleta; usa Ctrl+P. Los demás comandos del editor los interpreta Neovim. La sesión está aislada de tu configuración, pero Neovim no es un sandbox: sus comandos Ex siguen siendo comandos reales.
+
+Si falta `nvim`, el inicio falla con un error; no se sustituye silenciosamente por el editor emulado. Si el hijo termina, se conserva el último texto confirmado y se bloquean guardado y ejecución desde datos obsoletos. Los errores al cargar texto no cambian la ruta ni el estado de guardado.
+
+**Alt+Z** activa o desactiva el ajuste visual de línea sin modificar el contenido. La barra de estado conserva la línea y columna reales. La paleta permite mostrar u ocultar los números de línea. Estas preferencias se guardan y se aplican a todas las pestañas.
 
 El resaltado distingue palabras reservadas, cadenas y números. Los delimitadores de identificadores no se colorean como cadenas. El dibujo respeta la selección y el ajuste de línea, y no modifica el SQL ni el historial de deshacer.
 
@@ -150,9 +160,11 @@ El resaltado distingue palabras reservadas, cadenas y números. Los delimitadore
 
 **F5** ejecuta el texto seleccionado; si no hay selección, ejecuta el documento. Las acciones de comentar o copiar no ejecutan SQL.
 
-**Alt+/** o **Ctrl+P → Comentar selección / Comment selection** alterna comentarios en las líneas completas alcanzadas por la selección. Si la selección termina justo al inicio de otra línea, esa línea no se incluye. Sin selección, solo se muestra un aviso.
+**Ctrl+}** o **Ctrl+P → Comentar selección / Comment selection** alterna comentarios en las líneas completas alcanzadas por la selección. Si la selección termina justo al inicio de otra línea, esa línea no se incluye. Sin selección, solo se muestra un aviso.
 
-**Ctrl+P → Comentar todo el documento / Comment whole document** aplica la misma operación al documento. Se agrega `-- ` después de la indentación o se quita `--` y un espacio opcional. Las líneas mixtas se alternan por separado, se conservan la selección y los saltos de línea, y una acción completa se deshace como una sola operación.
+**Ctrl+Shift+}** o **Ctrl+P → Comentar todo el documento / Comment whole document** aplica la misma operación al documento. Se agrega `-- ` después de la indentación o se quita `--` y un espacio opcional. Las líneas mixtas se alternan por separado, se conservan la selección y los saltos de línea, y una acción completa se deshace como una sola operación.
+
+También se acepta el código de control que algunas terminales envían como Ctrl+] (con Shift para todo el editor). Los atajos requieren que la terminal distinga Ctrl+} de Ctrl+Shift+}. Si no los comunica de forma diferenciada, usa las acciones de comentar de **Ctrl+P**. Una `}` sin Ctrl sigue siendo texto normal.
 
 Las líneas comentadas se muestran atenuadas, excepto marcadores dentro de cadenas o cuerpos con dollar quoting. El color es solo visual.
 
@@ -184,7 +196,7 @@ Los perfiles incluyen motor, servidor, puerto, base, usuario, entorno, carpeta l
 
 ### Base de datos opcional
 
-Un perfil puede tener **Database** vacío. Al conectar, el explorador muestra las bases disponibles para ese usuario. **Enter** selecciona una y carga sus objetos; **F4** o **Space b** permiten cambiarla después.
+Un perfil puede tener **Database** vacío. Al conectar, el explorador muestra las bases disponibles para ese usuario. **Enter** selecciona una y carga sus objetos; **F4** o **Ctrl+P → b** permiten cambiarla después.
 
 La selección pertenece a la pestaña y no modifica el perfil. Cada cambio abre una conexión nueva, mantiene el SQL y limpia resultados y metadatos de la base anterior. Si la nueva conexión falla, se mantiene la sesión previa. El estado transaccional no se conserva entre conexiones.
 
@@ -198,7 +210,7 @@ Con foco en el árbol:
 
 | Tecla | Acción |
 | --- | --- |
-| Enter | Conectar o expandir/contraer una carpeta |
+| Enter | Conectar o expandir/contraer una carpeta (sin atajos con ←/→ ni Space) |
 | + | Añadir un perfil en la carpeta seleccionada |
 | n | Crear una carpeta o subcarpeta |
 | e | Editar el perfil seleccionado |
@@ -233,9 +245,9 @@ Los `SELECT` generados no añaden un límite fijo; usan la recepción incrementa
 - PostgreSQL usa tipos explícitos para resolver sobrecargas y distingue `CALL` de funciones.
 - MySQL usa variables de sesión para `OUT` e `INOUT` y las consulta al finalizar `CALL`.
 
-**Space a** revisa la diferencia y el SQL exacto antes de aplicar una rutina. SQL Server usa `ALTER` para objetos abiertos. PostgreSQL usa `CREATE OR REPLACE`; cambiar tipos de entrada puede crear otra sobrecarga y conservar la original. MySQL necesita `DROP` y `CREATE`: la revisión advierte que no es atómico y que quizá sea necesario restaurar permisos. Si falla `CREATE`, el editor conserva el código para corregirlo.
+**Ctrl+P → a** revisa la diferencia y el SQL exacto antes de aplicar una rutina. SQL Server usa `ALTER` para objetos abiertos. PostgreSQL usa `CREATE OR REPLACE`; cambiar tipos de entrada puede crear otra sobrecarga y conservar la original. MySQL necesita `DROP` y `CREATE`: la revisión advierte que no es atómico y que quizá sea necesario restaurar permisos. Si falla `CREATE`, el editor conserva el código para corregirlo.
 
-Actualizar el catálogo con **Space r** permite encontrar objetos recién creados y limpia la caché de columnas cuando cambia el esquema.
+Actualizar el catálogo con **Ctrl+P → r** permite encontrar objetos recién creados y limpia la caché de columnas cuando cambia el esquema.
 
 ## Ejecución y confirmaciones
 
@@ -317,7 +329,7 @@ En INSERT aparecen sugerencias después de escribir dos caracteres o un punto. *
 
 Se sugieren palabras del dialecto, esquemas, tablas, vistas y rutinas con firma. Sin conexión solo hay palabras SQL. Los objetos y columnas requieren catálogo. SQLTerm reconoce referencias y alias simples en `FROM`, `JOIN`, `UPDATE` e `INTO`, y obtiene columnas cuando son necesarias.
 
-En SQL Server, después de `EXEC procedimiento `, con un espacio final, sugiere parámetros nombrados. Tras una coma vuelve a ofrecerlos. Escribir `@` o un prefijo filtra y aceptar inserta `@parametro = `. La lista no se abre automáticamente en un valor vacío después de `=`. El procedimiento debe estar en el catálogo activo; actualízalo con **Space r**.
+En SQL Server, después de `EXEC procedimiento `, con un espacio final, sugiere parámetros nombrados. Tras una coma vuelve a ofrecerlos. Escribir `@` o un prefijo filtra y aceptar inserta `@parametro = `. La lista no se abre automáticamente en un valor vacío después de `=`. El procedimiento debe estar en el catálogo activo; actualízalo con **Ctrl+P → r**.
 
 Las sugerencias no ejecutan el SQL. No constituyen un servidor de lenguaje ni un analizador semántico completo: no infieren columnas de CTE o subconsultas complejas ni ofrecen diagnósticos equivalentes a una herramienta especializada.
 
@@ -329,7 +341,7 @@ La barra superior muestra entorno, conexión, base y estado. PROD se destaca con
 
 ### Temas
 
-**F3** o **Space T** abre el selector de temas. **Space t** sigue reservado para la plantilla de procedimientos. Las flechas muestran una vista previa, **Enter** guarda y **Esc** restaura el tema anterior.
+**F3** o **Ctrl+P → T** abre el selector de temas. **Ctrl+P → t** sigue reservado para la plantilla de procedimientos. Las flechas muestran una vista previa, **Enter** guarda y **Esc** restaura el tema anterior.
 
 Se incluyen Tokyo Night, Rosé Pine, Nord, Gruvbox, Light y Classic. El tema cambia paneles, editor, resultados, formularios y diálogos sin desconectar ni reemplazar SQL. La elección persiste. El campo JSON `theme` acepta `tokyo-night`, `rose-pine`, `nord`, `gruvbox`, `light` o `classic`; un valor desconocido usa Tokyo Night.
 
@@ -344,24 +356,25 @@ La paleta ofrece **Language / Idioma**. Los mensajes técnicos del motor, el SQL
 | Tecla | Acción |
 | --- | --- |
 | F1 / F2 | Ayuda / conexiones |
-| F3 / Space T | Temas con vista previa |
+| F3 / Ctrl+P → T | Temas con vista previa |
 | F4 | Seleccionar o cambiar base |
 | F5 / F9 / F10 | Ejecutar / invocar / cancelar |
 | F6 / F7 / F8 | Objetos / editor / resultados |
 | F11 | Cambiar distribución y tamaño de paneles |
-| Ctrl+P / Space en NORMAL | Paleta de acciones |
+| Ctrl+P | Paleta de acciones (Espacio se envía a Neovim) |
 | Ctrl+Space | Abrir IntelliSense |
 | Alt+Z | Alternar ajuste de línea |
-| Alt+/ | Comentar o descomentar selección |
+| Ctrl+} | Comentar o descomentar selección |
+| Ctrl+Shift+} | Comentar o descomentar todo el editor |
 | Ctrl+O / Ctrl+S / Ctrl+N | Abrir / guardar / nueva pestaña |
 | Ctrl+Shift+S | Guardar como, si la terminal distingue la combinación |
 | Ctrl+C / Ctrl+Q | Copiar selección o abrir menú / salir |
 | Alt+1…9 | Cambiar de pestaña |
-| Space c/f/x/p/a/r | Conectar / buscar / ejecutar / invocar / aplicar / actualizar catálogo |
-| Space n/w/o/q | Nueva pestaña / guardar / abrir / cerrar pestaña |
-| Space h/e/b/d/t | Historial / exportar / cambiar base / desconectar / plantilla |
+| Ctrl+P → c/f/x/p/a/r | Conectar / buscar / ejecutar / invocar / aplicar / actualizar catálogo |
+| Ctrl+P → n/w/o/q | Nueva pestaña / guardar / abrir / cerrar pestaña |
+| Ctrl+P → h/e/b/d/t | Historial / exportar / cambiar base / desconectar / plantilla |
 
-Los atajos con **Space** requieren modo NORMAL y foco en el editor. Space abre la paleta y la segunda tecla conserva la acción existente. **Ctrl+P** está disponible desde cualquier panel.
+**Ctrl+P** abre la paleta desde cualquier panel. Pulsa la letra de la acción una vez abierta.
 
 `keys` permite alias globales con nombres de teclas especiales de tcell, por ejemplo `"run": "Ctrl-E"` o `"apply": "F12"`. Las acciones admitidas son `run`, `connect`, `invoke`, `cancel`, `help`, `save`, `open`, `new`, `apply`, `refresh`, `theme`, `database` y `complete`. F4 queda reservado para bases. Los alias tienen prioridad y los atajos predeterminados restantes continúan activos.
 
@@ -412,7 +425,7 @@ SQLTerm redacta contraseñas conocidas y sus formas codificadas. No agrega por s
 
 ### Historial opcional
 
-El historial está desactivado por defecto. **Space h** permite activarlo; se guarda como `history.json` junto a los datos del perfil y conserva como máximo 200 consultas.
+El historial está desactivado por defecto. **Ctrl+P → h** permite activarlo; se guarda como `history.json` junto a los datos del perfil y conserva como máximo 200 consultas.
 
 El historial puede incluir literales sensibles escritos en SQL. Los valores del formulario de invocación se excluyen. Las actualizaciones reemplazan el archivo de forma atómica y se coordinan entre procesos que comparten la misma ruta. Desactivar el historial conserva lo existente; **Clear history** lo elimina. El contenido del editor no se guarda automáticamente al salir.
 
@@ -428,6 +441,10 @@ Las transacciones siguen las reglas del servidor. Usa `BEGIN`, `COMMIT` y `ROLLB
 Los parámetros del formulario son texto o `NULL` y el servidor realiza la conversión. Los parámetros tabulares de SQL Server y tipos compuestos que requieren carga especial deben invocarse mediante SQL. Los arrays de PostgreSQL se introducen en representación textual y los cursores devueltos requieren `FETCH` explícito.
 
 ## Pruebas
+
+Las pruebas de Neovim usan procesos aislados y se omiten si `nvim` no está instalado; esa omisión no acredita la integración real. Con Neovim instalado, `go test ./internal/nvim ./internal/editor ./internal/ui -count=1` cubre el motor y su integración.
+
+Para comprobar el transporte nativo en Windows Terminal, ejecuta `./scripts/verify-windows-terminal.ps1` desde PowerShell y sigue sus indicaciones de pegado, teclas, mouse y redimensionado. Es una comprobación interactiva opcional; las pruebas automáticas del parser no sustituyen esa evidencia ni prueban la restauración real de consola.
 
 Para las comprobaciones habituales:
 
@@ -463,7 +480,7 @@ La automatización del repositorio ejecuta pruebas de Go en varios entornos y pr
 - El editor ofrece modos Vim básicos, no una implementación completa de Neovim.
 - IntelliSense depende del catálogo y no realiza análisis semántico avanzado ni búsqueda dentro de todas las definiciones.
 - La compatibilidad SQL depende del dialecto y de los modos del servidor. El lexer no se adapta a `NO_BACKSLASH_ESCAPES` ni a `standard_conforming_strings=off`.
-- Los cuerpos de rutinas PostgreSQL deben usar dollar quoting o cadenas. Los cuerpos SQL `BEGIN ATOMIC` sin comillas se aplican como definición completa con **Space a**, no como documento separado por F5.
+- Los cuerpos de rutinas PostgreSQL deben usar dollar quoting o cadenas. Los cuerpos SQL `BEGIN ATOMIC` sin comillas se aplican como definición completa con **Ctrl+P → a**, no como documento separado por F5.
 - Las vistas materializadas PostgreSQL no tienen flujo de edición dedicado.
 - Las instancias de SQL Server accesibles por nombre deben configurarse con su host y puerto TCP efectivos.
 - La compatibilidad completa con versiones anteriores de SQL Server requiere validación real, aunque la construcción de firmas no depende de `STRING_AGG`.

@@ -26,7 +26,7 @@ func TestAutomaticIntelliSenseDoesNotStealFocusAndAcceptsTab(t *testing.T) {
 	tab.Editor.SetText(sql)
 	u.app.ForceDraw()
 	tab.Editor.Area.Select(len("SELECT c.Na"), len("SELECT c.Na"))
-	dispatch(u, tcell.KeyRune, 'i')
+	u.active().Editor.Mode = "INSERT"
 	dispatch(u, tcell.KeyRune, 'm')
 	u.app.ForceDraw()
 	if u.suggestions == nil || !tab.Editor.Area.HasFocus() || tab.Editor.Mode != "INSERT" {
@@ -41,8 +41,8 @@ func TestAutomaticIntelliSenseDoesNotStealFocusAndAcceptsTab(t *testing.T) {
 		t.Fatal("completion did not replace the prefix in place")
 	}
 	dispatch(u, tcell.KeyEscape, 0)
-	if tab.Editor.Mode != "NORMAL" {
-		t.Fatal("Escape did not restore normal mode")
+	if u.suggestions != nil {
+		t.Fatal("Escape did not dismiss completion")
 	}
 }
 func TestAutomaticProcedureParameterGuidanceAndAcceptance(t *testing.T) {
@@ -60,7 +60,7 @@ func TestAutomaticProcedureParameterGuidanceAndAcceptance(t *testing.T) {
 				tab.Editor.SetText(sql)
 				u.app.ForceDraw()
 				tab.Editor.Area.Select(len(sql), len(sql))
-				dispatch(u, tcell.KeyRune, 'i')
+				u.active().Editor.Mode = "INSERT"
 				for _, r := range trigger {
 					dispatch(u, tcell.KeyRune, r)
 				}
@@ -107,7 +107,7 @@ func TestCompletionNavigationDoesNotCreateTab(t *testing.T) {
 	tab.Editor.SetText("SE")
 	u.app.ForceDraw()
 	tab.Editor.Area.Select(2, 2)
-	dispatch(u, tcell.KeyRune, 'i')
+	u.active().Editor.Mode = "INSERT"
 	u.complete()
 	if u.suggestions == nil {
 		t.Fatal("Ctrl+Space completion missing")
@@ -118,13 +118,13 @@ func TestCompletionNavigationDoesNotCreateTab(t *testing.T) {
 		t.Fatal("completion navigation created a session")
 	}
 	dispatch(u, tcell.KeyEscape, 0)
-	if u.suggestions != nil || tab.Editor.Mode != "NORMAL" {
+	if u.suggestions != nil {
 		t.Fatal("completion did not dismiss")
 	}
 }
 func TestOfflineKeywordCompletionDoesNotNeedAConnection(t *testing.T) {
 	u, _ := modeTestUI(t)
-	dispatch(u, tcell.KeyRune, 'i')
+	u.active().Editor.Mode = "INSERT"
 	dispatch(u, tcell.KeyRune, 'S')
 	dispatch(u, tcell.KeyRune, 'E')
 	u.app.ForceDraw()

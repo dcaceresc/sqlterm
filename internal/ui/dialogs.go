@@ -309,18 +309,23 @@ Ctrl+Q quit; Ctrl+C copies selected SQL in editor, opens result copy options els
 or closes a dialog. Without an editor selection it shows a notice and keeps the clipboard.
 Esc closes dialogs / returns to NORMAL.
 
-Editor: i/a/I/A/o insert; Esc normal; v visual (half-open selection).
-h/j/k/l, w/b, 0/$, gg/G move. yy/dd copy/cut line; y/d visual selection;
+Editor: isolated Neovim (nvim 0.11+ in PATH); i/a/I/A/o insert; Esc normal.
+v selects characters inclusively; V selects lines. Personal LazyVim config is not loaded.
+V selects whole logical lines; j/k extend. gg goes to file start; ggVG selects the whole file.
+h/j/k/l, w/b, 0/$, G move. yy/dd copy/cut line; y/d copy/cut visual selection;
+Ctrl+C keeps the current mode and selection; y/d return NORMAL;
 x delete; p paste; u undo; Ctrl+R redo; / search forward.
 Ctrl+C copies literal selected SQL to the system clipboard, even during query execution.
 It preserves SQL, selection and undo; NUL is escaped as \0 in clipboard text only.
-Alt+/ comments / uncomments each selected line; without selection, shows a notice.
-Ctrl+P → Comment whole document toggles every line; one undo; no SQL execution or file save.
+Ctrl+} comments / uncomments each selected line; without selection, shows a notice.
+Ctrl+Shift+} toggles every line; one undo; no SQL execution or file save.
+Ctrl+] / Ctrl+Shift+] control-code events are also accepted. If the terminal cannot distinguish these chords, use Ctrl+P comment actions.
 Selection is kept for repeated toggling. Full-line -- comments use the theme's muted color.
-Space: c connect, f find, x run, p invoke, a apply definition,
+Ctrl+P opens actions; Space goes to Neovim.
+Action keys in the palette: c connect, f find, x run, p invoke, a apply definition,
 r refresh catalog, n new tab, w save, o open, q close tab,
 h history, e export, b change database, d disconnect, t routine template.
-Space T themes. Themes preview with arrows; Enter saves, Esc restores.
+Ctrl+P then T opens themes. Themes preview with arrows; Enter saves, Esc restores.
 Connections: Enter connect/expand, + add profile, n new folder,
 e edit profile, r rename folder, d delete empty folder, / search.
 
@@ -334,7 +339,7 @@ cells of one spreadsheet row. Copy shortcuts and CSV default to spreadsheet-safe
 text, including both fields of Cell with header; menus expose literal copy/CSV
 with an untrusted-data warning. Clipboard rows are TSV in displayed order. JSON
 remains literal and unchanged.
-Sorting is lexical, NULL first ascending. Export includes the complete set.
+Sorting is lexical, NULL first ascending. Export includes all received rows.
 
 SQL Server: GO separates batches. MySQL: DELIMITER for routine scripts.
 PostgreSQL: dollar-quoted function bodies are supported.
@@ -343,7 +348,7 @@ Connection form: Test connection uses unsaved fields and does not save them.
 Changing engine, host, port or user requires entering the password again before testing or saving.
 Each tab owns a connection. Queries run with the server's transaction rules;
 use BEGIN / COMMIT / ROLLBACK explicitly when needed.
-History is opt-in (Space h). Passwords are never saved in profiles.
+History is opt-in (Ctrl+P then h). Passwords are never saved in profiles.
 
 Config: %s`, u.configPath)
 }

@@ -64,7 +64,7 @@ func (u *UI) acceptSuggestion(index int) {
 	}
 	u.suppressSuggestions = true
 	u.hideSuggestions()
-	t.Editor.Area.Replace(start, end, text)
+	t.Editor.Complete(start, end, text)
 	u.suppressSuggestions = false
 	u.app.SetFocus(t.Editor.Area)
 }

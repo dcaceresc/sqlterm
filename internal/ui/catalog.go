@@ -143,6 +143,9 @@ func (u *UI) insertObjectName(selectSQL bool) {
 		return
 	}
 	t := u.active()
+	if !u.editorReady(t) {
+		return
+	}
 	a := t.Session.Adapter
 	name := a.Quote(o.Schema) + "." + a.Quote(o.Name)
 	text := name
@@ -154,8 +157,16 @@ func (u *UI) insertObjectName(selectSQL bool) {
 	if from != to {
 		start, end = from, to
 	}
-	sql := t.Editor.Area.GetText()
-	t.Editor.SetText(sql[:start] + text + sql[end:])
+	if t.Editor.IsNeovim() {
+		t.Editor.Area.Replace(start, end, text)
+		if err := t.Editor.Err(); err != nil {
+			u.message(err.Error())
+			return
+		}
+	} else {
+		sql := t.Editor.Area.GetText()
+		t.Editor.SetText(sql[:start] + text + sql[end:])
+	}
 	t.Editor.Area.Select(start+len(text), start+len(text))
 	u.app.SetFocus(t.Editor.Area)
 }

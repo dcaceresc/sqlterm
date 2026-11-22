@@ -35,7 +35,11 @@ func run(args []string, stderr io.Writer) int {
 	}
 	c, err := config.Load(*path)
 	if err == nil {
-		err = ui.New(*path, c).Run()
+		var application *ui.UI
+		application, err = ui.NewWithNeovim(*path, c)
+		if err == nil {
+			err = application.Run()
+		}
 	}
 	if err != nil {
 		_ = diagnostic.LogError(*path, "Startup", err)

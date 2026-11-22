@@ -28,6 +28,9 @@ func (u *UI) saveSQLFile(as bool) {
 			return
 		}
 		write := func() {
+			if !u.editorReady(t) {
+				return
+			}
 			if e := os.WriteFile(path, []byte(t.Editor.Area.GetText()), 0600); e != nil {
 				u.message(e.Error())
 				return
@@ -67,7 +70,10 @@ func (u *UI) openFile() {
 				u.message(e.Error())
 				return
 			}
-			t.Editor.SetText(string(b))
+			if err := t.Editor.SetText(string(b)); err != nil {
+				u.message(err.Error())
+				return
+			}
 			t.Saved = string(b)
 			t.Path = path
 			t.Object = nil
@@ -78,29 +84,6 @@ func (u *UI) openFile() {
 		} else {
 			open()
 		}
-	})
-}
-func (u *UI) searchEditor() {
-	t := u.active()
-	u.prompt(u.tr("Find forward (wraps)"), "", false, func(needle string) {
-		if needle == "" {
-			return
-		}
-		text := t.Editor.Area.GetText()
-		p := t.Editor.Cursor()
-		next := min(len(text), p+1)
-		n := strings.Index(text[next:], needle)
-		if n >= 0 {
-			n += next
-		} else {
-			n = strings.Index(text, needle)
-		}
-		if n < 0 {
-			u.message(u.tr("No match"))
-			return
-		}
-		t.Editor.Area.Select(n, n)
-		u.app.SetFocus(t.Editor.Area)
 	})
 }
 func (u *UI) showHistory() {
@@ -150,7 +133,15 @@ func (u *UI) showHistory() {
 		l.AddItem(entry.At.Format("01-02 15:04")+" · "+entry.Profile+" / "+entry.Database, summary, 0, func() {
 			u.dismiss()
 			t := u.active()
-			load := func() { t.Editor.SetText(entry.SQL); t.Path = ""; t.Object = nil; u.refreshBars() }
+			load := func() {
+				if err := t.Editor.SetText(entry.SQL); err != nil {
+					u.message(err.Error())
+					return
+				}
+				t.Path = ""
+				t.Object = nil
+				u.refreshBars()
+			}
 			if t.Editor.Area.GetText() != t.Saved {
 				u.confirm(u.tr("Replace unsaved SQL with history entry?"), load)
 			} else {
@@ -171,7 +162,7 @@ func (u *UI) template() {
 		return
 	}
 	if t.Profile.Engine == "mysql" && t.Profile.Database == "" {
-		u.message(u.tr("Choose a database with Space b first"))
+		u.message(u.tr("Choose a database with F4 first"))
 		return
 	}
 	u.prompt(u.tr("New procedure name (unqualified)"), "new_procedure", false, func(name string) {
@@ -196,7 +187,16 @@ func (u *UI) template() {
 		default:
 			text = "CREATE OR REPLACE PROCEDURE " + q + "(IN p_value integer)\nLANGUAGE plpgsql\nAS $body$\nBEGIN\n    RAISE NOTICE 'value: %', p_value;\nEND;\n$body$;"
 		}
-		load := func() { t.Editor.SetText(text); t.Path = ""; t.Saved = ""; t.Object = nil; u.refreshBars() }
+		load := func() {
+			if err := t.Editor.SetText(text); err != nil {
+				u.message(err.Error())
+				return
+			}
+			t.Path = ""
+			t.Saved = ""
+			t.Object = nil
+			u.refreshBars()
+		}
 		if t.Editor.Area.GetText() != t.Saved {
 			u.confirm(u.tr("Replace unsaved SQL with template?"), load)
 		} else {
@@ -206,6 +206,9 @@ func (u *UI) template() {
 }
 func (u *UI) applyDefinition() {
 	t := u.active()
+	if !u.editorReady(t) {
+		return
+	}
 	if t.SelectingDatabase {
 		u.message(u.tr("Choose a database first (F4)"))
 		return

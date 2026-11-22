@@ -15,7 +15,7 @@ func (u *UI) tableTemplate() {
 	}
 	a := t.Session.Adapter
 	if a.Engine() == "mysql" && t.Profile.Database == "" {
-		u.message(u.tr("Choose a database with Space b first"))
+		u.message(u.tr("Choose a database with F4 first"))
 		return
 	}
 	u.prompt(u.tr("New table name (unqualified)"), "new_table", false, func(name string) {
@@ -32,7 +32,10 @@ func (u *UI) tableTemplate() {
 		target := a.Quote(schema) + "." + a.Quote(name)
 		text := "CREATE TABLE " + target + " (\n    id " + id + " PRIMARY KEY,\n    name " + column + " NOT NULL\n);"
 		load := func() {
-			t.Editor.SetText(text)
+			if err := t.Editor.SetText(text); err != nil {
+				u.message(err.Error())
+				return
+			}
 			t.Path = ""
 			t.Saved = ""
 			t.Object = nil

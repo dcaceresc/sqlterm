@@ -4,6 +4,7 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
 )
 
 func TestCommentSelectedLines(t *testing.T) {
@@ -20,19 +21,15 @@ func TestCommentSelectedLines(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			e := New()
 			e.SetText(tt.text)
-			e.Clipboard = "keep clipboard"
 			e.Area.Select(tt.from, tt.to)
 			if !e.CommentLines(false) || e.Area.GetText() != tt.want {
 				t.Fatalf("comment: %q, want %q", e.Area.GetText(), tt.want)
 			}
-			if e.Clipboard != "keep clipboard" {
-				t.Fatal("comment modified clipboard")
-			}
-			keys(e, "u")
+			commentKey(e, tcell.KeyCtrlZ)
 			if e.Area.GetText() != tt.text {
 				t.Fatalf("one undo must restore original: %q", e.Area.GetText())
 			}
-			send(e, tcell.NewEventKey(tcell.KeyCtrlR, 0, 0))
+			commentKey(e, tcell.KeyCtrlY)
 			if e.Area.GetText() != tt.want {
 				t.Fatal("redo must restore comment")
 			}
@@ -54,7 +51,7 @@ func TestCommentWholeDocument(t *testing.T) {
 			t.Fatalf("whole document: %q, changed %v", e.Area.GetText(), changed)
 		}
 		if changed {
-			keys(e, "u")
+			commentKey(e, tcell.KeyCtrlZ)
 			if e.Area.GetText() != tt.text {
 				t.Fatal("whole document must undo in one step")
 			}
@@ -73,11 +70,11 @@ func TestCommentTogglesSameSelection(t *testing.T) {
 	if !e.CommentLines(false) || e.Area.GetText() != original {
 		t.Fatalf("second toggle must uncomment the same lines: %q", e.Area.GetText())
 	}
-	keys(e, "u")
+	commentKey(e, tcell.KeyCtrlZ)
 	if e.Area.GetText() != "  -- select ñ;\r\n\t-- select 2;\r\nafter" {
 		t.Fatal("uncomment must undo in one step")
 	}
-	send(e, tcell.NewEventKey(tcell.KeyCtrlR, 0, 0))
+	commentKey(e, tcell.KeyCtrlY)
 	if e.Area.GetText() != original {
 		t.Fatal("uncomment redo failed")
 	}
@@ -95,24 +92,13 @@ func TestCommentTogglesEachLineWithoutStacking(t *testing.T) {
 func TestCommentWithoutSelectionDoesNothing(t *testing.T) {
 	e := New()
 	e.SetText("select 1;")
-	keys(e, "i")
+	e.Mode = "INSERT"
 	e.Area.Select(3, 3)
 	if e.CommentLines(false) || e.Area.GetText() != "select 1;" || e.Cursor() != 3 || e.Mode != "INSERT" {
 		t.Fatal("missing selection must leave editor unchanged")
 	}
 }
 
-func TestCommentVisualModeCanContinueEditing(t *testing.T) {
-	e := New()
-	e.SetText("one\ntwo")
-	keys(e, "vll")
-	if !e.CommentLines(false) {
-		t.Fatal("visual selection not commented")
-	}
-	send(e, tcell.NewEventKey(tcell.KeyEscape, 0, 0))
-	keys(e, "ggvl")
-	selected, _, _ := e.Area.GetSelection()
-	if selected != "-" {
-		t.Fatalf("visual cursor state is stale: %q", selected)
-	}
+func commentKey(e *Editor, key tcell.Key) {
+	e.Area.InputHandler()(tcell.NewEventKey(key, 0, 0), func(tview.Primitive) {})
 }

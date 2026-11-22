@@ -37,10 +37,8 @@ type Invocation struct {
 	After  string
 }
 
-type Capabilities struct{ ReplaceRoutine, OutputParameters, ReturnStatus bool }
 type Adapter interface {
 	Engine() string
-	Capabilities() Capabilities
 	Catalog(context.Context, *sql.Conn) ([]Object, error)
 	Definition(context.Context, *sql.Conn, Object) (string, error)
 	Parameters(context.Context, *sql.Conn, Object) ([]Parameter, error)
@@ -70,9 +68,6 @@ func NewAdapter(engine string) Adapter { return &adapter{engine: engine} }
 type adapter struct{ engine string }
 
 func (a *adapter) Engine() string { return a.engine }
-func (a *adapter) Capabilities() Capabilities {
-	return Capabilities{a.engine != "mysql", true, a.engine == "sqlserver"}
-}
 func (a *adapter) Quote(s string) string {
 	switch a.engine {
 	case "sqlserver":

@@ -290,7 +290,7 @@ func (u *UI) export() {
 }
 
 func (u *UI) exportPrompt(t *Tab, s *result.Store, initial, format string, spreadsheetSafe bool) {
-	u.prompt(u.tr("Export complete set to new file"), initial, false, func(path string) {
+	u.prompt(u.tr("Export received rows to new file"), initial, false, func(path string) {
 		u.task(t, "Export", func(ctx context.Context) (func(), error) {
 			if spreadsheetSafe {
 				return nil, s.ExportSpreadsheetContext(ctx, path, format)

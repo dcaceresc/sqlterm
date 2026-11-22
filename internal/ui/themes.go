@@ -85,6 +85,9 @@ func (u *UI) applyTheme(id string) {
 	}
 	for _, t := range u.tabs {
 		u.style(t.Editor.Area)
+		if err := t.Editor.SetNeovimTheme(u.palette.neovimTheme()); err != nil {
+			t.Status = fmt.Sprintf("Neovim theme: %v", err)
+		}
 	}
 	u.refreshBars()
 	if u.suggestions != nil {
@@ -139,6 +142,8 @@ func (u *UI) style(p tview.Primitive) {
 		if w == u.status {
 			w.SetBackgroundColor(t.Surface)
 		}
+	case *editor.Area:
+		u.style(w.TextArea)
 	case *tview.TextArea:
 		w.SetTextStyle(tcell.StyleDefault.Foreground(t.Foreground).Background(t.Background)).SetSelectedStyle(selected).SetPlaceholderStyle(tcell.StyleDefault.Foreground(t.Muted).Background(t.Background))
 	case *tview.InputField:

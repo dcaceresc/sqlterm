@@ -1,8 +1,6 @@
 package editor
 
 import (
-	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/gdamore/tcell/v2"
@@ -10,36 +8,26 @@ import (
 	"github.com/rivo/uniseg"
 )
 
-// View draws the gutter around the original TextArea. SQL, undo, selection,
-// cursor and input handlers remain owned by that TextArea.
+// View dibuja la grilla publicada por Neovim cuando está activo.
+// Sin una sesión nativa, solo dibuja el widget de texto.
 type View struct {
-	*tview.TextArea
+	*Area
 	editor        *Editor
 	numbers, wrap bool
-	muted, active tcell.Color
-	text          string
-	width         int
-	rows          []viewRow
-	commented     []bool
-	complete      bool
-	syntaxEnabled bool
-	syntaxColors  SyntaxColors
-	syntax        []syntaxKind
-}
-
-type viewRow struct {
-	start        int
-	line         int
-	continuation bool
+	active        tcell.Color
 }
 
 func (e *Editor) SetWordWrap(enabled bool) {
+	if e.native != nil {
+		e.View.wrap = enabled
+		e.nativeEdit(func() error { return e.native.session.Configure(e.View.numbers, enabled) })
+		return
+	}
 	if e.View.wrap == enabled {
 		return
 	}
 	_, start, end := e.Area.GetSelection()
 	e.View.wrap = enabled
-	e.View.rows = nil
 	e.Area.SetWrap(enabled).SetWordWrap(true).SetOffset(0, 0).Select(start, end)
 	_, _, row, col := e.Area.GetCursor()
 	_, _, width, height := e.Area.GetInnerRect()
@@ -49,9 +37,14 @@ func (e *Editor) SetWordWrap(enabled bool) {
 	}
 	e.Area.SetOffset(max(0, row-max(1, height)+1), columnOffset)
 }
-func (e *Editor) WordWrap() bool                              { return e.View.wrap }
-func (e *Editor) SetLineNumbers(enabled bool)                 { e.View.numbers = enabled }
-func (v *View) SetLineNumberColors(muted, active tcell.Color) { v.muted, v.active = muted, active }
+func (e *Editor) WordWrap() bool { return e.View.wrap }
+func (e *Editor) SetLineNumbers(enabled bool) {
+	e.View.numbers = enabled
+	if e.native != nil {
+		e.nativeEdit(func() error { return e.native.session.Configure(enabled, e.View.wrap) })
+	}
+}
+func (v *View) SetActiveColor(active tcell.Color) { v.active = active }
 
 // Position reports the SQL location, independent of soft wrapping.
 func (e *Editor) Position() (row, column int) {
@@ -65,135 +58,9 @@ func (e *Editor) Position() (row, column int) {
 }
 
 func (v *View) Draw(screen tcell.Screen) {
-	text := v.GetText()
-	gutter := 0
-	digits := max(2, len(strconv.Itoa(strings.Count(text, "\n")+1)))
-	if v.numbers {
-		gutter = digits + 2
+	if v.editor.native != nil {
+		v.drawNeovim(screen)
+		return
 	}
-	// Padding is part of TextArea's own geometry, including mouse coordinates,
-	// wrapping, cursor placement and IntelliSense anchoring.
-	v.SetBorderPadding(0, 0, gutter, 0)
 	v.TextArea.Draw(screen)
-	x, y, width, height := v.GetInnerRect()
-	offset, _ := v.GetOffset()
-	if width <= 0 || height <= 0 {
-		return
-	}
-	if v.text != text || v.commented == nil {
-		v.commented = commentLineFlags(text)
-		v.syntax = nil
-	}
-	if v.syntaxEnabled && v.syntax == nil {
-		v.syntax = syntaxKinds(text)
-	}
-	if v.rows == nil || v.text != text || v.width != width || (!v.complete && offset+height >= len(v.rows)) {
-		v.rows, v.complete = layoutRows(text, width, v.wrap, offset+height+256)
-		v.text, v.width = text, width
-	}
-	// Recolor only the text area's visible cells. Its own renderer retains
-	// ownership of Unicode, caret, selection and geometry. Selection styling
-	// takes precedence over comment color, including across wrapped rows.
-	for row := 0; row < height && offset+row < len(v.rows); row++ {
-		line := v.rows[offset+row].line - 1
-		if line >= len(v.commented) || !v.commented[line] {
-			continue
-		}
-		for col := 0; col < width; col++ {
-			main, combining, style, _ := screen.GetContent(x+col, y+row)
-			_, background, _ := style.Decompose()
-			if background == v.GetBackgroundColor() {
-				screen.SetContent(x+col, y+row, main, combining, style.Foreground(v.muted))
-			}
-		}
-	}
-	if v.syntaxEnabled {
-		v.drawSyntax(screen, text, x, y, width, height, offset)
-	}
-	if gutter == 0 {
-		return
-	}
-	current, _ := v.editor.Position()
-	for i := 0; i < height; i++ {
-		style := tcell.StyleDefault.Foreground(v.muted).Background(v.GetBackgroundColor())
-		label := ""
-		if n := offset + i; n < len(v.rows) {
-			r := v.rows[n]
-			marker := " "
-			if r.continuation {
-				marker = "↪"
-			}
-			label = fmt.Sprintf("%*d%s", digits, r.line, marker)
-			if v.HasFocus() && r.line == current+1 {
-				style = style.Foreground(v.active).Bold(true)
-			}
-		}
-		for col := 0; col < gutter; col++ {
-			screen.SetContent(x-gutter+col, y+i, ' ', nil, style)
-		}
-		for col, r := range []rune(label) {
-			if col < gutter-1 {
-				screen.SetContent(x-gutter+col, y+i, r, nil, style)
-			}
-		}
-		screen.SetContent(x-1, y+i, '│', nil, style)
-	}
-}
-
-// Use the same Unicode line-break and grapheme rules as TextArea. Stop after
-// the viewport plus a lookahead instead of laying out an entire large script.
-func layoutRows(text string, width int, wrap bool, limit int) ([]viewRow, bool) {
-	starts, physical := []int{0}, []int{0}
-	remaining, state, pos := text, -1, 0
-	lineWidth, sinceBreak, lastGrapheme, lastBreak := 0, 0, 0, 0
-	for len(remaining) > 0 {
-		cluster, rest, boundaries, next := uniseg.StepString(remaining, state)
-		state = next
-		remaining = rest
-		pos += len(cluster)
-		cw := boundaries >> uniseg.ShiftWidth
-		if cluster == "\t" {
-			cw = tview.TabSize
-		}
-		lineWidth += cw
-		sinceBreak += cw
-		if !wrap || lineWidth <= width {
-			if boundaries&uniseg.MaskLine == uniseg.LineMustBreak && (len(rest) > 0 || uniseg.HasTrailingLineBreakInString(cluster)) {
-				starts = append(starts, pos)
-				physical = append(physical, pos)
-				lineWidth, sinceBreak, lastGrapheme, lastBreak = 0, 0, 0, 0
-				if len(starts) > limit {
-					break
-				}
-				continue
-			}
-		} else if lastBreak == 0 {
-			if lastGrapheme != 0 {
-				starts = append(starts, lastGrapheme)
-				lineWidth = cw
-				lastBreak = 0
-			}
-		} else {
-			starts = append(starts, lastBreak)
-			lineWidth = sinceBreak
-			lastBreak = 0
-		}
-		if boundaries&uniseg.MaskLine == uniseg.LineCanBreak {
-			lastBreak = pos
-			sinceBreak = 0
-		}
-		lastGrapheme = pos
-		if len(starts) > limit {
-			break
-		}
-	}
-	rows := make([]viewRow, len(starts))
-	line := 0
-	for i, start := range starts {
-		for line+1 < len(physical) && physical[line+1] <= start {
-			line++
-		}
-		rows[i] = viewRow{start: start, line: line + 1, continuation: start != physical[line]}
-	}
-	return rows, len(remaining) == 0
 }
