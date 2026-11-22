@@ -321,10 +321,11 @@ Ctrl+} comments / uncomments each selected line; without selection, toggles the 
 Ctrl+Shift+} toggles every line; one undo; no SQL execution or file save.
 Ctrl+] / Ctrl+Shift+] control-code events are also accepted. If the terminal cannot distinguish these chords, use Space c c or Space c a.
 Selection is kept for repeated toggling. Full-line -- comments use the theme's muted color.
-Space in the NORMAL editor opens actions; Focus the editor in NORMAL to open Space commands. INSERT Space keeps typing.
-Action keys in the palette: c connect, f find, x run, p invoke, a apply definition,
-r refresh catalog, n new tab, w save, o open, q close tab,
-h history, e export, b change database, d disconnect, t routine template.
+Space in the focused NORMAL editor opens hierarchical commands. INSERT Space keeps typing.
+Groups: f files, b tabs, c code, d connections, s explore, r results, u preferences, w layout.
+Space c c toggles selected lines or the current logical line; Space w opens layout actions.
+Space ? opens help; Space x cancels an operation; Space q q quits.
+Backspace returns to the parent group; Esc cancels without executing an action.
 Space u t opens themes. Themes preview with arrows; Enter saves, Esc restores.
 Connections: Enter connect/expand, + add profile, n new folder,
 e edit profile, r rename folder, d delete empty folder, / search.

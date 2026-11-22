@@ -8,6 +8,20 @@ import (
 	"github.com/rivo/tview"
 )
 
+func TestLeaderHelpDescribesHierarchy(t *testing.T) {
+	u, _ := modeTestUI(t)
+	for _, language := range []string{"en", "es"} {
+		u.cfg.Language = language
+		text := u.legacyHelp()
+		if language == "es" {
+			text = u.spanishHelp()["All shortcuts"]
+		}
+		if strings.Contains(text, "Action keys in the palette:") || strings.Contains(text, "Dentro de la paleta,") {
+			t.Errorf("%s help advertises retired flat mappings", language)
+		}
+	}
+}
+
 func TestLeaderSpanishLabels(t *testing.T) {
 	u, screen := modeTestUI(t)
 	u.cfg.Language = "es"
