@@ -160,7 +160,7 @@ El resaltado distingue palabras reservadas, cadenas y números. Los delimitadore
 
 **F5** ejecuta el texto seleccionado; si no hay selección, ejecuta el documento. Las acciones de comentar o copiar no ejecutan SQL.
 
-**Ctrl+}** o **Ctrl+P → Comentar selección / Comment selection** alterna comentarios en las líneas completas alcanzadas por la selección. Si la selección termina justo al inicio de otra línea, esa línea no se incluye. Sin selección, solo se muestra un aviso.
+**Ctrl+}** o **Ctrl+P → Comentar selección / Comment selection** alterna comentarios en las líneas completas alcanzadas por la selección. Si la selección termina justo al inicio de otra línea, esa línea no se incluye. Sin selección, se comenta o descomenta la línea lógica completa donde está el cursor.
 
 **Ctrl+Shift+}** o **Ctrl+P → Comentar todo el documento / Comment whole document** aplica la misma operación al documento. Se agrega `-- ` después de la indentación o se quita `--` y un espacio opcional. Las líneas mixtas se alternan por separado, se conservan la selección y los saltos de línea, y una acción completa se deshace como una sola operación.
 

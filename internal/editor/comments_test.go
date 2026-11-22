@@ -37,6 +37,26 @@ func TestCommentSelectedLines(t *testing.T) {
 	}
 }
 
+func TestCommentNativeSelection(t *testing.T) {
+	for _, bounds := range [][2]int{{0, 10}, {3, 9}} {
+		e := testNativeEditor(t)
+		original := "select ñ;\nselect 2;"
+		e.SetText(original)
+		e.Area.Select(bounds[0], bounds[1])
+		if !e.CommentLines(false) || e.Area.GetText() != "-- select ñ;\nselect 2;" || e.Mode != "VISUAL" || e.Err() != nil {
+			t.Fatalf("selection toggle: %q mode=%s err=%v", e.Area.GetText(), e.Mode, e.Err())
+		}
+		if !e.CommentLines(false) || e.Area.GetText() != original {
+			t.Fatalf("repeat selection toggle: %q", e.Area.GetText())
+		}
+		e.Area.InputHandler()(tcell.NewEventKey(tcell.KeyEscape, 0, 0), func(tview.Primitive) {})
+		nativeKeys(e, "u")
+		if e.Area.GetText() != "-- select ñ;\nselect 2;" {
+			t.Fatalf("selection undo: %q", e.Area.GetText())
+		}
+	}
+}
+
 func TestCommentWholeDocument(t *testing.T) {
 	for _, tt := range []struct{ text, want string }{
 		{"select 1;\n\tselect ñ;\n", "-- select 1;\n\t-- select ñ;\n"},
@@ -89,13 +109,63 @@ func TestCommentTogglesEachLineWithoutStacking(t *testing.T) {
 	}
 }
 
-func TestCommentWithoutSelectionDoesNothing(t *testing.T) {
-	e := New()
-	e.SetText("select 1;")
-	e.Mode = "INSERT"
-	e.Area.Select(3, 3)
-	if e.CommentLines(false) || e.Area.GetText() != "select 1;" || e.Cursor() != 3 || e.Mode != "INSERT" {
-		t.Fatal("missing selection must leave editor unchanged")
+func TestCommentCurrentLine(t *testing.T) {
+	for _, native := range []bool{false, true} {
+		for _, tt := range []struct {
+			name, text, want string
+			cursor           int
+		}{
+			{"start", "before\n  select ñ;\nafter", "before\n  -- select ñ;\nafter", 7},
+			{"middle UTF8", "before\n  select ñ;\nafter", "before\n  -- select ñ;\nafter", 18},
+			{"end", "before\n  select ñ;\nafter", "before\n  -- select ñ;\nafter", 19},
+			{"empty line", "before\n\nafter", "before\n-- \nafter", 7},
+			{"empty document", "", "-- ", 0},
+			{"last line", "before\nñ", "before\n-- ñ", 7},
+		} {
+			backend := "plain/"
+			if native {
+				backend = "native/"
+			}
+			t.Run(backend+tt.name, func(t *testing.T) {
+				e := New()
+				if native {
+					e = testNativeEditor(t)
+				}
+				e.SetText(tt.text)
+				e.Area.Select(tt.cursor, tt.cursor)
+				if !e.CommentLines(false) || e.Area.GetText() != tt.want || e.Err() != nil {
+					t.Fatalf("comment: %q, want %q, err=%v", e.Area.GetText(), tt.want, e.Err())
+				}
+				if e.Mode != "NORMAL" {
+					t.Fatalf("mode=%s", e.Mode)
+				}
+				if _, from, to := e.Area.GetSelection(); from != to {
+					t.Fatal("current-line action must not create selection")
+				}
+				if lineStart(e.Area.GetText(), e.Cursor()) != lineStart(tt.text, tt.cursor) {
+					t.Fatal("cursor left current line")
+				}
+				if !e.CommentLines(false) || e.Area.GetText() != tt.text {
+					t.Fatalf("repeat: %q", e.Area.GetText())
+				}
+				if native {
+					nativeKeys(e, "u")
+				} else {
+					commentKey(e, tcell.KeyCtrlZ)
+				}
+				if e.Area.GetText() != tt.want {
+					t.Fatalf("undo repeat: %q", e.Area.GetText())
+				}
+				if native {
+					nativeKeys(e, "u")
+				} else {
+					commentKey(e, tcell.KeyCtrlZ)
+				}
+				if e.Area.GetText() != tt.text {
+					t.Fatalf("undo comment: %q", e.Area.GetText())
+				}
+			})
+		}
 	}
 }
 

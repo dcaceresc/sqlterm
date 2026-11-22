@@ -5,11 +5,10 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/rivo/tview"
 	"sqlterm/internal/config"
 )
 
-func TestCommentSelectionShortcutAndPalette(t *testing.T) {
+func TestCommentCurrentLineSelectionAndDocumentActions(t *testing.T) {
 	u := runningUI(t, config.Config{})
 	u.app.QueueUpdateDraw(func() {
 		tab := u.active()
@@ -22,8 +21,12 @@ func TestCommentSelectionShortcutAndPalette(t *testing.T) {
 		if u.key(event) != nil {
 			t.Error("Ctrl+} must be consumed in editor")
 		}
-		if tab.Editor.Area.GetText() != tab.Saved || tab.Status != "Select SQL text before commenting" {
-			t.Error("no selection must show a notice without editing")
+		if tab.Editor.Area.GetText() != "-- select ñ;\nselect 2;" || tab.Status == "Select SQL text before commenting" {
+			t.Error("no selection must comment the current line without a notice")
+		}
+		u.key(event)
+		if tab.Editor.Area.GetText() != tab.Saved {
+			t.Error("repeated current-line toggle must restore SQL")
 		}
 		tab.Editor.Area.Select(0, 6)
 		if u.key(event) != nil || tab.Editor.Area.GetText() != "-- select ñ;\nselect 2;" {
@@ -37,29 +40,15 @@ func TestCommentSelectionShortcutAndPalette(t *testing.T) {
 		if tab.Saved != "select ñ;\nselect 2;" || tab.Path != originalPath || tab.Busy || tab.Session != nil {
 			t.Error("comment action changed saved state or executed SQL")
 		}
-		u.key(tcell.NewEventKey(tcell.KeyCtrlP, 0, 0))
-		panel, ok := u.dialogContent.(*tview.Flex)
-		if !ok {
-			t.Error("Ctrl+P must remain the palette")
-			return
+		u.commentSQL(true)
+		if tab.Editor.Area.GetText() != "select ñ;\n-- select 2;" {
+			t.Error("whole-document action must toggle every line")
 		}
-		list := panel.GetItem(1).(*tview.List)
-		found := false
-		for i := 0; i < list.GetItemCount(); i++ {
-			name, _ := list.GetItemText(i)
-			if name == "Comment whole document" {
-				list.SetCurrentItem(i)
-				u.app.SetFocus(list)
-				list.InputHandler()(tcell.NewEventKey(tcell.KeyEnter, 0, 0), func(p tview.Primitive) { u.app.SetFocus(p) })
-				found = true
-				break
-			}
-		}
-		if !found || tab.Editor.Area.GetText() != "select ñ;\n-- select 2;" {
-			t.Error("palette must offer whole-document commenting")
+		if tab.Saved != "select ñ;\nselect 2;" || tab.Path != originalPath || tab.Busy || tab.Session != nil {
+			t.Error("document action changed saved state or executed SQL")
 		}
 		if u.dialogContent != nil || u.app.GetFocus() != tab.Editor.Area {
-			t.Error("palette action must return to editor")
+			t.Error("comment action must return to editor")
 		}
 	})
 }
