@@ -300,7 +300,7 @@ func (u *UI) legacyHelp() string {
 F6 object search     F7 editor     F8 results     F10 cancel
 Ctrl+N new session     Alt+1..9 switch tabs     Ctrl+O open     Ctrl+S save in place
 Files: terminal folder browser; Tab/Shift+Tab fields, Enter selects, Esc cancels.
-Ctrl+Shift+S or Ctrl+P → Save SQL as: choose another folder and file name.
+Ctrl+Shift+S or Space f S: choose another folder and file name.
 If the terminal cannot distinguish Ctrl+Shift+S from Ctrl+S, Ctrl+S saves in place.
 IntelliSense: automatic while typing; Ctrl+Space opens suggestions.
 SQL Server: EXEC procedure + space lists parameter names/types; @ filters; Tab/Enter inserts @name = .
@@ -317,15 +317,15 @@ Ctrl+C keeps the current mode and selection; y/d return NORMAL;
 x delete; p paste; u undo; Ctrl+R redo; / search forward.
 Ctrl+C copies literal selected SQL to the system clipboard, even during query execution.
 It preserves SQL, selection and undo; NUL is escaped as \0 in clipboard text only.
-Ctrl+} comments / uncomments each selected line; without selection, shows a notice.
+Ctrl+} comments / uncomments each selected line; without selection, toggles the complete current line.
 Ctrl+Shift+} toggles every line; one undo; no SQL execution or file save.
-Ctrl+] / Ctrl+Shift+] control-code events are also accepted. If the terminal cannot distinguish these chords, use Ctrl+P comment actions.
+Ctrl+] / Ctrl+Shift+] control-code events are also accepted. If the terminal cannot distinguish these chords, use Space c c or Space c a.
 Selection is kept for repeated toggling. Full-line -- comments use the theme's muted color.
-Space in the NORMAL editor opens actions; Ctrl+P works from any panel. INSERT Space keeps typing.
+Space in the NORMAL editor opens actions; Focus the editor in NORMAL to open Space commands. INSERT Space keeps typing.
 Action keys in the palette: c connect, f find, x run, p invoke, a apply definition,
 r refresh catalog, n new tab, w save, o open, q close tab,
 h history, e export, b change database, d disconnect, t routine template.
-Ctrl+P then T opens themes. Themes preview with arrows; Enter saves, Esc restores.
+Space u t opens themes. Themes preview with arrows; Enter saves, Esc restores.
 Connections: Enter connect/expand, + add profile, n new folder,
 e edit profile, r rename folder, d delete empty folder, / search.
 
@@ -348,7 +348,7 @@ Connection form: Test connection uses unsaved fields and does not save them.
 Changing engine, host, port or user requires entering the password again before testing or saving.
 Each tab owns a connection. Queries run with the server's transaction rules;
 use BEGIN / COMMIT / ROLLBACK explicitly when needed.
-History is opt-in (Ctrl+P then h). Passwords are never saved in profiles.
+History is opt-in (Space s h). Passwords are never saved in profiles.
 
 Config: %s`, u.configPath)
 }

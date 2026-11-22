@@ -54,37 +54,38 @@ func (u *UI) languageMenu() {
 func (u *UI) spanishHelp() map[string]string {
 	intro := map[string]string{
 		"Getting started": "F2 conectar → F6 buscar objetos → F7 editar → F5 ejecutar → F8 revisar/copiar. El destino permanece en la barra superior.\nCada pestaña tiene su conexión. No garantiza solo lectura. Usa BEGIN / COMMIT / ROLLBACK explícitamente.",
-		"Editor":          "i INSERT · Esc NORMAL · v VISUAL · h/j/k/l · w/b · 0/$ · gg/G · yy/dd · y/d · p · u · Ctrl+R\nCtrl+Space IntelliSense; Tab/Enter aceptar. F5 ejecuta selección o script completo. * indica cambios sin guardar.\nAlt+Z activa/desactiva el ajuste de línea. Los números indican líneas reales del SQL. Ambas preferencias se guardan y aparecen en Ctrl+P.",
-		"Objects":         "Buscar por nombre, esquema y tipo. Clic o Enter abre definiciones, incluido CREATE TABLE para tablas, sin ejecutar SQL. Los grupos se expanden/contraen.\nCtrl+P: insertar nombre entre comillas, generar SELECT, invocar, actualizar o catálogo plano. Nueva plantilla de tabla prepara CREATE TABLE en el editor; revisa y ejecuta con F5.",
+		"Editor":          "i INSERT · Esc NORMAL · v VISUAL · h/j/k/l · w/b · 0/$ · gg/G · yy/dd · y/d · p · u · Ctrl+R\nCtrl+Space IntelliSense; Tab/Enter aceptar. F5 ejecuta selección o script completo. * indica cambios sin guardar.\nAlt+Z activa/desactiva el ajuste de línea. Los números indican líneas reales del SQL. Ambas preferencias se guardan y aparecen en Espacio u.",
+		"Objects":         "Buscar por nombre, esquema y tipo. Clic o Enter abre definiciones, incluido CREATE TABLE para tablas, sin ejecutar SQL. Los grupos se expanden/contraen.\nEspacio c i/c q/c p/d r/s g: insertar nombre, generar SELECT, invocar, actualizar o catálogo plano. Nueva plantilla de tabla prepara CREATE TABLE en el editor; revisa y ejecuta con F5.",
 		"Results":         "Se obtiene el primer bloque configurado. Solo ↓/Ctrl+N/PageDown/End/j o la rueda hacia abajo cerca del final solicita un bloque más. F10 detiene la recepción y conserva las filas para copiarlas o exportarlas.\nUna pausa no bloquea la pestaña: F5 o F9 cancela la lectura pausada, espera a que el controlador la cierre y libere la conexión, y luego ejecuta la sentencia nueva. F4, desconectar, cerrar pestaña y salir también la liberan. Copiar, ordenar y exportar siguen requiriendo F10.\nEnter inspecciona la celda completa y permite copiar el valor, o el nombre de columna con el valor en una sola fila TSV (segura por defecto, con variante literal avisada). NULL es SQL NULL; cadena vacía es \"\".\n/ buscar · s/S orden léxico de filas recibidas · [/] conjuntos · e exportar · y/Y copiar filas sin/con cabeceras · r/R fila · c celda · v seleccionar rango · +/- ancho de columna\nCtrl+C abre copia; incluye 'Celda con cabecera': la celda seleccionada como nombre de columna, tabulador y valor en una sola fila TSV (por ejemplo nombre_cliente<TAB>ACME S.A.), lista para pegar en dos celdas contiguas. La cabecera es el nombre de la columna del resultado y respeta el orden visible.\nCopia y CSV son seguros por defecto para hojas de cálculo: la protección ' se aplica al nombre de columna y al valor; el menú ofrece modo literal, que deja ambos intactos. Se antepone ' a texto que empieza por =, +, - o @ tras espacios/controles. NUL se representa como \\0. JSON no cambia.",
 		"Connections":     "F2 perfiles y carpetas · / buscar · + añadir · e editar · n carpeta · r renombrar · d eliminar carpeta vacía · * favorito\nF4 busca bases. La nueva conexión sustituye la anterior solo tras conectar correctamente. Conserva SQL; no conserva transacciones, variables ni tablas temporales.\nSi cambias motor, servidor, puerto o usuario, vuelve a escribir la contraseña antes de probar o guardar.\nF3: flechas vista previa, Enter guardar, Esc restaurar. Ctrl+Q salir; Ctrl+C copia o cancela diálogo.",
 	}
 	intro["Editor"] += "\nCtrl+C copia la selección SQL al portapapeles del sistema; sin selección muestra un aviso y no copia nada. Conserva texto, selección y deshacer; funciona aunque haya una consulta en curso. NUL se representa como \\0 solo en el texto copiado."
-	intro["Editor"] += "\nCtrl+} comenta o descomenta cada línea seleccionada con --; sin selección solo muestra un aviso. Ctrl+Shift+} alterna todas las líneas. También se acepta Ctrl+] y Ctrl+Shift+] cuando la terminal los comunica como código de control. Si la terminal no distingue estas combinaciones, usa las acciones de comentar de Ctrl+P. Conserva indentación y selección para repetir la acción; permite deshacer y no ejecuta ni guarda SQL. Los comentarios de línea usan el color atenuado del tema; la selección conserva sus colores."
-	intro["Editor"] += "\nEspacio en NORMAL abre acciones; pulsa la letra de la acción o Esc para cerrar. En INSERT escribe espacios. Ctrl+P funciona desde cualquier panel.\nArchivos: Ctrl+O explora carpetas; Ctrl+S guarda directamente en la ruta actual. Ctrl+Shift+S o Ctrl+P → Guardar SQL como elige otro destino. Si la terminal informa Ctrl+Shift+S como Ctrl+S, se realiza un guardado normal. Tab/Shift+Tab cambia de campo; Enter selecciona; Esc cancela."
+	intro["Editor"] += "\nCtrl+} comenta o descomenta cada línea seleccionada con --; sin selección alterna la línea completa del cursor. Ctrl+Shift+} alterna todas las líneas. También se acepta Ctrl+] y Ctrl+Shift+] cuando la terminal los comunica como código de control. Si la terminal no distingue estas combinaciones, usa Espacio c c o Espacio c a. Conserva indentación y selección para repetir la acción; permite deshacer y no ejecuta ni guarda SQL. Los comentarios de línea usan el color atenuado del tema; la selección conserva sus colores."
+	intro["Editor"] += "\nEspacio en NORMAL abre acciones; pulsa la letra de la acción o Esc para cerrar. En INSERT escribe espacios. Enfoca el editor en NORMAL para abrir los comandos de Espacio.\nArchivos: Ctrl+O explora carpetas; Ctrl+S guarda directamente en la ruta actual. Ctrl+Shift+S o Espacio f S elige otro destino. Si la terminal informa Ctrl+Shift+S como Ctrl+S, se realiza un guardado normal. Tab/Shift+Tab cambia de campo; Enter selecciona; Esc cancela."
 	intro["Editor"] += "\nV selecciona la línea lógica completa; j/k extienden por líneas. gg va al inicio del archivo; ggVG selecciona todo el archivo. Ctrl+C conserva el modo actual y la selección; yy conserva NORMAL. y/d copian/cortan la selección y vuelven a NORMAL."
 	intro["Editor"] += "\nEl panel SQL usa Neovim 0.11+ aislado (nvim en PATH), sin la configuración personal de LazyVim. v incluye el carácter actual; los atajos globales de SQLTerm tienen prioridad. El pegado delimitado de Windows Terminal es literal y conserva NORMAL. No se ejecutan selecciones por bloques. No hay sustitución silenciosa si falta o termina Neovim; se bloquea guardar/ejecutar datos obsoletos."
 	intro["Editor"] += "\nSQL Server: EXEC procedimiento seguido de espacio muestra parámetros y tipos; @ filtra, Tab/Enter inserta @nombre = . Reaparece tras una coma entre argumentos; no ejecuta SQL."
 	intro["All shortcuts"] = strings.Join([]string{intro["Getting started"], intro["Editor"], intro["Objects"], intro["Results"], intro["Connections"],
-		"F10 cancelar y esperar al controlador · F11 distribución · Espacio en el editor NORMAL abre acciones; Ctrl+P funciona desde cualquier panel. En INSERT, Espacio escribe\nCtrl+N nueva sesión · Alt+1..9 pestaña · Ctrl+O abrir · Ctrl+S guardar en la ruta actual · Ctrl+Shift+S guardar como\nDentro de la paleta, c/f/x/p/a/r/n/w/o/q/h/e/b/d/t/T seleccionan acciones.\nSQL Server: GO separa lotes. MySQL: DELIMITER en rutinas. PostgreSQL: cuerpos con dollar quoting.\nHistorial opcional; no guarda parámetros de invocación. Contraseñas en el almacén del sistema. Errores técnicos se conservan en el idioma del controlador."},
+		"F10 cancelar y esperar al controlador · Espacio w distribución · Espacio en el editor NORMAL abre acciones; Enfoca el editor en NORMAL para abrir los comandos de Espacio. En INSERT, Espacio escribe\nCtrl+N nueva sesión · Alt+1..9 pestaña · Ctrl+O abrir · Ctrl+S guardar en la ruta actual · Ctrl+Shift+S guardar como\nEspacio: f archivos, b pestañas, c código, d conexiones, s explorar, r resultados, u preferencias, w distribución; ? ayuda, x cancelar, q q salir. Retroceso vuelve al grupo; Esc cancela.\nSQL Server: GO separa lotes. MySQL: DELIMITER en rutinas. PostgreSQL: cuerpos con dollar quoting.\nHistorial opcional; no guarda parámetros de invocación. Contraseñas en el almacén del sistema. Errores técnicos se conservan en el idioma del controlador."},
 		"\n\n")
 	return intro
 }
 
 var spanish = map[string]string{
-	"Select SQL text before copying":                   "Selecciona texto SQL antes de copiar",
-	"SQL clipboard copy already in progress":           "Ya hay una copia SQL al portapapeles en curso",
-	"Copied SQL selection to clipboard":                "Selección SQL copiada al portapapeles",
-	"Could not copy SQL: %s":                           "No se pudo copiar el SQL: %s",
-	"(NUL escaped as \\0)":                             "(NUL representado como \\0)",
-	"Comment selection":                                "Comentar selección",
-	"Ctrl+} · comment / uncomment each selected line":  "Ctrl+} · comentar / descomentar cada línea seleccionada",
-	"Comment whole document":                           "Comentar todo el documento",
-	"Ctrl+Shift+} · comment / uncomment each SQL line": "Ctrl+Shift+} · comentar / descomentar cada línea SQL",
-	"Select SQL text before commenting":                "Selecciona texto SQL antes de comentar",
-	"Word wrap":                                        "Ajuste de línea", "Alt+Z · toggle visual wrapping of long SQL lines": "Alt+Z · activar/desactivar ajuste visual de líneas SQL largas", "Line numbers": "Números de línea", "Show / hide SQL line numbers": "Mostrar / ocultar números de línea SQL", "On": "Activado", "Off": "Desactivado", "Favorites": "Favoritos", "Favorite": "Favorito",
+	"Files": "Archivos", "Tabs": "Pestañas", "Code": "Código", "Explore": "Explorar", "Preferences": "Preferencias",
+	"Space · Esc cancel · Backspace parent":                  "Espacio · Esc cancelar · Retroceso volver",
+	"Select SQL text before copying":                         "Selecciona texto SQL antes de copiar",
+	"SQL clipboard copy already in progress":                 "Ya hay una copia SQL al portapapeles en curso",
+	"Copied SQL selection to clipboard":                      "Selección SQL copiada al portapapeles",
+	"Could not copy SQL: %s":                                 "No se pudo copiar el SQL: %s",
+	"(NUL escaped as \\0)":                                   "(NUL representado como \\0)",
+	"Comment selection":                                      "Comentar línea o selección",
+	"Ctrl+} · comment / uncomment selection or current line": "Ctrl+} · comentar / descomentar selección o línea actual",
+	"Comment whole document":                                 "Comentar todo el documento",
+	"Ctrl+Shift+} · comment / uncomment each SQL line":       "Ctrl+Shift+} · comentar / descomentar cada línea SQL",
+	"Word wrap": "Ajuste de línea", "Alt+Z · toggle visual wrapping of long SQL lines": "Alt+Z · activar/desactivar ajuste visual de líneas SQL largas", "Line numbers": "Números de línea", "Show / hide SQL line numbers": "Mostrar / ocultar números de línea SQL", "On": "Activado", "Off": "Desactivado", "Favorites": "Favoritos", "Favorite": "Favorito",
 	"Welcome to SQLTerm": "Bienvenido a SQLTerm",
-	"Connect":            "Conectar", "Export": "Exportar", "Sort results": "Ordenar resultados", "Search results": "Buscar resultados", "Read definition": "Leer definición", "Read parameters": "Leer parámetros", "List databases": "Listar bases de datos", "Cancelling · waiting for driver": "Cancelando · esperando al controlador", "Loading catalog…": "Cargando catálogo…", "Could not load catalog · Ctrl+P Refresh catalog": "No se pudo cargar el catálogo · Ctrl+P Actualizar catálogo", "Choose after connecting": "Elegir después de conectar",
+	"Connect":            "Conectar", "Export": "Exportar", "Sort results": "Ordenar resultados", "Search results": "Buscar resultados", "Read definition": "Leer definición", "Read parameters": "Leer parámetros", "List databases": "Listar bases de datos", "Cancelling · waiting for driver": "Cancelando · esperando al controlador", "Loading catalog…": "Cargando catálogo…", "Could not load catalog · Space d r Refresh catalog": "No se pudo cargar el catálogo · Espacio d r Actualizar catálogo", "Choose after connecting": "Elegir después de conectar",
 	"%s · %s\n%s:%d · %s\nUser: %s · * toggle favorite": "%s · %s\n%s:%d · %s\nUsuario: %s · * cambiar favorito", "Enter collapses/expands folders or connects profiles": "Enter contrae/expande carpetas o conecta perfiles", "/ search · + add · n folder · e edit": "/ buscar · + añadir · n carpeta · e editar",
 	"Search objects": "Buscar objetos", "Enter save · Esc restore": "Enter guardar · Esc restaurar",
 	"· %d visible rows": "· %d filas visibles",
@@ -115,10 +116,10 @@ var spanish = map[string]string{
 	"Every F5 execution":                                                           "Cada ejecución con F5",
 	"Confirm every script or selection, including reads":                           "Confirma cada script o selección, incluidas lecturas",
 	"F1 help  F2 connect  F3 themes  F4 database  F5 run  F6 objects  F7 editor  F8 results  F9 invoke  F10 cancel": "F1 Ayuda  F2 Conexión  F3 Temas  F4 Base  F5 Ejecutar  F6 Objetos  F7 Editor  F8 Resultados  F9 Invocar  F10 Cancelar",
-	"F1 Help  / Find  s/S Sort locally  Ctrl+C Copy  Enter Cell  e Export  F11 Layout":                              "F1 Ayuda  / Buscar  s/S Orden local  Ctrl+C Copiar  Enter Celda  e Exportar  F11 Vista",
+	"F1 Help  / Find  s/S Sort locally  Ctrl+C Copy  Enter Cell  e Export  F7 Editor → Space w":                     "F1 Ayuda  / Buscar  s/S Orden local  Ctrl+C Copiar  Enter Celda  e Exportar  F7 Editor → Espacio w",
 	"F1 Help  ↓/PgDn/End/j Scroll more  F10 Stop/keep  Ctrl+C Copy  e Export":                                       "F1 Ayuda  ↓/PgDn/End/j Más filas  F10 Parar/conservar  Ctrl+C Copiar  e Exportar",
-	"F1 Help  Enter Definition  Ctrl+P Actions  F7 Editor  F8 Results  F11 Layout":                                  "F1 Ayuda  Enter Definición  Ctrl+P Acciones  F7 Editor  F8 Resultados  F11 Vista",
-	"F1 Help  F5 Run  F6 Objects  F7 Editor  F8 Results  F10 Cancel  F11 Layout":                                    "F1 Ayuda  F5 Ejecutar  F6 Objetos  F7 Editor  F8 Resultados  F10 Cancelar  F11 Vista",
+	"F1 Help  Enter Definition  F7 Editor → Space  F7 Editor  F8 Results  F7 Editor → Space w":                      "F1 Ayuda  Enter Definición  F7 Editor → Espacio  F7 Editor  F8 Resultados  F7 Editor → Espacio w",
+	"F1 Help  F5 Run  F6 Objects  F7 Editor  F8 Results  F10 Cancel  F7 Editor → Space w":                           "F1 Ayuda  F5 Ejecutar  F6 Objetos  F7 Editor  F8 Resultados  F10 Cancelar  F7 Editor → Espacio w",
 	"Ctrl+C copy menu · y/Y all without/with headers · r/R row · c cell · e export · Ctrl+Q quit":                   "Ctrl+C menú copiar · y/Y filas sin/con cabeceras · r/R fila · c celda · e exportar · Ctrl+Q salir",
 	"Enter definition":  "Enter definición",
 	"Enter select":      "Enter seleccionar",
@@ -216,7 +217,7 @@ var spanish = map[string]string{
 	"Quoted identifier at editor cursor":                                         "Identificador entre comillas en el cursor",
 	"Insert SELECT; review and run with F5":                                      "Insertar SELECT; revisar y ejecutar con F5",
 	"Group by schema and object kind":                                            "Agrupar por esquema y tipo",
-	"F11 · resize, maximize, edit / explore / balanced":                          "F11 · ajustar, maximizar, editar / explorar / equilibrado",
+	"Space w · resize, maximize, edit / explore / balanced":                      "Espacio w · ajustar, maximizar, editar / explorar / equilibrado",
 	"F10 · wait for driver confirmation":                                         "F10 · espera confirmación del controlador",
 	"Server messages and execution errors · copyable":                            "Mensajes del servidor y errores de ejecución · copiables",
 	"Ctrl+Q · checks unsaved SQL":                                                "Ctrl+Q · comprueba SQL sin guardar",
@@ -275,7 +276,7 @@ var spanish = map[string]string{
 	"More editor (+10%)":                   "Más editor (+10%)",
 	"More results (+10%)":                  "Más resultados (+10%)",
 	"Actions · / search":                   "Acciones · / buscar",
-	"Help · Tab navigate · Ctrl+P actions": "Ayuda · Tab navegar · Ctrl+P acciones",
+	"Help · Tab navigate · Space actions":  "Ayuda · Tab navegar · Espacio acciones",
 	"Getting started":                      "Primeros pasos",
 	"All shortcuts":                        "Todos los atajos",
 	"Execute SQL":                          "Ejecutar SQL",
@@ -342,7 +343,7 @@ var spanish = map[string]string{
 	"Session busy; cancel or wait":                                                        "Sesión ocupada; cancela o espera",
 	"No matching databases":                                                               "No hay bases coincidentes",
 	"No matching objects":                                                                 "No hay objetos coincidentes",
-	"No objects · Ctrl+P Refresh catalog":                                                 "Sin objetos · Ctrl+P Actualizar catálogo",
+	"No objects · Space d r Refresh catalog":                                              "Sin objetos · Espacio d r Actualizar catálogo",
 	"No received rows":                                                                    "Sin filas recibidas",
 	"Not executed":                                                                        "Sin ejecutar",
 	"Execute script":                                                                      "Ejecutar script",

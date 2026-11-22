@@ -71,9 +71,9 @@ func (u *UI) refreshWorkspace() {
 	if u.table.HasFocus() {
 		u.help.SetText(u.tr(" F1 Help  ↓/PgDn/End/j Scroll more  F10 Stop/keep  Ctrl+C Copy  e Export "))
 	} else if u.objects.HasFocus() || u.search.HasFocus() || u.kind.HasFocus() {
-		u.help.SetText(u.tr(" F1 Help  Enter Definition  Ctrl+P Actions  F7 Editor  F8 Results  F11 Layout "))
+		u.help.SetText(u.tr(" F1 Help  Enter Definition  F7 Editor  F8 Results  Space w Layout in NORMAL editor "))
 	} else if u.lastWidth > 0 && u.lastWidth < 110 {
-		u.help.SetText(u.tr(" F1 Help  F5 Run  F6 Objects  F7 Editor  F8 Results  F10 Cancel  F11 Layout "))
+		u.help.SetText(u.tr(" F1 Help  F5 Run  F6 Objects  F7 Editor  F8 Results  F10 Cancel  Space w Layout "))
 	}
 }
 
@@ -114,7 +114,7 @@ func (u *UI) refreshResultInfo() {
 		if e.Phase == "Paused" && e.Pause != nil {
 			guidance = fmt.Sprintf(u.tr(" · %d received · scroll at end for more · F10 stop and keep rows"), e.Pause.Rows)
 		}
-		info = fmt.Sprintf("#%d %s │ %s / %s │ %s · %s%s%s\n%s%s · %s · F5 · Ctrl+P", e.ID, e.Source, e.Profile, e.Database, e.Started.Format("15:04:05"), duration.Round(time.Millisecond), stale, partial, u.tr(e.Phase), guidance, u.tr(e.Scope))
+		info = fmt.Sprintf("#%d %s │ %s / %s │ %s · %s%s%s\n%s%s · %s · F5 · Space r", e.ID, e.Source, e.Profile, e.Database, e.Started.Format("15:04:05"), duration.Round(time.Millisecond), stale, partial, u.tr(e.Phase), guidance, u.tr(e.Scope))
 	}
 	u.resultInfo.SetText(tview.Escape(info))
 	s := u.currentStore()
@@ -265,11 +265,11 @@ func (u *UI) saveLayout(l config.Layout) {
 	}
 }
 
-func (u *UI) layoutMenu() {
-	l := tview.NewList().ShowSecondaryText(false)
-	l.SetBorder(true).SetTitle(u.tr(" Layout · saved per workspace "))
+func (u *UI) layoutCommands() []command {
+	var commands []command
+	keys := []rune{'b', 'e', 'd', 'm', 'r', 'c', '>', '<', '+', '-'}
 	add := func(label string, change func(*config.Layout)) {
-		l.AddItem(u.tr(label), "", 0, func() { next := u.cfg.Layout; change(&next); u.dismiss(); u.saveLayout(next) })
+		commands = append(commands, command{Name: label, Key: keys[len(commands)], Run: func() { next := u.cfg.Layout; change(&next); u.saveLayout(next) }})
 	}
 	add("Balanced", func(v *config.Layout) { v.EditorPercent = 45; v.Maximized = ""; v.HideCatalog = false })
 	add("Edit", func(v *config.Layout) { v.EditorPercent = 70; v.Maximized = "" })
@@ -301,5 +301,5 @@ func (u *UI) layoutMenu() {
 		}
 		v.EditorPercent = max(20, v.EditorPercent-10)
 	})
-	u.popup(l, 65, 14)
+	return commands
 }

@@ -5,10 +5,9 @@ import (
 	"strings"
 )
 
-// Configured shortcuts are global aliases. Restrict them to special keys so
-// ordinary typing can never accidentally execute SQL.
+// Los alias globales excluyen las teclas retiradas y la escritura normal.
 func (u *UI) customKey(k *tcell.EventKey) bool {
-	if k.Key() == tcell.KeyRune {
+	if k.Key() == tcell.KeyRune || k.Key() == tcell.KeyF11 || k.Key() == tcell.KeyCtrlP {
 		return false
 	}
 	normalize := func(s string) string { return strings.ToLower(strings.ReplaceAll(s, "+", "-")) }

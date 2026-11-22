@@ -437,7 +437,7 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 				u.app.SetFocus(u.table)
 			}
 			return nil
-		case tcell.KeyF1, tcell.KeyF2, tcell.KeyF3, tcell.KeyF4, tcell.KeyF6, tcell.KeyF7, tcell.KeyF8, tcell.KeyF11, tcell.KeyCtrlP, tcell.KeyCtrlQ:
+		case tcell.KeyF1, tcell.KeyF2, tcell.KeyF3, tcell.KeyF4, tcell.KeyF6, tcell.KeyF7, tcell.KeyF8, tcell.KeyCtrlQ:
 			u.dismiss()
 		}
 	}
@@ -482,7 +482,7 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 		return nil
 	}
 	if e := u.active().Editor; k.Key() == tcell.KeyRune && k.Rune() == ' ' && k.Modifiers() == 0 && u.app.GetFocus() == e.Area && e.IsNeovim() && e.Mode == "NORMAL" {
-		u.commandPalette()
+		u.leaderMenu()
 		return nil
 	}
 	switch k.Key() {
@@ -523,12 +523,6 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 		return nil
 	case tcell.KeyF10:
 		u.cancelOperation()
-		return nil
-	case tcell.KeyF11:
-		u.layoutMenu()
-		return nil
-	case tcell.KeyCtrlP:
-		u.commandPalette()
 		return nil
 	case tcell.KeyCtrlN:
 		if u.table.HasFocus() {

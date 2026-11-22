@@ -104,7 +104,7 @@ func (u *UI) rebuildCatalog() {
 	if len(filtered) == 0 {
 		text := "No matching objects"
 		if len(t.Catalog) == 0 {
-			text = "No objects · Ctrl+P Refresh catalog"
+			text = "No objects · Space d r Refresh catalog"
 		}
 		if t.CatalogStatus != "" {
 			text = t.CatalogStatus

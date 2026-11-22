@@ -135,7 +135,7 @@ func (u *UI) refreshCatalogTab(t *Tab) {
 		objects, e := t.Session.Adapter.Catalog(ctx, t.Session.Conn)
 		if e != nil {
 			return func() {
-				t.CatalogStatus = "Could not load catalog · Ctrl+P Refresh catalog"
+				t.CatalogStatus = "Could not load catalog · Space d r Refresh catalog"
 				if u.active() == t {
 					u.filterObjects()
 				}

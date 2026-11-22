@@ -42,7 +42,7 @@ func TestNeovimUIStartupWelcomeKeepsSQLEmpty(t *testing.T) {
 	})
 }
 
-func TestNeovimUISpaceAndCtrlPOpenPalette(t *testing.T) {
+func TestNeovimUISpaceLeaderAndRemovedBindings(t *testing.T) {
 	if testing.Short() {
 		t.Skip("requires installed Neovim")
 	}
@@ -61,8 +61,8 @@ func TestNeovimUISpaceAndCtrlPOpenPalette(t *testing.T) {
 		}
 		dispatchModified(u, tcell.KeyEscape, 0, 0)
 		dispatchModified(u, tcell.KeyCtrlP, 0, 0)
-		if u.dialogContent == nil || e.Cursor() != 0 || e.Mode != "NORMAL" || e.Area.GetText() != text {
-			t.Error("Ctrl+P must open the palette without editing SQL or moving the editor cursor")
+		if u.dialogContent != nil {
+			t.Error("Ctrl+P must not open actions")
 		}
 	})
 }
