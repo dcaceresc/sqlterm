@@ -71,7 +71,7 @@ func (u *UI) leaderMenu() {
 	text.SetInputCapture(func(k *tcell.EventKey) *tcell.EventKey {
 		switch k.Key() {
 		case tcell.KeyEscape:
-			u.dismiss()
+			u.leaderPanel = nil
 			return nil
 		case tcell.KeyBackspace, tcell.KeyBackspace2:
 			current = 0
@@ -90,7 +90,7 @@ func (u *UI) leaderMenu() {
 		}
 		for _, c := range entries {
 			if c.Key == k.Rune() {
-				u.dismiss()
+				u.leaderPanel = nil
 				if c.Available != nil && !c.Available() {
 					u.message(u.tr("Unavailable in this context: ") + c.Name)
 					return nil
@@ -101,5 +101,27 @@ func (u *UI) leaderMenu() {
 		}
 		return nil
 	})
-	u.popup(text, 72, 16)
+	u.style(text)
+	text.SetWrap(false)
+	u.leaderPanel = text
+}
+
+// drawLeader muestra las próximas teclas a la derecha sin cambiar el foco ni cubrir toda la sesión.
+func (u *UI) drawLeader(screen tcell.Screen) {
+	panel := u.leaderPanel
+	if panel == nil {
+		return
+	}
+	if !u.active().Editor.Area.HasFocus() {
+		u.leaderPanel = nil
+		return
+	}
+	width, height := screen.Size()
+	if width < 4 || height < 5 {
+		return
+	}
+	panelWidth := min(46, width/2)
+	panelHeight := min(14, height-4)
+	panel.SetRect(width-panelWidth, height-panelHeight-2, panelWidth, panelHeight)
+	panel.Draw(screen)
 }

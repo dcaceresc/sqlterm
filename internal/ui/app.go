@@ -72,6 +72,7 @@ type UI struct {
 	copyingSQL                                         bool
 	palette                                            Palette
 	dialogCancel                                       func()
+	leaderPanel                                        *tview.TextView
 	dialogContent                                      tview.Primitive
 	copyPopup                                          *tview.List
 	connectionFolder                                   string
@@ -166,7 +167,10 @@ func New(path string, cfg config.Config) *UI {
 		u.status.SetRect(0, max(0, height-2), width, 1)
 		u.refreshBars()
 		return false
-	}).SetAfterDrawFunc(u.updateCursor)
+	}).SetAfterDrawFunc(func(screen tcell.Screen) {
+		u.updateCursor(screen)
+		u.drawLeader(screen)
+	})
 	u.newTab(nil)
 	u.applyTheme(cfg.Theme)
 	return u
@@ -428,6 +432,19 @@ func neovimCommentShortcut(k *tcell.EventKey) bool {
 }
 
 func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
+	if u.leaderPanel != nil {
+		if u.app.GetFocus() == u.active().Editor.Area {
+			switch k.Key() {
+			case tcell.KeyCtrlC:
+				u.leaderPanel = nil
+				return nil
+			case tcell.KeyF1, tcell.KeyF2, tcell.KeyF3, tcell.KeyF4, tcell.KeyF6, tcell.KeyF7, tcell.KeyF8, tcell.KeyCtrlQ:
+			default:
+				return u.leaderPanel.GetInputCapture()(k)
+			}
+		}
+		u.leaderPanel = nil
+	}
 	if u.dialogContent != nil {
 		switch k.Key() {
 		case tcell.KeyCtrlC, tcell.KeyEscape:

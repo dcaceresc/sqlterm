@@ -5,7 +5,6 @@ import (
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/rivo/tview"
 )
 
 func TestLeaderHelpDescribesHierarchy(t *testing.T) {
@@ -33,7 +32,7 @@ func TestLeaderSpanishLabels(t *testing.T) {
 			t.Errorf("missing translated group %q", label)
 		}
 	}
-	capture := u.dialogContent.(*tview.TextView).GetInputCapture()
+	capture := u.leaderPanel.GetInputCapture()
 	capture(tcell.NewEventKey(tcell.KeyRune, 'w', 0))
 	u.app.ForceDraw()
 	if !strings.Contains(screenText(screen), "Maximizar editor") {

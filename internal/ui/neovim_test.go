@@ -55,7 +55,7 @@ func TestNeovimUISpaceLeaderAndRemovedBindings(t *testing.T) {
 			return
 		}
 		dispatchModified(u, tcell.KeyRune, ' ', 0)
-		if u.dialogContent == nil || e.Cursor() != 0 || e.Mode != "NORMAL" || e.Area.GetText() != text {
+		if u.leaderPanel == nil || u.dialogContent != nil || u.app.GetFocus() != e.Area || e.Cursor() != 0 || e.Mode != "NORMAL" || e.Area.GetText() != text {
 			t.Errorf("Space must open actions without editing: dialog=%T cursor=%d mode=%s text=%q", u.dialogContent, e.Cursor(), e.Mode, e.Area.GetText())
 			return
 		}

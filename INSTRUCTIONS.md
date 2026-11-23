@@ -374,7 +374,7 @@ La forma del cursor intenta cambiar de bloque en NORMAL y VISUAL a barra en INSE
 
 ### Menú de Espacio
 
-Con el editor enfocado en NORMAL, pulsa **Espacio**, el grupo y la acción. Cada prefijo muestra las siguientes teclas disponibles. Las mayúsculas distinguen acciones. **Esc** cancela; **Retroceso** vuelve al grupo anterior. En INSERT, Espacio sigue escribiendo espacios. F11 y Ctrl+P no abren menús; Ctrl+P conserva la navegación de sugerencias.
+Con el editor enfocado en NORMAL, pulsa **Espacio**, el grupo y la acción. Cada prefijo muestra las siguientes teclas disponibles en un panel a la derecha, sin abrir un diálogo modal ni quitar el foco al editor. El panel no cambia el SQL ni el cursor y desaparece al ejecutar una acción o cancelar. Las mayúsculas distinguen acciones. **Esc** cancela; **Retroceso** vuelve al grupo anterior. En INSERT, Espacio sigue escribiendo espacios. F11 y Ctrl+P no abren menús; Ctrl+P conserva la navegación de sugerencias.
 
 | Grupo | Acciones después de Espacio |
 | --- | --- |

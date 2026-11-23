@@ -15,7 +15,7 @@ func TestLeaderRender(t *testing.T) {
 		u.leaderMenu()
 		for _, submenu := range []bool{false, true} {
 			if submenu {
-				u.dialogContent.(*tview.TextView).GetInputCapture()(tcell.NewEventKey(tcell.KeyRune, 'w', 0))
+				u.leaderPanel.GetInputCapture()(tcell.NewEventKey(tcell.KeyRune, 'w', 0))
 			}
 			u.app.ForceDraw()
 			var rendered strings.Builder
@@ -74,7 +74,7 @@ func TestLeaderAvailabilityAndCase(t *testing.T) {
 		}
 	}
 	u.leaderMenu()
-	capture := u.dialogContent.(*tview.TextView).GetInputCapture()
+	capture := u.leaderPanel.GetInputCapture()
 	capture(tcell.NewEventKey(tcell.KeyRune, 'c', 0))
 	capture(tcell.NewEventKey(tcell.KeyRune, 'x', 0))
 	if u.active().Busy || u.active().Execution != nil {
@@ -93,7 +93,7 @@ func TestLeaderExcludedModesAndPanes(t *testing.T) {
 			e.Mode = mode
 			u.app.SetFocus(e.Area)
 			u.key(tcell.NewEventKey(tcell.KeyRune, ' ', 0))
-			if u.dialogContent != nil {
+			if u.leaderPanel != nil {
 				t.Errorf("Space opened menu in %s", mode)
 			}
 		}
@@ -101,13 +101,13 @@ func TestLeaderExcludedModesAndPanes(t *testing.T) {
 		for _, pane := range []tview.Primitive{u.table, u.objects, u.search, u.kind} {
 			u.app.SetFocus(pane)
 			u.key(tcell.NewEventKey(tcell.KeyRune, ' ', 0))
-			if u.dialogContent != nil {
+			if u.leaderPanel != nil {
 				t.Errorf("Space opened menu in %T", pane)
 			}
 		}
 		u.app.SetFocus(e.Area)
 		u.key(tcell.NewEventKey(tcell.KeyRune, ' ', tcell.ModAlt))
-		if u.dialogContent != nil {
+		if u.leaderPanel != nil {
 			t.Error("modified Space opened menu")
 		}
 	})
@@ -117,10 +117,10 @@ func TestLeaderLayoutLeaves(t *testing.T) {
 	for _, ckey := range "bedmrc><+-" {
 		u, _ := modeTestUI(t)
 		u.leaderMenu()
-		capture := u.dialogContent.(*tview.TextView).GetInputCapture()
+		capture := u.leaderPanel.GetInputCapture()
 		capture(tcell.NewEventKey(tcell.KeyRune, 'w', 0))
 		capture(tcell.NewEventKey(tcell.KeyRune, ckey, 0))
-		if u.dialogContent != nil {
+		if u.leaderPanel != nil {
 			t.Fatalf("%c opened another dialog", ckey)
 		}
 		l := u.cfg.Layout
@@ -156,12 +156,10 @@ func TestLeaderLayoutLeaves(t *testing.T) {
 func TestLeaderNavigationAndRemovedKeys(t *testing.T) {
 	u, _ := modeTestUI(t)
 	u.leaderMenu()
-	root := u.dialogContent
-	capture := root.(interface {
-		GetInputCapture() func(*tcell.EventKey) *tcell.EventKey
-	}).GetInputCapture()
+	root := u.leaderPanel
+	capture := root.GetInputCapture()
 	capture(tcell.NewEventKey(tcell.KeyRune, 'f', 0))
-	text := root.(*tview.TextView)
+	text := root
 	if !strings.Contains(text.GetText(true), "Save SQL as") {
 		t.Fatal(text.GetText(true))
 	}
@@ -177,12 +175,12 @@ func TestLeaderNavigationAndRemovedKeys(t *testing.T) {
 	for _, key := range []tcell.Key{tcell.KeyF11, tcell.KeyCtrlP} {
 		u.cfg.Keys = map[string]string{"help": tcell.KeyNames[key]}
 		u.key(tcell.NewEventKey(key, 0, 0))
-		if u.dialogContent != root {
+		if u.leaderPanel != root {
 			t.Fatalf("removed key %v changed dialog", key)
 		}
 	}
 	capture(tcell.NewEventKey(tcell.KeyEscape, 0, 0))
-	if u.dialogContent != nil {
+	if u.leaderPanel != nil {
 		t.Fatal("Escape did not dismiss")
 	}
 }

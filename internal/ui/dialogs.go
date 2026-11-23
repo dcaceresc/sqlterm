@@ -11,6 +11,7 @@ import (
 )
 
 func (u *UI) popup(p tview.Primitive, width, height int) {
+	u.leaderPanel = nil
 	if u.dialogContent == nil {
 		u.dialogReturn = u.app.GetFocus()
 	}
