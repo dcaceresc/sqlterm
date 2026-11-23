@@ -31,12 +31,17 @@ func (u *UI) saveSQLFile(as bool) {
 			if !u.editorReady(t) {
 				return
 			}
-			if e := os.WriteFile(path, []byte(t.Editor.Area.GetText()), 0600); e != nil {
+			text := t.Editor.Area.GetText()
+			crlf := t.Path != "" && t.fileCRLF
+			data := text
+			if crlf {
+				data = strings.ReplaceAll(strings.ReplaceAll(text, "\r\n", "\n"), "\n", "\r\n")
+			}
+			if e := os.WriteFile(path, []byte(data), 0600); e != nil {
 				u.message(e.Error())
 				return
 			}
-			t.Path = path
-			t.Saved = t.Editor.Area.GetText()
+			t.Path, t.Saved, t.fileCRLF = path, text, crlf
 			u.lastSavedSQLDir = filepath.Dir(path)
 			u.message(u.tr("Saved ") + path)
 		}
@@ -70,12 +75,13 @@ func (u *UI) openFile() {
 				u.message(e.Error())
 				return
 			}
-			if err := t.Editor.SetText(string(b)); err != nil {
+			raw := string(b)
+			text := strings.ReplaceAll(raw, "\r\n", "\n")
+			if err := t.Editor.SetText(text); err != nil {
 				u.message(err.Error())
 				return
 			}
-			t.Saved = string(b)
-			t.Path = path
+			t.Path, t.Saved, t.fileCRLF = path, text, usesCRLF(raw)
 			t.Object = nil
 			u.refreshBars()
 		}
@@ -86,6 +92,11 @@ func (u *UI) openFile() {
 		}
 	})
 }
+func usesCRLF(text string) bool {
+	pairs := strings.Count(text, "\r\n")
+	return pairs > 0 && pairs == strings.Count(text, "\n")
+}
+
 func (u *UI) showHistory() {
 	if !u.cfg.History {
 		u.confirm(u.tr("Enable local SQL history? Statements may contain sensitive literals. Invocation parameter values are excluded."), func() {

@@ -26,6 +26,17 @@ func (u *UI) pickSQLFile(initial string, save bool, done func(string)) {
 }
 
 func (u *UI) pickSQLFileFrom(initial, preferredDir string, save bool, done func(string)) {
+	action, title := "Open", "Open SQL file"
+	if save {
+		action, title = "Save", "Save SQL as"
+		if initial == "" {
+			initial = "query.sql"
+		}
+	}
+	u.pickFile(initial, preferredDir, save, action, title, done)
+}
+
+func (u *UI) pickFile(initial, preferredDir string, save bool, action, title string, done func(string)) {
 	dir, err := os.Getwd()
 	if err != nil {
 		u.message(err.Error())
@@ -47,19 +58,11 @@ func (u *UI) pickSQLFileFrom(initial, preferredDir string, save bool, done func(
 			}
 		}
 	}
-	if save && name == "" {
-		name = "query.sql"
-	}
 	p := &sqlFileDialog{Flex: tview.NewFlex().SetDirection(tview.FlexRow), u: u, save: save, done: done}
 	p.path = tview.NewInputField().SetLabel(u.tr("Folder") + ": ")
 	p.name = tview.NewInputField().SetLabel(u.tr("File name") + ": ").SetText(name)
 	p.list = tview.NewList().ShowSecondaryText(false)
 	p.status = tview.NewTextView().SetDynamicColors(false)
-	action := "Open"
-	title := "Open SQL file"
-	if save {
-		action, title = "Save", "Save SQL as"
-	}
 	buttons := tview.NewForm().AddButton(u.tr(action), p.submit).AddButton(u.tr("Cancel"), u.dismiss)
 	buttons.SetButtonsAlign(tview.AlignRight)
 	p.SetBorder(true).SetTitle(" " + u.tr(title) + " ")

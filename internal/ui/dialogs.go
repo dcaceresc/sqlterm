@@ -306,7 +306,7 @@ If the terminal cannot distinguish Ctrl+Shift+S from Ctrl+S, Ctrl+S saves in pla
 IntelliSense: automatic while typing; Ctrl+Space opens suggestions.
 SQL Server: EXEC procedure + space lists parameter names/types; @ filters; Tab/Enter inserts @name = .
 Up/Down or Ctrl+N/P select; Tab/Enter accept; Esc closes and returns NORMAL.
-Ctrl+Q quit; Ctrl+C copies selected SQL in editor, opens result copy options elsewhere,
+Ctrl+Q quits and keeps SQL tabs for next launch; Ctrl+C copies selected SQL in editor, opens result copy options elsewhere,
 or closes a dialog. Without an editor selection it shows a notice and keeps the clipboard.
 Esc closes dialogs / returns to NORMAL.
 
@@ -341,7 +341,7 @@ cells of one spreadsheet row. Copy shortcuts and CSV default to spreadsheet-safe
 text, including both fields of Cell with header; menus expose literal copy/CSV
 with an untrusted-data warning. Clipboard rows are TSV in displayed order. JSON
 remains literal and unchanged.
-Sorting is lexical, NULL first ascending. Export includes all received rows.
+Sorting is lexical, NULL first ascending. Export includes all received rows and opens the file browser in the last successful export folder.
 
 SQL Server: GO separates batches. MySQL: DELIMITER for routine scripts.
 PostgreSQL: dollar-quoted function bodies are supported.

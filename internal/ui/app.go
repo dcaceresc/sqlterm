@@ -24,6 +24,7 @@ type Tab struct {
 	Profile             config.Profile
 	Password            string
 	Path, Saved, Status string
+	fileCRLF            bool
 	Original            string
 	Object              *db.Object
 	Catalog             []db.Object
@@ -76,6 +77,7 @@ type UI struct {
 	dialogContent                                      tview.Primitive
 	copyPopup                                          *tview.List
 	connectionFolder                                   string
+	lastExportDir                                      string
 	lastSavedSQLDir                                    string
 	configPath                                         string
 	tabs                                               []*Tab
@@ -171,7 +173,8 @@ func New(path string, cfg config.Config) *UI {
 		u.updateCursor(screen)
 		u.drawLeader(screen)
 	})
-	u.newTab(nil)
+	_ = readCache(u.configPath+".export-dir.json", &u.lastExportDir)
+	u.restoreWorkspace()
 	u.applyTheme(cfg.Theme)
 	return u
 }
@@ -347,21 +350,17 @@ func (u *UI) quit() {
 	if u.closing {
 		return
 	}
-	dirty := false
-	for _, t := range u.tabs {
-		dirty = dirty || t.Editor.Area.GetText() != t.Saved
-	}
 	finish := func() {
 		u.closing = true
 		u.cancel()
 		u.message(u.tr("Closing sessions…"))
 		go func() { u.wg.Wait(); u.post(func() { u.app.Stop() }) }()
 	}
-	if dirty {
-		u.confirm(u.tr("Discard unsaved SQL and quit?"), finish)
-	} else {
-		finish()
+	if err := u.cacheWorkspace(); err != nil {
+		u.confirm(u.tr("Could not cache SQL tabs")+": "+tview.Escape(err.Error())+"\n"+u.tr("Quit without updating the SQL cache?"), finish)
+		return
 	}
+	finish()
 }
 func (u *UI) closeTab() {
 	t := u.active()

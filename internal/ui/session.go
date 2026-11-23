@@ -164,6 +164,7 @@ func (u *UI) openObject(o db.Object) {
 			if e != nil {
 				return nil, e
 			}
+			text = strings.ReplaceAll(text, "\r\n", "\n")
 			var cols []string
 			if o.Kind == "table" || o.Kind == "view" {
 				cols, _ = t.Session.Adapter.Columns(ctx, t.Session.Conn, o)

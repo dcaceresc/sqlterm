@@ -127,7 +127,7 @@ func TestCatalogHierarchySearchAndTabFilterRestoration(t *testing.T) {
 	u, _ := modeTestUI(t)
 	first := u.active()
 	first.Catalog = []db.Object{{Schema: "dbo", Name: "VeryLongStudentsName", Kind: "table"}, {Schema: "dbo", Name: "calculate", Kind: "procedure"}, {Schema: "audit", Name: "events", Kind: "view"}}
-	u.search.SetText("dbotable")
+	u.search.SetText("dbo table")
 	if len(u.catalogRows) != 1 {
 		t.Fatal("schema/type search did not find object")
 	}
@@ -143,7 +143,7 @@ func TestCatalogHierarchySearchAndTabFilterRestoration(t *testing.T) {
 	}
 	u.current = 0
 	u.showTab()
-	if u.search.GetText() != "dbotable" {
+	if u.search.GetText() != "dbo table" {
 		t.Fatal("tab switch lost filter")
 	}
 	if o, ok := u.selectedObject(); !ok || o.Name != "VeryLongStudentsName" {

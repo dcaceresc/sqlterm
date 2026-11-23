@@ -6,6 +6,7 @@ import (
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"io"
+	"path/filepath"
 	"sqlterm/internal/result"
 	"strconv"
 	"strings"
@@ -290,12 +291,21 @@ func (u *UI) export() {
 }
 
 func (u *UI) exportPrompt(t *Tab, s *result.Store, initial, format string, spreadsheetSafe bool) {
-	u.prompt(u.tr("Export received rows to new file"), initial, false, func(path string) {
+	u.pickFile(initial, u.lastExportDir, true, "Export", "Export received rows to new file", func(path string) {
 		u.task(t, "Export", func(ctx context.Context) (func(), error) {
+			export := s.ExportContext
 			if spreadsheetSafe {
-				return nil, s.ExportSpreadsheetContext(ctx, path, format)
+				export = s.ExportSpreadsheetContext
 			}
-			return nil, s.ExportContext(ctx, path, format)
+			if err := export(ctx, path, format); err != nil {
+				return nil, err
+			}
+			return func() {
+				u.lastExportDir = filepath.Dir(path)
+				if err := writeCache(u.configPath+".export-dir.json", u.lastExportDir); err != nil {
+					t.Status += " · " + u.tr("Could not remember export folder") + ": " + err.Error()
+				}
+			}, nil
 		})
 	})
 }

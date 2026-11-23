@@ -39,12 +39,13 @@ func (u *UI) rebuildCatalog() {
 	if index >= 0 && index < len(objectKinds) {
 		kind = objectKinds[index]
 	}
+	terms := strings.Fields(needle)
 	filtered := []db.Object{}
 	for _, o := range t.Catalog {
 		if kind != "" && kind != "all" && o.Kind != kind {
 			continue
 		}
-		if fuzzy(needle, strings.ToLower(o.Label()+" "+o.Kind)) {
+		if matchesCatalogObject(terms, o) {
 			filtered = append(filtered, o)
 		}
 	}
@@ -75,7 +76,7 @@ func (u *UI) rebuildCatalog() {
 			lastSchema = o.Schema
 			schema := o.Schema
 			marker := "−"
-			if t.Collapsed[schemaKey] && needle == "" {
+			if t.Collapsed[schemaKey] && len(terms) == 0 {
 				marker = "+"
 			}
 			u.objects.AddItem(marker+" "+tview.Escape(schema), "", 0, func() { t.Collapsed["schema:"+schema] = !t.Collapsed["schema:"+schema]; u.rebuildCatalog() })
@@ -85,16 +86,16 @@ func (u *UI) rebuildCatalog() {
 			end++
 		}
 		key := o.Schema + "/" + o.Kind
-		if t.Collapsed[schemaKey] && needle == "" {
+		if t.Collapsed[schemaKey] && len(terms) == 0 {
 			i = end
 			continue
 		}
 		marker := "−"
-		if t.Collapsed[key] && needle == "" {
+		if t.Collapsed[key] && len(terms) == 0 {
 			marker = "+"
 		}
 		u.objects.AddItem(fmt.Sprintf("  %s %s (%d)", marker, u.tr(o.Kind), end-i), "", 0, func() { t.Collapsed[key] = !t.Collapsed[key]; u.rebuildCatalog() })
-		if !t.Collapsed[key] || needle != "" {
+		if !t.Collapsed[key] || len(terms) != 0 {
 			for _, child := range filtered[i:end] {
 				addObject(child, "    "+child.Name)
 			}
@@ -113,6 +114,16 @@ func (u *UI) rebuildCatalog() {
 	} else {
 		u.objectDetail.SetText(fmt.Sprintf(u.tr("%d matches / %d objects"), len(filtered), len(t.Catalog)))
 	}
+}
+
+func matchesCatalogObject(terms []string, o db.Object) bool {
+	name, kind := strings.ToLower(o.Label()), strings.ToLower(o.Kind)
+	for _, term := range terms {
+		if !strings.Contains(name, term) && !strings.Contains(kind, term) {
+			return false
+		}
+	}
+	return true
 }
 
 var objectKinds = []string{"all", "table", "view", "procedure", "function"}

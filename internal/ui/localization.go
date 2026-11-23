@@ -55,7 +55,7 @@ func (u *UI) spanishHelp() map[string]string {
 	intro := map[string]string{
 		"Getting started": "F2 conectar → F6 buscar objetos → F7 editar → F5 ejecutar → F8 revisar/copiar. El destino permanece en la barra superior.\nCada pestaña tiene su conexión. No garantiza solo lectura. Usa BEGIN / COMMIT / ROLLBACK explícitamente.",
 		"Editor":          "i INSERT · Esc NORMAL · v VISUAL · h/j/k/l · w/b · 0/$ · gg/G · yy/dd · y/d · p · u · Ctrl+R\nCtrl+Space IntelliSense; Tab/Enter aceptar. F5 ejecuta selección o script completo. * indica cambios sin guardar.\nAlt+Z activa/desactiva el ajuste de línea. Los números indican líneas reales del SQL. Ambas preferencias se guardan y aparecen en Espacio u.",
-		"Objects":         "Buscar por nombre, esquema y tipo. Clic o Enter abre definiciones, incluido CREATE TABLE para tablas, sin ejecutar SQL. Los grupos se expanden/contraen.\nEspacio c i/c q/c p/d r/s g: insertar nombre, generar SELECT, invocar, actualizar o catálogo plano. Nueva plantilla de tabla prepara CREATE TABLE en el editor; revisa y ejecuta con F5.",
+		"Objects":         "Buscar texto continuo en el nombre, esquema o tipo; separa los términos con espacios. Clic o Enter abre definiciones, incluido CREATE TABLE para tablas, sin ejecutar SQL. Los grupos se expanden/contraen.\nEspacio c i/c q/c p/d r/s g: insertar nombre, generar SELECT, invocar, actualizar o catálogo plano. Nueva plantilla de tabla prepara CREATE TABLE en el editor; revisa y ejecuta con F5.",
 		"Results":         "Se obtiene el primer bloque configurado. Solo ↓/Ctrl+N/PageDown/End/j o la rueda hacia abajo cerca del final solicita un bloque más. F10 detiene la recepción y conserva las filas para copiarlas o exportarlas.\nUna pausa no bloquea la pestaña: F5 o F9 cancela la lectura pausada, espera a que el controlador la cierre y libere la conexión, y luego ejecuta la sentencia nueva. F4, desconectar, cerrar pestaña y salir también la liberan. Copiar, ordenar y exportar siguen requiriendo F10.\nEnter inspecciona la celda completa y permite copiar el valor, o el nombre de columna con el valor en una sola fila TSV (segura por defecto, con variante literal avisada). NULL es SQL NULL; cadena vacía es \"\".\n/ buscar · s/S orden léxico de filas recibidas · [/] conjuntos · e exportar · y/Y copiar filas sin/con cabeceras · r/R fila · c celda · v seleccionar rango · +/- ancho de columna\nCtrl+C abre copia; incluye 'Celda con cabecera': la celda seleccionada como nombre de columna, tabulador y valor en una sola fila TSV (por ejemplo nombre_cliente<TAB>ACME S.A.), lista para pegar en dos celdas contiguas. La cabecera es el nombre de la columna del resultado y respeta el orden visible.\nCopia y CSV son seguros por defecto para hojas de cálculo: la protección ' se aplica al nombre de columna y al valor; el menú ofrece modo literal, que deja ambos intactos. Se antepone ' a texto que empieza por =, +, - o @ tras espacios/controles. NUL se representa como \\0. JSON no cambia.",
 		"Connections":     "F2 perfiles y carpetas · / buscar · + añadir · e editar · n carpeta · r renombrar · d eliminar carpeta vacía · * favorito\nF4 busca bases. La nueva conexión sustituye la anterior solo tras conectar correctamente. Conserva SQL; no conserva transacciones, variables ni tablas temporales.\nSi cambias motor, servidor, puerto o usuario, vuelve a escribir la contraseña antes de probar o guardar.\nF3: flechas vista previa, Enter guardar, Esc restaurar. Ctrl+Q salir; Ctrl+C copia o cancela diálogo.",
 	}
@@ -175,7 +175,9 @@ var spanish = map[string]string{
 	"Select a procedure or function in Objects first":   "Selecciona un procedimiento o función en Objetos primero",
 	"No completions for this SQL context":               "No hay sugerencias para este contexto SQL",
 	"Editor file limit is 8 MiB":                        "El límite de archivos del editor es 8 MiB",
-	"Discard unsaved SQL and quit?":                     "¿Descartar SQL sin guardar y salir?",
+	"Could not cache SQL tabs":                          "No se pudieron conservar las pestañas SQL",
+	"Quit without updating the SQL cache?":              "¿Salir sin actualizar el caché SQL?",
+	"Could not remember export folder":                  "No se pudo recordar la carpeta de exportación",
 	"Discard unsaved SQL in this tab?":                  "¿Descartar SQL sin guardar en esta pestaña?",
 	"Replace unsaved SQL?":                              "¿Reemplazar SQL sin guardar?",
 	"Replace unsaved SQL with history entry?":           "¿Reemplazar SQL sin guardar por la entrada del historial?",
@@ -220,7 +222,7 @@ var spanish = map[string]string{
 	"Space w · resize, maximize, edit / explore / balanced":                      "Espacio w · ajustar, maximizar, editar / explorar / equilibrado",
 	"F10 · wait for driver confirmation":                                         "F10 · espera confirmación del controlador",
 	"Server messages and execution errors · copyable":                            "Mensajes del servidor y errores de ejecución · copiables",
-	"Ctrl+Q · checks unsaved SQL":                                                "Ctrl+Q · comprueba SQL sin guardar",
+	"Ctrl+Q · keeps SQL tabs for next launch":                                    "Ctrl+Q · conserva las pestañas SQL para el próximo inicio",
 	"Choose Off / production writes / every F5 execution":                        "Elegir desactivado / escrituras PROD / cada ejecución F5",
 	"Find:":                                "Buscar:",
 	"Type:":                                "Tipo:",

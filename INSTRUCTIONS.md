@@ -115,7 +115,7 @@ Estas automatizaciones configuran cachés locales de Go bajo `.cache/build`, `.c
 2. Completa motor, servidor, base y usuario. **Folder** indica la carpeta lógica del perfil.
 3. Introduce la contraseña en el campo oculto. **Test connection** verifica los datos sin guardar el perfil ni la contraseña; durante la prueba cambia a **Cancel test** y la conexión temporal se cierra al terminar.
 4. Guarda y selecciona el perfil. Si cambias motor, servidor, puerto efectivo o usuario de un perfil con credencial guardada, vuelve a introducir la contraseña antes de probar o guardar.
-5. Pulsa **F6** para buscar un procedimiento, función, tabla o vista por nombre y filtrar por tipo.
+5. Pulsa **F6** para buscar un procedimiento, función, tabla o vista por texto continuo en el nombre, esquema o tipo. Separa los términos con espacios (por ejemplo, `dbo procedure`). El selector también permite filtrar por tipo.
 6. **Enter** abre la definición del objeto. En rutinas, **F9** abre el formulario de parámetros y permite usar un valor, `NULL` o el valor predeterminado cuando el catálogo o la definición lo permite.
 7. Ejecuta la rutina desde el formulario. `[` y `]` cambian entre conjuntos, incluidos los parámetros de salida y el retorno cuando el motor los ofrece.
 8. Para editar una definición, pulsa **F7**, entra en INSERT con `i`, escribe y vuelve a NORMAL con **Esc**. **Espacio c A** muestra los cambios y el SQL exacto antes de aplicarlo.
@@ -170,13 +170,15 @@ Las líneas comentadas se muestran atenuadas, excepto marcadores dentro de caden
 
 ### Abrir, guardar y confirmar cambios
 
+Al abrir un archivo SQL, los saltos CRLF de Windows se muestran como saltos normales, sin `^M`. Al guardar se conserva CRLF si el archivo usaba ese formato de manera uniforme; si mezclaba LF y CRLF, se guarda con LF.
+
 **Ctrl+O** abre el explorador integrado. **Enter** entra en carpetas o abre un archivo, `[..]` sube al nivel superior, Tab y Shift+Tab cambian de campo y **Esc** cancela. Se muestran todos los archivos para admitir scripts sin extensión `.sql`. La apertura admite archivos de hasta 8 MiB; si falla, conserva el documento actual.
 
 **Ctrl+Shift+S** abre **Guardar SQL como / Save SQL as** cuando la terminal distingue la combinación. Algunas terminales pueden comunicarla como **Ctrl+S**; en ese caso se realiza el guardado normal. **Ctrl+S** guarda directamente cuando el archivo ya tiene ruta y abre el diálogo de guardado cuando todavía no la tiene.
 
 El diálogo solicita confirmación antes de sobrescribir otro archivo. Cada guardado correcto recuerda la carpeta durante la sesión: el siguiente guardado como empieza allí y conserva el nombre de la pestaña, o propone `query.sql` para una pestaña nueva. La carpeta no se conserva entre sesiones. Si deja de existir, se usa la carpeta del archivo actual o el directorio de trabajo. El diálogo no crea carpetas.
 
-Cerrar una pestaña, reemplazar SQL o salir solicita confirmación cuando existen cambios sin guardar. Las operaciones que generan una plantilla también confirman antes de reemplazar SQL modificado.
+Cerrar una pestaña o reemplazar SQL solicita confirmación cuando existen cambios sin guardar. Al salir normalmente con **Ctrl+Q**, SQLTerm conserva las pestañas SQL y cuál estaba activa, sin guardar los archivos `.sql` ni restablecer conexiones. Los borradores siguen marcados como no guardados. El caché `<config>.workspace.json` queda junto a la configuración y contiene texto SQL, que puede incluir datos sensibles. El caché no se actualiza si se termina el proceso abruptamente. Las operaciones que generan una plantilla también confirman antes de reemplazar SQL modificado.
 
 ### Copiar SQL
 
@@ -315,7 +317,7 @@ La transformación afecta únicamente a la salida. `NULL` se representa como `\N
 
 ### Exportación y almacenamiento
 
-`e` permite elegir explícitamente **Spreadsheet-safe CSV**, **Literal CSV** o **JSON**, con independencia del sufijo del archivo. La exportación exige un archivo nuevo, no sobrescribe uno existente y elimina la salida parcial de una exportación cancelada.
+`e` permite elegir explícitamente **Spreadsheet-safe CSV**, **Literal CSV** o **JSON**, con independencia del sufijo del archivo. Luego abre el mismo navegador de archivos de Abrir y Guardar para elegir carpeta y nombre. Recuerda la carpeta de la última exportación exitosa incluso tras reiniciar, sin modificar la carpeta usada para guardar SQL. La exportación exige un archivo nuevo, no sobrescribe uno existente y elimina la salida parcial de una exportación cancelada.
 
 CSV seguro aplica la protección para hojas de cálculo a cabeceras y celdas. CSV literal conserva el texto y advierte sobre datos no confiables. Ambos usan `\N` para SQL NULL y escapan textos que comienzan con `\` para distinguir NULL, cadena vacía y el texto literal `\N`.
 
