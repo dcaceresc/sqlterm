@@ -56,7 +56,7 @@ func TestThemePreviewCancelAndSavePreserveWorkspace(t *testing.T) {
 		t.Fatal("editor did not change colors")
 	}
 	headingFG, _, _ := u.table.GetCell(0, 0).Style.Decompose()
-	nullFG, _, _ := u.table.GetCell(1, 0).Style.Decompose()
+	nullFG, _, _ := u.table.GetCell(1, 1).Style.Decompose()
 	if headingFG != u.palette.Accent || nullFG != u.palette.Muted {
 		t.Fatal("results did not change colors")
 	}

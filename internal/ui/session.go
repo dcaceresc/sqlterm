@@ -12,9 +12,7 @@ import (
 
 func (u *UI) connect(t *Tab, p config.Profile, password string) {
 	if t.Busy {
-		if u.releasePausedExecution(t, func() { u.connect(t, p, password) }) {
-			return
-		}
+
 		u.message(u.tr("Session busy"))
 		return
 	}
@@ -81,9 +79,7 @@ func (u *UI) disconnect() {
 	var detach func()
 	detach = func() {
 		if t.Busy {
-			if u.releasePausedExecution(t, detach) {
-				return
-			}
+
 			u.message(u.tr("Cancel execution before disconnecting"))
 			return
 		}
@@ -205,9 +201,7 @@ func (u *UI) switchDatabase() {
 	var list func()
 	list = func() {
 		if t.Busy {
-			if u.releasePausedExecution(t, list) {
-				return
-			}
+
 			u.message(u.tr("Session busy; cancel or wait"))
 			return
 		}
@@ -228,7 +222,7 @@ func (u *UI) execute() {
 	if !u.editorReady(t) {
 		return
 	}
-	if t.Busy && !pausedExecution(t) {
+	if t.Busy {
 		u.message(u.tr("Session busy"))
 		return
 	}
@@ -273,34 +267,9 @@ func (u *UI) execute() {
 	}
 }
 
-// pausedExecution reports whether the tab holds a paused read that a new
-// operation may cancel and release instead of being refused as busy.
-func pausedExecution(t *Tab) bool {
-	return t.Busy && t.Cancel != nil && t.Execution != nil && t.Execution.Phase == "Paused"
-}
-
-// releasePausedExecution cancels the paused read holding the tab and runs next
-// only after that task and its driver connection have actually finished, so the
-// single tab connection is free before another statement starts.
-func (u *UI) releasePausedExecution(t *Tab, next func()) bool {
-	if !pausedExecution(t) {
-		return false
-	}
-	e := t.Execution
-	e.Phase = "Cancelling"
-	e.Pause = nil
-	e.pulsePaused.Store(false)
-	t.Pending = next
-	t.Status = u.tr("Releasing paused execution…")
-	u.refreshBars()
-	t.Cancel()
-	return true
-}
 func (u *UI) run(t *Tab, sqlText string, work func(context.Context, func(db.Event)) error, after ...func()) {
 	if t.Busy {
-		if u.releasePausedExecution(t, func() { u.run(t, sqlText, work, after...) }) {
-			return
-		}
+
 		u.message(u.tr("Session busy"))
 		return
 	}
@@ -328,15 +297,9 @@ func (u *UI) run(t *Tab, sqlText string, work func(context.Context, func(db.Even
 	if selected, _, _ := t.Editor.Area.GetSelection(); selected != "" {
 		scope = "Execute selection"
 	}
-	pager, err := db.NewPager(u.cfg.EffectiveResultBlockSize())
-	if err != nil {
-		u.message(err.Error())
-		return
-	}
-	e := &execution{ID: u.nextExecution, SQL: sqlText, EditorSQL: t.Editor.Area.GetText(), Source: u.queryName(t), Profile: t.Profile.DisplayName(), Database: t.Profile.Database, Scope: scope, Started: time.Now(), Phase: "Running", Pager: pager}
+	e := &execution{ID: u.nextExecution, SQL: sqlText, EditorSQL: t.Editor.Area.GetText(), Source: u.queryName(t), Profile: t.Profile.DisplayName(), Database: t.Profile.Database, Scope: scope, Started: time.Now(), Phase: "Running"}
 	t.Execution = e
 	u.task(t, "Execute", func(ctx context.Context) (func(), error) {
-		ctx = db.WithPager(ctx, pager)
 		started := time.Now()
 		stopPulse := u.executionPulse(t, e)
 		defer stopPulse()
@@ -349,17 +312,19 @@ func (u *UI) run(t *Tab, sqlText string, work func(context.Context, func(db.Even
 				case "columns":
 					t.Results = append(t.Results, ev.Store)
 					if u.active() == t {
-						u.showResults()
+						if len(t.Results) == 1 {
+							u.showResults()
+						} else {
+							u.refreshResultInfo()
+						}
 					}
 				case "rows":
-					if e.Phase != "Cancelling" && e.Phase != "Paused" {
+					if e.Phase != "Cancelling" {
 						e.Phase = "Receiving rows"
 					}
 					if u.active() == t {
 						u.refreshResultInfo()
 					}
-				case "paused":
-					u.setResultPause(t, e, ev)
 				case "message":
 					if len(t.Messages) < 2000 {
 						t.Messages = append(t.Messages, ev.Message)
@@ -376,7 +341,6 @@ func (u *UI) run(t *Tab, sqlText string, work func(context.Context, func(db.Even
 				return
 			}
 			e.Duration = elapsed
-			e.Pause = nil
 			e.Phase = "Completed"
 			if err != nil {
 				e.Phase = "Error"
@@ -420,9 +384,7 @@ func (u *UI) invokeSelected() {
 	var read func()
 	read = func() {
 		if t.Busy {
-			if u.releasePausedExecution(t, read) {
-				return
-			}
+
 			u.message(u.tr("Session busy; cancel or wait"))
 			return
 		}

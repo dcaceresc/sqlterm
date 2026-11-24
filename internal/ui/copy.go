@@ -3,60 +3,27 @@ package ui
 import (
 	"context"
 	"fmt"
-	"github.com/rivo/tview"
 	"sqlterm/internal/clipboardtext"
 	"sqlterm/internal/result"
 	"strings"
 )
 
-func (u *UI) copyMenu() { u.copyMenuMode(false) }
-
-func (u *UI) copyMenuMode(literal bool) {
-	if u.currentStore() == nil {
-		u.message(u.tr("No results to copy"))
+func (u *UI) copyGridSelection() {
+	if u.active().Busy {
+		u.message(u.tr("Press F10 to stop receiving rows before sorting, copying or exporting"))
 		return
 	}
-	l := tview.NewList().ShowSecondaryText(false)
-	t := u.active()
-	s := u.currentStore()
-	source := t.Profile.Database
-	if e := t.Execution; e != nil {
-		source = fmt.Sprintf("#%d %s / %s", e.ID, e.Source, e.Database)
+	row, col := u.table.GetSelection()
+	switch {
+	case row > 0 && col > 0:
+		u.copyResults("cell", false)
+	case row == 0 && col > 0:
+		u.copyResults("column", false)
+	case col == 0 && row > 0:
+		u.copyResults("row", false)
+	default:
+		u.message(u.tr("Select a result cell first"))
 	}
-	title := " Spreadsheet-safe copy · "
-	if literal {
-		title = " Literal copy · not safe for untrusted spreadsheet data · "
-	}
-	l.SetBorder(true).SetTitle(u.tr(title) + tview.Escape(source) + " ")
-	add := func(label, scope string, headers bool) {
-		l.AddItem(u.tr(label), "", 0, func() {
-			u.dismiss()
-			u.app.SetFocus(u.table)
-			u.copyResultsMode(scope, headers, literal)
-		})
-	}
-	for _, opt := range []struct {
-		label, scope string
-		headers      bool
-	}{{"Cell · 1 value", "cell", false}, {"Cell with header · column + value", "cell-header", false}, {"Row · 1 row without headers", "row", false}, {"Row · 1 row with headers", "row", true}, {fmt.Sprintf(u.tr("Received results · %d rows without headers"), s.Count()), "all", false}, {fmt.Sprintf(u.tr("Received results · %d rows with headers"), s.Count()), "all", true}} {
-		add(opt.label, opt.scope, opt.headers)
-	}
-	if t.CopyAnchor > 0 {
-		row, _ := u.table.GetSelection()
-		selectedCount := max(row, t.CopyAnchor) - min(row, t.CopyAnchor) + 1
-		for _, headers := range []bool{false, true} {
-			label := "Selection without headers"
-			if headers {
-				label = "Selection with headers"
-			}
-			add(fmt.Sprintf("%s · %d", u.tr(label), selectedCount), "selection", headers)
-		}
-	}
-	if !literal {
-		l.AddItem(u.tr("Literal copy options · not safe for untrusted spreadsheet data"), "", 0, func() { u.copyMenuMode(true) })
-	}
-	u.popup(l, 90, 4+l.GetItemCount())
-	u.copyPopup = l
 }
 
 func (u *UI) copyResults(scope string, headers bool) {
@@ -79,6 +46,7 @@ func (u *UI) copyResultsMode(scope string, headers, literal bool) {
 		return
 	}
 	row, col := u.table.GetSelection()
+	col--
 	var rows []int
 	if scope == "selection" {
 		if t.CopyAnchor < 1 || row < 1 {
@@ -95,7 +63,7 @@ func (u *UI) copyResultsMode(scope string, headers, literal bool) {
 			}
 			rows = append(rows, id)
 		}
-	} else if scope != "all" {
+	} else if scope != "all" && scope != "column" {
 		if row < 1 || row > store.Count() {
 			u.message(u.tr("Select a result cell first"))
 			return
@@ -146,7 +114,13 @@ func (u *UI) copyResultsMode(scope string, headers, literal bool) {
 			if literal {
 				write = store.WriteTSV
 			}
-			if err := write(ctx, &b, rows, headers); err != nil {
+			var err error
+			if scope == "column" {
+				err = store.WriteSpreadsheetColumn(ctx, &b, rows, col)
+			} else {
+				err = write(ctx, &b, rows, headers)
+			}
+			if err != nil {
 				return nil, err
 			}
 			text = b.String()

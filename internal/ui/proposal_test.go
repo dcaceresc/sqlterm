@@ -79,14 +79,12 @@ func TestResultsLayout(t *testing.T) {
 			}
 			tab.CopyAnchor = 1
 			u.table.Select(1, 0)
-			check(base + count + " · " + fmt.Sprintf(u.tr("Selected %d rows (%d–%d) · Ctrl+C copy selection · v clear"), 1, 1, 1))
+			check(base + count + " · " + fmt.Sprintf(u.tr("Selected %d rows (%d–%d) · Y copy with headers · v clear"), 1, 1, 1))
 			tab.CopyAnchor = 0
-			tab.Execution.Phase = "Paused"
-			tab.Execution.Pause = &resultPause{Rows: 1}
-			check(base + " · " + labels.paused + count)
+			tab.Execution.Phase = "Receiving rows"
+			check(base + count)
 			tab.Editor.SetText("SELECT 2")
-			check(base + " · " + labels.paused + " · " + labels.stale + count)
-			tab.Execution.Pause = nil
+			check(base + " · " + labels.stale + count)
 			for _, phase := range []string{"Cancelled", "Error"} {
 				tab.Execution.Phase = phase
 				check(base + " · " + labels.partial + " · " + labels.stale + count)

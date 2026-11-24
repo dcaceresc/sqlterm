@@ -93,6 +93,38 @@ func (s *Store) writeTSV(ctx context.Context, w io.Writer, rows []int, headers, 
 	return c.Error()
 }
 
+func (s *Store) WriteSpreadsheetColumn(ctx context.Context, w io.Writer, rows []int, column int) error {
+	if column < 0 || column >= len(s.Columns) {
+		return fmt.Errorf("invalid column: %d", column)
+	}
+	writer := newTSVWriter(w)
+	count := s.Count()
+	if rows != nil {
+		count = len(rows)
+	}
+	for i := 0; i < count; i++ {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		row := i
+		if rows != nil {
+			row = rows[i]
+		}
+		cells, err := s.Row(row)
+		if err != nil {
+			return err
+		}
+		if column >= len(cells) {
+			return fmt.Errorf("missing column %d in row %d", column, row)
+		}
+		if err := tsvWrite(writer, w, []string{SpreadsheetSafeText(tsvCell(cells[column]))}); err != nil {
+			return err
+		}
+	}
+	writer.Flush()
+	return writer.Error()
+}
+
 func newTSVWriter(w io.Writer) *csv.Writer {
 	c := csv.NewWriter(w)
 	c.Comma = '\t'

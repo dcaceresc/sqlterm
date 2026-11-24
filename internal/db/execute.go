@@ -14,28 +14,23 @@ import (
 type Event struct {
 	Kind      string
 	Set, Rows int
-	Token     PageToken
-	Message   string
-	Duration  time.Duration
-	Store     *result.Store
+
+	Message  string
+	Duration time.Duration
+	Store    *result.Store
 }
 
 // Run streams events synchronously. The receiver owns each emitted Store.
 func (s *Session) Run(ctx context.Context, statements []Bound, emit func(Event)) error {
 	start := time.Now()
 	set := 0
-	paging, err := beginPaging(ctx)
-	if err != nil {
-		return err
-	}
-	defer paging.finish()
 	defer func() { s.drainMessages(emit); emit(Event{Kind: "done", Duration: time.Since(start)}) }()
 	for _, st := range statements {
 		if e := ctx.Err(); e != nil {
 			return e
 		}
 		if s.Adapter.Engine() == "sqlserver" {
-			if e := s.runSQLServer(ctx, st, emit, &set, paging); e != nil {
+			if e := s.runSQLServer(ctx, st, emit, &set); e != nil {
 				return e
 			}
 			continue
@@ -57,7 +52,7 @@ func (s *Session) Run(ctx context.Context, statements []Bound, emit func(Event))
 		e = func() error {
 			defer rows.Close()
 			for {
-				if e := s.scanSet(ctx, rows, emit, &set, paging); e != nil {
+				if e := s.scanSet(ctx, rows, emit, &set); e != nil {
 					return e
 				}
 				if !rows.NextResultSet() {
@@ -84,7 +79,7 @@ func (s *Session) drainMessages(emit func(Event)) {
 		}
 	}
 }
-func (s *Session) scanSet(ctx context.Context, rows *sql.Rows, emit func(Event), set *int, paging *pageRun) error {
+func (s *Session) scanSet(ctx context.Context, rows *sql.Rows, emit func(Event), set *int) error {
 	cols, e := rows.Columns()
 	if e != nil {
 		return e
@@ -115,18 +110,7 @@ func (s *Session) scanSet(ctx context.Context, rows *sql.Rows, emit func(Event),
 		dest[i] = &vals[i]
 	}
 	count := 0
-	blockRows := 0
 	for {
-		if paging != nil && blockRows == paging.blockSize() {
-			if e = store.Flush(); e != nil {
-				return e
-			}
-			emit(Event{Kind: "rows", Set: idx, Rows: count})
-			if e = paging.wait(ctx, idx, count, emit); e != nil {
-				return e
-			}
-			blockRows = 0
-		}
 		if e = ctx.Err(); e != nil {
 			return e
 		}
@@ -155,8 +139,7 @@ func (s *Session) scanSet(ctx context.Context, rows *sql.Rows, emit func(Event),
 			return e
 		}
 		count++
-		blockRows++
-		if paging == nil && count%256 == 0 {
+		if count%256 == 0 {
 			if e = store.Flush(); e != nil {
 				return e
 			}
@@ -169,7 +152,7 @@ func (s *Session) scanSet(ctx context.Context, rows *sql.Rows, emit func(Event),
 	emit(Event{Kind: "rows", Set: idx, Rows: count})
 	return rows.Err()
 }
-func (s *Session) runSQLServer(parent context.Context, st Bound, emit func(Event), set *int, paging *pageRun) error {
+func (s *Session) runSQLServer(parent context.Context, st Bound, emit func(Event), set *int) error {
 	ctx, cancel := context.WithCancel(parent)
 	defer cancel()
 	messages := &sqlexp.ReturnMessage{}
@@ -185,7 +168,7 @@ func (s *Session) runSQLServer(parent context.Context, st Bound, emit func(Event
 		}
 		switch m := messages.Message(ctx).(type) {
 		case sqlexp.MsgNext:
-			if e = s.scanSet(ctx, rows, emit, set, paging); e != nil {
+			if e = s.scanSet(ctx, rows, emit, set); e != nil {
 				return e
 			}
 		case sqlexp.MsgNextResultSet:

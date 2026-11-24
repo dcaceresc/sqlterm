@@ -259,7 +259,7 @@ Actualizar el catálogo con **Espacio d r** permite encontrar objetos recién cr
 
 ### Comandos y estado
 
-**F5** ejecuta SQL, **F9** invoca una rutina y **F10** cancela la operación activa. El destino permanece en la barra superior. El encabezado de Resultados avisa si la lectura está en pausa, si quedaron filas parciales tras un error o una cancelación, o si las filas corresponden al SQL anterior.
+**F5** ejecuta SQL, **F9** invoca una rutina y **F10** cancela la operación activa. El destino permanece en la barra superior. El encabezado de Resultados avisa si quedaron filas parciales tras un error o una cancelación, o si las filas corresponden al SQL anterior.
 
 La paleta ofrece **Execution confirmations**:
 
@@ -271,17 +271,7 @@ La detección de escrituras es heurística: no garantiza seguridad, solo lectura
 
 ### Recepción incremental
 
-Cada ejecución obtiene primero `result_block_size` filas, 1000 por defecto, y queda **En pausa**. Una intención de desplazamiento al final de lo cargado —↓, Ctrl+N, PageDown, End, `j` o rueda hacia abajo— solicita el bloque siguiente. Redibujar, cambiar de pestaña, seleccionar otro conjunto o actualizar barras no solicita datos.
-
-La pausa no bloquea la interfaz y el tiempo visible se congela. Al continuar, el tiempo se calcula desde el inicio original. Cada pestaña y ejecución mantiene su propia solicitud pendiente.
-
-Una nueva ejecución, invocación, reconexión, cambio de base, desconexión, cierre de pestaña o salida cancela primero la lectura pausada y espera a que el driver cierre las filas y libere la conexión. Nunca hay dos sentencias simultáneas en la conexión de una misma pestaña.
-
-Mientras se libera la lectura se muestra **Liberando la ejecución en pausa…**. La espera no tiene tiempo límite. Si el driver no responde, la pestaña permanece ocupada; **F10** puede descartar una operación nueva que estuviera esperando, pero no puede forzar al driver a liberar la lectura.
-
-**F10** conserva las filas recibidas después de que el driver confirme la cancelación. Copiar, ordenar o exportar exige que la ejecución haya terminado; cancélala antes si está activa. Un conjunto cuyo tamaño sea múltiplo exacto del bloque requiere otro desplazamiento para comprobar el final. Los conjuntos y sentencias posteriores no avanzan hasta terminar el conjunto actual.
-
-La consulta se ejecuta una sola vez: el cliente no añade `LIMIT`, `TOP` u `OFFSET` ni la reejecuta para cargar más filas. Pausar la lectura del cliente no garantiza que el servidor deje de procesar internamente.
+La lectura es continua y no requiere desplazarse para pedir más filas. Mientras se ejecuta, la grilla permanece en las primeras filas y muestra el contador de filas recibidas y el tiempo transcurrido. Al terminar se pueden recorrer todos los resultados. **F10** cancela la lectura y conserva las filas que ya llegaron; copiar, ordenar o exportar requiere que la ejecución haya terminado.
 
 ## Resultados, copia y exportación
 
@@ -289,7 +279,7 @@ La consulta se ejecuta una sola vez: el cliente no añade `LIMIT`, `TOP` u `OFFS
 
 En resultados:
 
-- **Enter** abre el valor completo de la celda.
+- Haz clic o pulsa **Enter** en una celda para marcarla, en una cabecera para marcar la columna o en el número inicial para marcar la fila. **Ctrl+C** o **y** copia lo marcado sin cabeceras ni números de fila. **i** abre el inspector de texto de la celda.
 - `/` busca.
 - `s` y `S` ordenan localmente la columna en sentido ascendente o descendente.
 - `m` muestra mensajes.
@@ -298,7 +288,7 @@ En resultados:
 
 La ordenación es léxica, coloca `NULL` primero al ascender y solo actúa sobre las filas recibidas. La exportación conserva el orden original del servidor.
 
-En SQL Server, los valores `uniqueidentifier` se muestran como GUID legibles, también en resultados de rutinas y bloques incrementales. Otras columnas binarias no se interpretan como GUID solo por tener 16 bytes. Una longitud binaria inválida produce un error de lectura en lugar de texto ilegible.
+En SQL Server, los valores `uniqueidentifier` se muestran como GUID legibles, también en resultados de rutinas. Otras columnas binarias no se interpretan como GUID solo por tener 16 bytes. Una longitud binaria inválida produce un error de lectura en lugar de texto ilegible.
 
 El inspector distingue `NULL` de `""`, muestra nombre y posición de columna y ofrece copia segura o literal. También copia nombre de columna y valor en una fila TSV.
 
@@ -306,18 +296,18 @@ El inspector distingue `NULL` de `""`, muestra nombre y posición de columna y o
 
 | Tecla | Acción |
 | --- | --- |
-| Ctrl+C | Abrir el menú de copia |
-| y / Y | Copiar todo sin / con cabeceras |
+| Ctrl+C / y | Copiar la celda, fila o columna marcada |
+| Y | Copiar con cabeceras las filas recibidas o el rango marcado con v |
 | r / R | Copiar la fila sin / con cabeceras |
 | c | Copiar la celda |
 | v | Iniciar o quitar una selección de filas |
 | + / - | Ampliar o reducir la columna activa |
 
-El menú permite copiar celda, celda con cabecera, fila o conjunto completo. La opción **Celda con cabecera** produce nombre, tabulador y valor en una sola fila TSV. Los tabuladores y saltos internos se entrecomillan para mantener la estructura.
+El inspector también permite copiar el nombre de la columna y el valor como una fila TSV.
 
 El modo seguro es el predeterminado. Antepone `'` al texto cuyo primer carácter significativo sea `=`, `+`, `-` o `@`, tanto en cabeceras como en valores, para reducir la ejecución de fórmulas al pegar en una hoja de cálculo. También protege valores como `-42`. Usa **Literal** solo si necesitas el texto exacto y confías en los datos.
 
-La transformación afecta únicamente a la salida. `NULL` se representa como `\N` y NUL como `\0`. Los fallos del portapapeles se muestran sin cerrar la aplicación. El menú se cierra con **Esc**, **Ctrl+C**, un clic fuera o un cambio de panel.
+La transformación afecta únicamente a la salida. `NULL` se representa como `\N` y NUL como `\0`. Los fallos del portapapeles se muestran sin cerrar la aplicación.
 
 ### Exportación y almacenamiento
 
@@ -376,7 +366,7 @@ La forma del cursor intenta cambiar de bloque en NORMAL y VISUAL a barra en INSE
 | `gcc` / `gc` con movimiento / `gc` en VISUAL | Alternar comentarios en la línea actual / rango / selección |
 | Ctrl+O / Ctrl+S / Ctrl+N | Abrir / guardar / nueva pestaña |
 | Ctrl+Shift+S | Guardar como |
-| Ctrl+C | Copiar selección o abrir menú |
+| Ctrl+C | Copiar texto seleccionado o resultado marcado |
 | Espacio b d | Cerrar la pestaña actual (confirma si hay cambios sin guardar) |
 | Espacio q q | Salir y conservar los borradores |
 | `Shift+H` / `Shift+L` en NORMAL | Pestaña anterior / siguiente (navegación circular) |
@@ -392,7 +382,7 @@ Con el editor enfocado en NORMAL, pulsa **Espacio**, el grupo y la acción. Cada
 | `c` Código | `x` ejecutar · `A` revisar/aplicar definición · `p` invocar rutina · `t` plantilla de rutina · `T` plantilla de tabla · `i` insertar nombre de objeto · `q` generar SELECT |
 | `d` Conexiones | `c` perfiles · `b` cambiar base · `d` desconectar · `r` actualizar catálogo · `e` confirmaciones |
 | `s` Explorar | `o` buscar objetos · `d` ver definición · `g` catálogo agrupado/plano · `h` historial |
-| `r` Resultados | `y` copiar · `i` inspeccionar celda · `e` exportar · `b` tamaño de bloque · `m` mensajes técnicos |
+| `r` Resultados | `y` copiar · `i` inspeccionar celda · `e` exportar · `m` mensajes técnicos |
 | `u` Preferencias | `w` ajuste de línea · `l` números · `C` tema · `i` idioma |
 | `w` Distribución | `b` equilibrada · `e` edición · `d` exploración · `m` maximizar editor · `r` maximizar resultados · `c` mostrar/ocultar catálogo · `>` / `<` ancho del catálogo ±4 columnas · `+` / `-` dar espacio al editor/resultados ±10 puntos porcentuales |
 | Generales | `?` ayuda · `x` cancelar operación · `q q` salir |
@@ -416,8 +406,6 @@ sqlterm --config examples/config.json
 ```
 
 La ruta relativa `examples/config.json` funciona al ejecutar el comando desde la copia del repositorio. Desde otra carpeta, proporciona la ruta absoluta o una ruta relativa válida al archivo que quieras usar. El ejemplo contiene perfiles locales; los motores se identifican como `sqlserver`, `mysql` y `postgres`.
-
-`result_block_size` acepta entre 1 y 100000 filas. Si falta o vale 0, se usan 1000. También puede cambiarse desde **Espacio r b**; solo se guarda cuando el valor y la escritura del archivo son válidos.
 
 ### Cifrado y certificados
 

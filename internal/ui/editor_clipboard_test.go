@@ -125,7 +125,6 @@ func TestEditorSQLCopyDuringQueryDoesNotChangeQueryState(t *testing.T) {
 	u := runningUI(t, config.Config{})
 	copied := make(chan string, 1)
 	var cancelled atomic.Int32
-	var pending atomic.Int32
 	u.app.QueueUpdateDraw(func() {
 		tab := u.active()
 		tab.Editor.SetText("select * from tabla")
@@ -139,7 +138,6 @@ func TestEditorSQLCopyDuringQueryDoesNotChangeQueryState(t *testing.T) {
 		tab.Results = []*result.Store{store}
 		tab.Busy = true
 		tab.Cancel = func() { cancelled.Add(1) }
-		tab.Pending = func() { pending.Add(1) }
 		u.writeClipboard = func(text string) error { copied <- text; return nil }
 		u.app.SetFocus(tab.Editor.Area)
 		u.key(tcell.NewEventKey(tcell.KeyCtrlC, 0, 0))
@@ -155,12 +153,11 @@ func TestEditorSQLCopyDuringQueryDoesNotChangeQueryState(t *testing.T) {
 	waitUI(t, u, func() bool { return u.active().Status == "Copied SQL selection to clipboard" })
 	u.app.QueueUpdateDraw(func() {
 		tab := u.active()
-		if !tab.Busy || tab.Cancel == nil || tab.Pending == nil || cancelled.Load() != 0 || pending.Load() != 0 || tab.Results[0].Count() != 0 {
+		if !tab.Busy || tab.Cancel == nil || cancelled.Load() != 0 || tab.Results[0].Count() != 0 {
 			t.Error("copy changed running query/cancellation state")
 		}
 		tab.Busy = false
 		tab.Cancel = nil
-		tab.Pending = nil
 	})
 }
 

@@ -40,7 +40,7 @@ func TestLeaderRender(t *testing.T) {
 
 func TestLeaderMaps(t *testing.T) {
 	u, _ := modeTestUI(t)
-	expected := map[rune]string{'f': "ensS", 'b': "d", 'c': "xAptTiq", 'd': "cbdre", 's': "odgh", 'r': "yiebm", 'u': "wlCi", 'w': "bedmrc><+-", 'q': "q"}
+	expected := map[rune]string{'f': "ensS", 'b': "d", 'c': "xAptTiq", 'd': "cbdre", 's': "odgh", 'r': "yiem", 'u': "wlCi", 'w': "bedmrc><+-", 'q': "q"}
 	groups := u.leaderGroups()
 	for key, keys := range expected {
 		var got strings.Builder

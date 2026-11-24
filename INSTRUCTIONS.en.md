@@ -259,7 +259,7 @@ Refresh the catalog with **Space d r** to find newly created objects and clear t
 
 ### Commands and status
 
-**F5** runs SQL, **F9** invokes a routine, and **F10** cancels the active operation. The destination stays in the top bar. The Results heading indicates when reading is paused, when an error or cancellation leaves partial rows, or when the results belong to earlier SQL.
+**F5** runs SQL, **F9** invokes a routine, and **F10** cancels the active operation. The destination stays in the top bar. The Results heading indicates when an error or cancellation leaves partial rows, or when the results belong to earlier SQL.
 
 The command palette offers **Execution confirmations**:
 
@@ -271,17 +271,7 @@ Write detection is heuristic. It does not guarantee safety, read-only execution,
 
 ### Incremental fetching
 
-Each execution first fetches `result_block_size` rows (1000 by default), then becomes **Paused**. Scrolling past the end of loaded rows with ↓, Ctrl+N, PageDown, End, `j`, or the mouse wheel requests the next block. Redrawing, switching tabs, selecting a different result set, or updating bars does not request data.
-
-Pausing does not block the interface, and the displayed elapsed time freezes. On resume, the time is calculated from the original start. Each tab and execution tracks its own pending request.
-
-A new execution, routine call, reconnection, database switch, disconnect, tab close, or exit first cancels the paused read and waits for the driver to close the rows and release the connection. Two statements never run concurrently on the same tab connection.
-
-SQLTerm displays a status message while releasing the paused execution. The wait has no timeout. If the driver does not respond, the tab stays busy. **F10** can discard a new operation that was waiting, but cannot force the driver to release the read.
-
-**F10** preserves received rows after the driver confirms cancellation. Copying, sorting, and exporting require the execution to have ended; cancel it first if it is still active. A result set whose size is an exact multiple of the block size requires another scroll to detect the end. Subsequent sets and statements do not advance until the current set finishes.
-
-The query runs only once: the client does not add `LIMIT`, `TOP`, or `OFFSET` or rerun the query to fetch more rows. Pausing the client's read does not guarantee that the server stops processing internally.
+Rows are fetched continuously without scrolling to request more. While the query is running, the grid stays on the first rows and shows the received-row count and elapsed time. When it finishes, all received rows can be browsed. **F10** cancels the read and keeps received rows; copying, sorting, and exporting require the execution to end.
 
 ## Results, copying, and export
 
@@ -289,7 +279,7 @@ The query runs only once: the client does not add `LIMIT`, `TOP`, or `OFFSET` or
 
 In the results pane:
 
-- **Enter** opens the full cell value.
+- Click or press **Enter** on a cell to highlight it, on a header to highlight the column, or on the leading number to highlight the row. **Ctrl+C** or **y** copies the selection without headers or row numbers. **i** opens the cell text inspector.
 - `/` searches.
 - `s` and `S` sort the column locally in ascending or descending order.
 - `m` shows messages.
@@ -298,7 +288,7 @@ In the results pane:
 
 Sorting is lexicographic, puts `NULL` first in ascending order, and only affects rows already fetched. Export retains the original server order.
 
-In SQL Server, `uniqueidentifier` values appear as readable GUIDs, including in routine results and incremental blocks. Other binary columns are not treated as GUIDs just because they are 16 bytes long. An invalid binary length produces a read error rather than unreadable text.
+In SQL Server, `uniqueidentifier` values appear as readable GUIDs, including in routine results. Other binary columns are not treated as GUIDs just because they are 16 bytes long. An invalid binary length produces a read error rather than unreadable text.
 
 The inspector distinguishes `NULL` from `""`, shows the column name and position, and offers safe or literal copying. It can also copy the column name and value as one TSV row.
 
@@ -306,18 +296,18 @@ The inspector distinguishes `NULL` from `""`, shows the column name and position
 
 | Key | Action |
 | --- | --- |
-| Ctrl+C | Open the copy menu |
-| y / Y | Copy all without / with headers |
+| Ctrl+C / y | Copy the selected cell, row, or column |
+| Y | Copy received rows or the range marked with v, with headers |
 | r / R | Copy the row without / with headers |
 | c | Copy the cell |
 | v | Start or clear a row selection |
 | + / - | Widen or narrow the active column |
 
-The menu can copy a cell, a cell with its header, a row, or the whole result set. **Cell with header** produces a name, tab, and value on a single TSV row. Embedded tabs and line breaks are quoted to preserve the structure.
+The inspector can also copy a cell with its header as a name, tab, and value on a single TSV row. Embedded tabs and line breaks are quoted.
 
 Safe mode is the default. It prefixes `'` to text whose first significant character is `=`, `+`, `-`, or `@`, in both headers and values, to reduce formula execution when pasting into a spreadsheet. This also protects values such as `-42`. Use **Literal** only when you need the exact text and trust the data.
 
-The transformation affects only the output. `NULL` is represented as `\N` and NUL as `\0`. Clipboard failures are reported without closing the application. Close the menu with **Esc**, **Ctrl+C**, a click outside it, or by switching panes.
+The transformation affects only the output. `NULL` is represented as `\N` and NUL as `\0`. Clipboard failures are reported without closing the application.
 
 ### Export and storage
 
@@ -376,7 +366,7 @@ The cursor shape tries to switch from a block in NORMAL and VISUAL to a bar in I
 | `gcc` / `gc` with a motion / `gc` in VISUAL | Toggle comments on the current line / range / selection |
 | Ctrl+O / Ctrl+S / Ctrl+N | Open / save / new tab |
 | Ctrl+Shift+S | Save as |
-| Ctrl+C | Copy selection or open copy menu |
+| Ctrl+C | Copy selected text or the highlighted result |
 | Space b d | Close the current tab (confirm if there are unsaved changes) |
 | Space q q | Quit and preserve drafts |
 | `Shift+H` / `Shift+L` in NORMAL | Previous / next tab (wraps at either end) |
@@ -392,7 +382,7 @@ With focus on the editor in NORMAL, press **Space**, the group key, and the acti
 | `c` Code | `x` run · `A` review/apply definition · `p` invoke routine · `t` routine template · `T` table template · `i` insert object name · `q` generate SELECT |
 | `d` Connections | `c` profiles · `b` switch database · `d` disconnect · `r` refresh catalog · `e` confirmations |
 | `s` Explore | `o` find objects · `d` view definition · `g` grouped/flat catalog · `h` history |
-| `r` Results | `y` copy · `i` inspect cell · `e` export · `b` block size · `m` technical messages |
+| `r` Results | `y` copy · `i` inspect cell · `e` export · `m` technical messages |
 | `u` Preferences | `w` line wrap · `l` line numbers · `C` theme · `i` language |
 | `w` Layout | `b` balanced · `e` editing · `d` browsing · `m` maximize editor · `r` maximize results · `c` show/hide catalog · `>` / `<` adjust catalog width by ±4 columns · `+` / `-` give the editor/results ±10 percentage points of space |
 | General | `?` help · `x` cancel operation · `q q` quit |
@@ -416,8 +406,6 @@ sqlterm --config examples/config.json
 ```
 
 The relative path `examples/config.json` works when running the command from the local repository. From another directory, provide an absolute path or a valid relative path to the file you want to use. The example contains local profiles; engines are identified as `sqlserver`, `mysql`, and `postgres`.
-
-`result_block_size` accepts 1 to 100000 rows. If it is missing or set to 0, it defaults to 1000. You can also change it with **Space r b**; it is saved only if the value is valid and the write succeeds.
 
 ### Encryption and certificates
 

@@ -45,7 +45,6 @@ type Tab struct {
 	Collapsed           map[string]bool
 	ColumnWidths        map[int]int
 	CopyAnchor          int
-	Pending             func()
 }
 type UI struct {
 	app                                *tview.Application
@@ -76,7 +75,6 @@ type UI struct {
 	dialogCancel                       func()
 	leaderPanel                        *tview.TextView
 	dialogContent                      tview.Primitive
-	copyPopup                          *tview.List
 	connectionFolder                   string
 	lastExportDir                      string
 	lastSavedSQLDir                    string
@@ -131,9 +129,8 @@ func New(path string, cfg config.Config) *UI {
 	left.AddItem(u.objectDetail, 1, 0, false)
 	u.sidebar = left
 	u.editorHost = tview.NewFlex()
-	u.table = tview.NewTable().SetFixed(1, 0).SetSelectable(true, true)
+	u.table = tview.NewTable().SetFixed(1, 1).SetSelectable(true, true)
 	u.table.SetBorder(true).SetTitle(u.tr(" Results "))
-	u.table.SetSelectedFunc(func(row, col int) { u.viewCell(row, col) })
 	u.table.SetInputCapture(u.gridKey)
 	u.table.SetSelectionChangedFunc(func(int, int) { u.refreshResultInfo() })
 	u.table.SetSeparator('│')
@@ -162,7 +159,7 @@ func New(path string, cfg config.Config) *UI {
 				}
 			}
 		}
-		if u.resultWheelDemand(event, action) {
+		if u.resultPreviewLocked() && (action == tview.MouseScrollDown || action == tview.MouseScrollUp || action == tview.MouseScrollLeft || action == tview.MouseScrollRight) && u.table.InRect(event.Position()) {
 			return nil, action
 		}
 		return event, action
@@ -173,6 +170,11 @@ func New(path string, cfg config.Config) *UI {
 		width, height := screen.Size()
 		u.nativeEventPending.Store(false)
 		u.adaptLayout(width, height)
+		if u.resultPreviewLocked() {
+			// tview activa el seguimiento del final al dibujar una tabla corta.
+			// Restablecer el desplazamiento evita que salte al crecer el resultado.
+			u.table.SetOffset(0, 0)
+		}
 		u.status.SetRect(0, max(0, height-2), width, 1)
 		u.refreshBars()
 		u.drawTabHeader(width)
@@ -304,14 +306,7 @@ func (u *UI) task(t *Tab, label string, work func(context.Context) (func(), erro
 			if apply != nil {
 				apply()
 			}
-			next := t.Pending
-			t.Pending = nil
 			u.refreshBars()
-			// Work queued while this task held the tab starts only now, after the
-			// task and its driver connection have actually finished.
-			if next != nil && !u.closing {
-				next()
-			}
 		})
 	}()
 }
@@ -349,16 +344,14 @@ func (u *UI) closeTab() { u.closeTabTarget(u.active()) }
 func (u *UI) closeTabTarget(t *Tab) {
 	// A tab with a running (non-paused) statement is refused before any unsaved
 	// SQL prompt, as before. A paused read is released first and closed after.
-	if t.Busy && !pausedExecution(t) {
+	if t.Busy {
 		u.message(u.tr("Cancel execution before closing this tab"))
 		return
 	}
 	var closeIt func()
 	closeIt = func() {
 		if t.Busy {
-			if u.releasePausedExecution(t, closeIt) {
-				return
-			}
+
 			u.message(u.tr("Cancel execution before closing this tab"))
 			return
 		}
@@ -442,14 +435,13 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 	if u.dialogContent != nil {
 		switch k.Key() {
 		case tcell.KeyCtrlC, tcell.KeyEscape:
+			if u.cellInspectorKey(k.Key()) {
+				return nil
+			}
 			if k.Key() == tcell.KeyEscape && u.clearSelectorSearch() {
 				return nil
 			}
-			wasCopy := u.copyPopup != nil
 			u.dismiss()
-			if wasCopy {
-				u.app.SetFocus(u.table)
-			}
 			return nil
 		case tcell.KeyF1, tcell.KeyF2, tcell.KeyF3, tcell.KeyF4, tcell.KeyF6, tcell.KeyF7, tcell.KeyF8:
 			u.dismiss()
@@ -513,7 +505,9 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 			u.message(u.tr("Press F10 to stop receiving rows before sorting, copying or exporting"))
 			return nil
 		}
-		u.copyMenu()
+		if u.table.HasFocus() {
+			u.copyGridSelection()
+		}
 		return nil
 	case tcell.KeyF1:
 		u.showHelp()

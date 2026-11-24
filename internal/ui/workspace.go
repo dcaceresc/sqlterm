@@ -4,12 +4,10 @@ import (
 	"fmt"
 	"path/filepath"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/gdamore/tcell/v2"
 	"sqlterm/internal/config"
-	"sqlterm/internal/db"
 )
 
 type execution struct {
@@ -18,12 +16,6 @@ type execution struct {
 	Started                                          time.Time
 	Duration                                         time.Duration
 	Phase, Error                                     string
-	Pager                                            *db.Pager
-	Pause                                            *resultPause
-	// pulsePaused detiene los redibujados periódicos durante la pausa.
-	// pausedFor conserva el tiempo transcurrido hasta esa pausa.
-	pulsePaused atomic.Bool
-	pausedFor   time.Duration
 }
 
 func (e *execution) elapsedText() string {
@@ -34,8 +26,6 @@ func (e *execution) elapsedText() string {
 	switch e.Phase {
 	case "Running", "Receiving rows", "Cancelling":
 		elapsed = time.Since(e.Started)
-	case "Paused":
-		elapsed = e.pausedFor
 	}
 	return elapsed.Round(time.Millisecond).String()
 }
@@ -85,7 +75,7 @@ func (u *UI) refreshWorkspace() {
 		u.objectDetail.SetText(o.Label())
 	}
 	if u.table.HasFocus() {
-		u.help.SetText(u.tr(" F1 Help  ↓/PgDn/End/j Scroll more  F10 Stop/keep  Ctrl+C Copy  e Export "))
+		u.help.SetText(u.tr(" F1 Help  F10 Cancel/keep  Ctrl+C Copy  e Export "))
 	} else if u.objects.HasFocus() || u.search.HasFocus() || u.kind.HasFocus() {
 		u.help.SetText(u.tr(" F1 Help  Enter Definition  F7 Editor  F8 Results  Space w Layout in NORMAL editor "))
 	} else if u.lastWidth > 0 && u.lastWidth < 110 {
@@ -104,8 +94,6 @@ func (u *UI) refreshResultInfo() {
 	}
 	if e := t.Execution; e != nil {
 		switch e.Phase {
-		case "Paused":
-			title += " · " + u.tr("Paused")
 		case "Cancelled", "Error":
 			for _, store := range t.Results {
 				if store.Count() > 0 {
@@ -124,7 +112,7 @@ func (u *UI) refreshResultInfo() {
 		if t.CopyAnchor > 0 {
 			row, _ := u.table.GetSelection()
 			first, last := min(t.CopyAnchor, row), max(t.CopyAnchor, row)
-			title += " · " + fmt.Sprintf(u.tr("Selected %d rows (%d–%d) · Ctrl+C copy selection · v clear"), last-first+1, first, last)
+			title += " · " + fmt.Sprintf(u.tr("Selected %d rows (%d–%d) · Y copy with headers · v clear"), last-first+1, first, last)
 		} else if t.SortDescription != "" {
 			title += " · " + t.SortDescription
 		}
@@ -135,13 +123,8 @@ func (u *UI) refreshResultInfo() {
 func (u *UI) cancelOperation() {
 	t := u.active()
 	if t.Cancel != nil {
-		// F10 stops everything: it also abandons a replacement that was queued
-		// while the paused read is being released.
-		t.Pending = nil
-		if t.Execution != nil && (t.Execution.Phase == "Running" || t.Execution.Phase == "Receiving rows" || t.Execution.Phase == "Paused") {
+		if t.Execution != nil && (t.Execution.Phase == "Running" || t.Execution.Phase == "Receiving rows") {
 			t.Execution.Phase = "Cancelling"
-			t.Execution.Pause = nil
-			t.Execution.pulsePaused.Store(false)
 		}
 		t.Status = u.tr("Cancelling · waiting for driver")
 		t.Cancel()
@@ -160,13 +143,9 @@ func (u *UI) executionPulse(t *Tab, e *execution) func() {
 			case <-stop:
 				return
 			case <-ticker.C:
-				// A paused read must look idle: no periodic redraw or elapsed tick.
-				if e.pulsePaused.Load() {
-					continue
-				}
 				u.post(func() {
 					if u.active() == t && t.Execution == e {
-						u.refreshResultInfo()
+						u.refreshBars()
 					}
 				})
 			}

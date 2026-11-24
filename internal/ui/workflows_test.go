@@ -101,14 +101,11 @@ func TestCopyResultsWithAndWithoutHeadersUsesDisplayedOrder(t *testing.T) {
 		t.Fatal(text)
 	}
 	u.app.QueueUpdateDraw(func() {
-		u.key(tcell.NewEventKey(tcell.KeyCtrlC, 0, 0))
-		front, _ := u.pages.GetFrontPage()
-		if front != "dialog" || u.closing {
-			t.Error("Ctrl+C in results must show copy options")
-		}
-		u.dismiss()
 		u.writeClipboard = func(string) error { return errors.New("clipboard locked") }
-		u.copyResults("all", false)
+		u.key(tcell.NewEventKey(tcell.KeyCtrlC, 0, 0))
+		if front, _ := u.pages.GetFrontPage(); front != "main" || u.closing {
+			t.Error("Ctrl+C in results opened a dialog")
+		}
 	})
 	waitUI(t, u, func() bool { return !u.active().Busy })
 	u.app.QueueUpdateDraw(func() {

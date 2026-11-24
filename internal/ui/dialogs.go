@@ -15,7 +15,6 @@ func (u *UI) popup(p tview.Primitive, width, height int) {
 	if u.dialogContent == nil {
 		u.dialogReturn = u.app.GetFocus()
 	}
-	u.copyPopup = nil
 	u.hideSuggestions()
 	if u.dialogCancel != nil {
 		cancel := u.dialogCancel
@@ -73,7 +72,6 @@ func (u *UI) dismiss() {
 	previous := u.dialogReturn
 	u.dialogReturn = nil
 	u.dialogContent = nil
-	u.copyPopup = nil
 	if u.dialogCancel != nil {
 		cancel := u.dialogCancel
 		u.dialogCancel = nil
@@ -310,7 +308,7 @@ If the terminal cannot distinguish Ctrl+Shift+S from Ctrl+S, Ctrl+S saves in pla
 IntelliSense: automatic while typing; Ctrl+Space opens suggestions.
 SQL Server: EXEC procedure + space lists parameter names/types; @ filters; Tab/Enter inserts @name = .
 Up/Down or Ctrl+N/P select; Tab/Enter accept; Esc closes and returns NORMAL.
-Ex commands are disabled in the editor. F1 opens help. Space b d closes the current tab; Space q q quits and keeps SQL tabs for next launch. Ctrl+C copies selected SQL in editor, opens result copy options elsewhere,
+Ex commands are disabled in the editor. F1 opens help. Space b d closes the current tab; Space q q quits and keeps SQL tabs for next launch. Ctrl+C copies selected SQL in editor, copies the highlighted selection in results,
 or closes a dialog. Without an editor selection it shows a notice and keeps the clipboard.
 Esc closes dialogs / returns to NORMAL.
 
@@ -332,10 +330,10 @@ Space u C opens themes. Themes preview with arrows; Enter saves, Esc restores.
 Connections: Enter connect/expand, + add profile, n new folder,
 e edit profile, r rename folder, d delete empty folder, / search.
 
-Results: [ / ] previous/next result set; Enter inspect cell and copy the value
+Results: [ / ] previous/next result set; click/Enter highlight cell, column header or row number; i inspect value
 or the column name with the value; m messages;
 / search rows; s sort selected column ascending; S descending; e export.
-Ctrl+C copy menu; y/Y copy all without/with headers; r/R current row;
+Ctrl+C/y copy highlighted scope; Y copy rows with headers; r/R current row;
 c current cell. The menu also offers Cell with header: the selected cell's
 column name, a tab and its value in one TSV row, so a paste fills two adjacent
 cells of one spreadsheet row. Copy shortcuts and CSV default to spreadsheet-safe

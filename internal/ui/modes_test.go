@@ -129,7 +129,6 @@ func TestModeStatusShowsMessageAndExecutionTime(t *testing.T) {
 			want      string
 		}{
 			{nil, "NORMAL query failed"},
-			{&execution{Phase: "Paused", Started: time.Now().Add(-3 * time.Second), pausedFor: 250 * time.Millisecond}, "NORMAL query failed 250ms"},
 			{&execution{Phase: "Completed", Duration: 1200 * time.Millisecond}, "NORMAL query failed 1.2s"},
 		} {
 			tab.Execution = state.execution

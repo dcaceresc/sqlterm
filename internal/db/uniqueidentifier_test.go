@@ -89,7 +89,7 @@ func TestRunLeavesOtherBinaryColumnsAndEnginesUnchanged(t *testing.T) {
 	}
 }
 
-func TestRunInvocationPagedUniqueIdentifiersAcrossResultSets(t *testing.T) {
+func TestRunInvocationUniqueIdentifiersAcrossResultSets(t *testing.T) {
 	binary := []byte("0123456789abcdef")
 	p := &pagingPlan{
 		columns: [][]string{{"id", "binary"}, {"binary", "id"}},
@@ -97,10 +97,6 @@ func TestRunInvocationPagedUniqueIdentifiersAcrossResultSets(t *testing.T) {
 		sets:    [][][]driver.Value{{{guidWireBytes(), binary}}, {{binary, make([]byte, 16)}}},
 	}
 	session, state := newPagingSession(t, "sqlserver", map[string][]*pagingPlan{"EXEC identifiers": {p}})
-	pager, err := NewPager(1)
-	if err != nil {
-		t.Fatal(err)
-	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	var stores []*result.Store
@@ -109,23 +105,13 @@ func TestRunInvocationPagedUniqueIdentifiersAcrossResultSets(t *testing.T) {
 			store.Close()
 		}
 	}()
-	pauses := 0
-	err = session.RunInvocation(WithPager(ctx, pager), Invocation{SQL: "EXEC identifiers", Before: []Bound{{SQL: "SET fixture"}}}, func(ev Event) {
+	err := session.RunInvocation(ctx, Invocation{SQL: "EXEC identifiers", Before: []Bound{{SQL: "SET fixture"}}}, func(ev Event) {
 		if ev.Store != nil {
 			stores = append(stores, ev.Store)
 		}
-		if ev.Kind == "paused" {
-			pauses++
-			if ev.Set != pauses-1 || ev.Rows != 1 {
-				t.Errorf("unexpected pause: set=%d rows=%d", ev.Set, ev.Rows)
-			}
-			if !pager.Request(ev.Token) {
-				t.Error("could not resume GUID result")
-			}
-		}
 	})
-	if err != nil || len(stores) != 2 || pauses != 2 {
-		t.Fatalf("invocation err=%v sets=%d pauses=%d", err, len(stores), pauses)
+	if err != nil || len(stores) != 2 {
+		t.Fatalf("invocation err=%v sets=%d", err, len(stores))
 	}
 	first, err := stores[0].Row(0)
 	if err != nil || first[0].Text != "01234567-89AB-CDEF-0123-456789ABCDEF" || first[1].Text != string(binary) {
@@ -136,7 +122,7 @@ func TestRunInvocationPagedUniqueIdentifiersAcrossResultSets(t *testing.T) {
 		t.Fatalf("second result metadata: %#v %v", second, err)
 	}
 	if p.nextCalls.Load() != 4 || p.closeCalls.Load() != 1 {
-		t.Fatal("paging or cursor cleanup changed")
+		t.Fatal("cursor cleanup changed")
 	}
 	state.mu.Lock()
 	defer state.mu.Unlock()
