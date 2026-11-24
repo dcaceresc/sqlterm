@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-func TestEmbeddedEditorHidesScratchStatuslineButKeepsCommandLine(t *testing.T) {
+func TestEmbeddedEditorHidesScratchStatuslineButKeepsSearchPrompt(t *testing.T) {
 	if testing.Short() {
 		t.Skip("requires installed Neovim")
 	}
@@ -31,8 +31,8 @@ func TestEmbeddedEditorHidesScratchStatuslineButKeepsCommandLine(t *testing.T) {
 	if err := s.SetText(sql); err != nil {
 		t.Fatal(err)
 	}
-	const command = ":echo 'command visible'"
-	if err := s.Input(command); err != nil {
+	const search = "/SELECT"
+	if err := s.Input(search); err != nil {
 		t.Fatal(err)
 	}
 	deadline := time.NewTimer(2 * time.Second)
@@ -47,7 +47,7 @@ func TestEmbeddedEditorHidesScratchStatuslineButKeepsCommandLine(t *testing.T) {
 			grid.WriteByte('\n')
 		}
 		visible := grid.String()
-		if strings.Contains(visible, sql) && strings.Contains(visible, command) {
+		if strings.Contains(visible, sql) && strings.Contains(visible, search) {
 			if strings.Contains(strings.ToLower(visible), "[scratch]") {
 				t.Fatalf("the redundant scratch statusline is visible:\n%s", visible)
 			}
@@ -56,7 +56,7 @@ func TestEmbeddedEditorHidesScratchStatuslineButKeepsCommandLine(t *testing.T) {
 		select {
 		case <-s.Changed():
 		case <-deadline.C:
-			t.Fatalf("SQL or command line was not rendered:\n%s", visible)
+			t.Fatalf("SQL or search prompt was not rendered:\n%s", visible)
 		}
 	}
 }

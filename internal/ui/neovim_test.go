@@ -326,43 +326,53 @@ func TestLazyVimTabNavigation(t *testing.T) {
 	})
 }
 
-func executeExInEditor(u *UI, command string) {
-	for _, r := range ":" + command {
-		dispatchModified(u, tcell.KeyRune, r, 0)
-	}
-	dispatchModified(u, tcell.KeyEnter, 0, 0)
-}
-
-func TestNeovimExQuitUsesTabClose(t *testing.T) {
-	for _, command := range []string{"q", "quit"} {
-		t.Run(command, func(t *testing.T) {
-			u := runningNeovimUI(t)
-			u.app.QueueUpdateDraw(func() {
-				u.newTab(nil)
-				tab := u.active()
-				if err := tab.Editor.SetText("SELECT 1;"); err != nil {
-					t.Error(err)
-					return
-				}
-				executeExInEditor(u, "normal! $")
-				if tab.Editor.Cursor() != len("SELECT 1") {
-					t.Error("ordinary Ex command did not reach Neovim")
-				}
-				executeExInEditor(u, command)
-				if u.dialogContent == nil || len(u.tabs) != 2 || u.active() != tab || tab.Editor.Err() != nil || tab.Editor.Mode != "NORMAL" {
-					t.Errorf(":%s must confirm without exiting Neovim: dialog=%T status=%q err=%v mode=%q", command, u.dialogContent, tab.Status, tab.Editor.Err(), tab.Editor.Mode)
-					return
-				}
-				fileDialogKey(u, tcell.KeyEnter)
-				if u.dialogContent != nil || u.active() != tab || tab.Editor.Area.GetText() != "SELECT 1;" {
-					t.Error("cancelling did not preserve the unsaved tab")
-				}
-				tab.Saved = "SELECT 1;"
-				executeExInEditor(u, command)
-				if len(u.tabs) != 1 || u.closing || u.active().Editor.Err() != nil {
-					t.Error("clean tab did not close without quitting SQLTerm")
-				}
-			})
-		})
-	}
+func TestNeovimExPromptDisabled(t *testing.T) {
+	u := runningNeovimUI(t)
+	u.app.QueueUpdateDraw(func() {
+		tab := u.active()
+		e := tab.Editor
+		const text = "SELECT :name;"
+		send := func(keys string) {
+			for _, key := range keys {
+				dispatchModified(u, tcell.KeyRune, key, 0)
+			}
+		}
+		escape := func() { dispatchModified(u, tcell.KeyEscape, 0, 0) }
+		for _, mode := range []string{"NORMAL", "VISUAL"} {
+			if err := e.SetText(text); err != nil {
+				t.Error(err)
+				return
+			}
+			if mode == "VISUAL" {
+				send("v")
+			}
+			send(":")
+			if e.Mode != mode || e.Area.GetText() != text || e.Err() != nil || u.dialogContent != nil || tab.Status != "Ex commands are disabled. F1: help · Space b d: close tab · Space q q: quit" {
+				t.Errorf("colon in %s: mode=%q text=%q status=%q err=%v", mode, e.Mode, e.Area.GetText(), tab.Status, e.Err())
+			}
+			escape()
+		}
+		if err := e.SetText(text); err != nil {
+			t.Error(err)
+			return
+		}
+		send("f:")
+		if e.Cursor() != len("SELECT ") {
+			t.Errorf("f: did not find the colon: cursor=%d", e.Cursor())
+		}
+		send("0/:")
+		dispatchModified(u, tcell.KeyEnter, 0, 0)
+		if e.Mode != "NORMAL" || e.Cursor() != len("SELECT ") {
+			t.Errorf("search for colon: mode=%q cursor=%d", e.Mode, e.Cursor())
+		}
+		send("i:")
+		escape()
+		if got := e.Area.GetText(); got != "SELECT ::name;" {
+			t.Errorf("colon in INSERT: %q", got)
+		}
+		send("0d:")
+		if e.Mode != "NORMAL" || e.Area.GetText() != "SELECT ::name;" || e.Err() != nil {
+			t.Errorf("colon with pending operator: mode=%q text=%q err=%v", e.Mode, e.Area.GetText(), e.Err())
+		}
+	})
 }

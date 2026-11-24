@@ -308,7 +308,7 @@ If the terminal cannot distinguish Ctrl+Shift+S from Ctrl+S, Ctrl+S saves in pla
 IntelliSense: automatic while typing; Ctrl+Space opens suggestions.
 SQL Server: EXEC procedure + space lists parameter names/types; @ filters; Tab/Enter inserts @name = .
 Up/Down or Ctrl+N/P select; Tab/Enter accept; Esc closes and returns NORMAL.
-:q / :quit or Space b d closes the current tab; :qa / :qall or Space q q quits and keeps SQL tabs for next launch. Ctrl+C copies selected SQL in editor, opens result copy options elsewhere,
+Ex commands are disabled in the editor. F1 opens help. Space b d closes the current tab; Space q q quits and keeps SQL tabs for next launch. Ctrl+C copies selected SQL in editor, opens result copy options elsewhere,
 or closes a dialog. Without an editor selection it shows a notice and keeps the clipboard.
 Esc closes dialogs / returns to NORMAL.
 

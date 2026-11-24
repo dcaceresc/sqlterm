@@ -28,22 +28,6 @@ func (s *Session) Input(keys string) error {
 	})
 }
 
-// ExCommandLine devuelve únicamente la línea activa de un comando Ex.
-func (s *Session) ExCommandLine() (string, error) {
-	result := make(chan string, 1)
-	if err := s.run(func() error {
-		var line string
-		if err := s.v.ExecLua(`if vim.fn.getcmdtype() == ':' then return vim.fn.getcmdline() end; return ''`, &line); err != nil {
-			return err
-		}
-		result <- line
-		return nil
-	}); err != nil {
-		return "", err
-	}
-	return <-result, nil
-}
-
 func (s *Session) inputBarrier() error {
 	mode, err := s.v.Mode()
 	if err != nil || mode.Blocking {

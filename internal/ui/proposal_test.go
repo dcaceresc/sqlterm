@@ -41,7 +41,7 @@ func TestResultsLayout(t *testing.T) {
 				if got := strings.Trim(string(line[x:x+width]), "─┌┐═╔╗ "); got != title {
 					t.Errorf("first results line: got %q, want %q", got, title)
 				}
-				for _, obsolete := range []string{"#73", "14:30:00", "Destination above", "Destino en la barra superior", "visible rows", "filas visibles"} {
+				for _, obsolete := range []string{"#73", "14:30:00", "Destination above", "Destino en la barra superior", "visible rows", "filas visibles", "Row 1/1", "Fila 1/1", "Column 1/1", "Columna 1/1", "server order", "orden del servidor", "No received rows", "Sin filas recibidas"} {
 					if strings.Contains(text, obsolete) {
 						t.Errorf("obsolete strip text still visible: %q", obsolete)
 					}
@@ -69,9 +69,18 @@ func TestResultsLayout(t *testing.T) {
 			tab.Execution.Phase = "Completed"
 			check(base + count)
 			text := screenText(screen)
-			if !strings.Contains(text, "received-value") || !strings.Contains(text, u.tr("server order")) {
-				t.Error("missing table contents or row details")
+			if !strings.Contains(text, "received-value") {
+				t.Error("missing table contents")
 			}
+			hostX, hostY, hostWidth, hostHeight := u.resultsHost.GetRect()
+			tableX, tableY, tableWidth, tableHeight := u.table.GetRect()
+			if hostX != tableX || hostY != tableY || hostWidth != tableWidth || hostHeight != tableHeight {
+				t.Error("results table must use the entire panel without a footer row")
+			}
+			tab.CopyAnchor = 1
+			u.table.Select(1, 0)
+			check(base + count + " · " + fmt.Sprintf(u.tr("Selected %d rows (%d–%d) · Ctrl+C copy selection · v clear"), 1, 1, 1))
+			tab.CopyAnchor = 0
 			tab.Execution.Phase = "Paused"
 			tab.Execution.Pause = &resultPause{Rows: 1}
 			check(base + " · " + labels.paused + count)

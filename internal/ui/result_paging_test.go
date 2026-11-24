@@ -90,6 +90,9 @@ func TestResultPagingWaitsForExplicitNavigationAndRenewsDemand(t *testing.T) {
 		if tab.Execution.Phase != "Completed" {
 			t.Errorf("phase = %q, want Completed", tab.Execution.Phase)
 		}
+		if tab.Status != "Completed" || !strings.Contains(u.status.GetText(true), "Completed") || !strings.Contains(u.status.GetText(true), tab.Execution.elapsedText()) || !strings.Contains(u.table.GetTitle(), "set 1/1") {
+			t.Errorf("completion should show a short message, with duration and set in their existing locations: status=%q time bar=%q title=%q", tab.Status, u.status.GetText(true), u.table.GetTitle())
+		}
 	})
 	if err := mock.ExpectationsWereMet(); err != nil {
 		t.Fatal(err)

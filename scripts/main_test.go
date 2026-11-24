@@ -260,7 +260,16 @@ func readRecords(t *testing.T, path string) []commandRecord {
 
 func assertRecord(t *testing.T, record commandRecord, repo string, args []string, goos, goarch, cgo string) {
 	t.Helper()
-	if record.Dir != repo || !reflect.DeepEqual(record.Args, args) {
+	// El proceso hijo puede devolver la ruta física aunque el repositorio se abrió por un enlace simbólico.
+	expectedDir, err := os.Stat(repo)
+	if err != nil {
+		t.Fatalf("stat expected directory %q: %v", repo, err)
+	}
+	actualDir, err := os.Stat(record.Dir)
+	if err != nil {
+		t.Fatalf("stat child directory %q: %v", record.Dir, err)
+	}
+	if !os.SameFile(expectedDir, actualDir) || !reflect.DeepEqual(record.Args, args) {
 		t.Fatalf("record = %+v, want dir %q args %q", record, repo, args)
 	}
 	if record.GoCache != filepath.Join(repo, ".cache", "build") || record.GoPath != filepath.Join(repo, ".cache", "go") || record.GoModCache != filepath.Join(repo, ".cache", "mod") {

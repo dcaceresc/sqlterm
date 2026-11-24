@@ -26,6 +26,20 @@ type execution struct {
 	pausedFor   time.Duration
 }
 
+func (e *execution) elapsedText() string {
+	if e == nil {
+		return ""
+	}
+	elapsed := e.Duration
+	switch e.Phase {
+	case "Running", "Receiving rows", "Cancelling":
+		elapsed = time.Since(e.Started)
+	case "Paused":
+		elapsed = e.pausedFor
+	}
+	return elapsed.Round(time.Millisecond).String()
+}
+
 func (u *UI) queryName(t *Tab) string {
 	if t.Path != "" {
 		return filepath.Base(t.Path)
@@ -75,7 +89,7 @@ func (u *UI) refreshWorkspace() {
 	} else if u.objects.HasFocus() || u.search.HasFocus() || u.kind.HasFocus() {
 		u.help.SetText(u.tr(" F1 Help  Enter Definition  F7 Editor  F8 Results  Space w Layout in NORMAL editor "))
 	} else if u.lastWidth > 0 && u.lastWidth < 110 {
-		u.help.SetText(u.tr(" F1 Help  F5 Run  F6 Objects  F7 Editor  F8 Results  F10 Cancel  Space w Layout "))
+		u.help.SetText(u.tr(" F1 Help  F2 Connect  F5 Run  F6 Objects  F7 Editor  F8 Results  F10 Cancel  Space w Layout "))
 	}
 }
 
@@ -107,26 +121,15 @@ func (u *UI) refreshResultInfo() {
 	s := u.currentStore()
 	if s != nil {
 		title += " · " + fmt.Sprintf(u.tr("set %d/%d · %d received rows"), t.SelectedSet+1, len(t.Results), s.Count())
+		if t.CopyAnchor > 0 {
+			row, _ := u.table.GetSelection()
+			first, last := min(t.CopyAnchor, row), max(t.CopyAnchor, row)
+			title += " · " + fmt.Sprintf(u.tr("Selected %d rows (%d–%d) · Ctrl+C copy selection · v clear"), last-first+1, first, last)
+		} else if t.SortDescription != "" {
+			title += " · " + t.SortDescription
+		}
 	}
 	u.table.SetTitle(" " + title + " ")
-	if s == nil {
-		u.resultDetail.SetText(u.tr("No received rows"))
-		return
-	}
-	row, col := u.table.GetSelection()
-	_, offset := u.table.GetOffset()
-	name := ""
-	if col >= 0 && col < len(s.Columns) {
-		name = s.Columns[col]
-	}
-	order := t.SortDescription
-	if order == "" {
-		order = u.tr("server order")
-	}
-	u.resultDetail.SetText(fmt.Sprintf(u.tr("Row %d/%d │ Column %d/%d: %s │ Scroll %d/%d │ %s"), row, s.Count(), col+1, len(s.Columns), name, offset+1, len(s.Columns), order))
-	if t.CopyAnchor > 0 {
-		u.resultDetail.SetText(fmt.Sprintf(u.tr("Selected %d rows (%d–%d) · Ctrl+C copy selection · v clear"), max(t.CopyAnchor, row)-min(t.CopyAnchor, row)+1, min(t.CopyAnchor, row), max(t.CopyAnchor, row)))
-	}
 }
 
 func (u *UI) cancelOperation() {

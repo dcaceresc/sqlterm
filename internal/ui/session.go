@@ -2,7 +2,6 @@ package ui
 
 import (
 	"context"
-	"fmt"
 	"github.com/rivo/tview"
 	"sqlterm/internal/config"
 	"sqlterm/internal/db"
@@ -388,7 +387,7 @@ func (u *UI) run(t *Tab, sqlText string, work func(context.Context, func(db.Even
 				t.Messages = append(t.Messages, err.Error())
 			}
 			if err == nil {
-				t.Status = fmt.Sprintf(u.tr("Complete in %s · %d result sets"), elapsed.Round(time.Millisecond), len(t.Results))
+				t.Status = "Completed"
 				for _, f := range after {
 					f()
 				}

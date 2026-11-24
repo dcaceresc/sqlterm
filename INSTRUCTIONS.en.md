@@ -152,15 +152,15 @@ Selection follows native Neovim behavior: `v` includes the current character and
 
 In Windows Terminal, the updated backend uses bracketed paste. When the terminal intercepts Ctrl+V, the paste arrives as literal text rather than Vim commands and does not enter INSERT from NORMAL. When Ctrl+V reaches Neovim as a regular keystroke, it retains its native visual block selection behavior. SQL execution does not support block selections: it displays an error rather than running the entire document.
 
-SQLTerm's global shortcuts (F1–F10, Ctrl+S, Ctrl+Shift+S, Ctrl+O, Ctrl+C, Ctrl+N, Alt+Z) take precedence. With the editor in NORMAL mode, Space opens the hierarchical menu. Press the group and action keys, or Esc to close it. In INSERT, Space still types a space. F11 and Ctrl+P no longer open actions; Ctrl+P keeps its native and IntelliSense navigation behavior. Neovim interprets other editor commands. The session is isolated from your configuration, but Neovim is not a sandbox: its Ex commands are real commands.
+SQLTerm's global shortcuts (F1–F10, Ctrl+S, Ctrl+Shift+S, Ctrl+O, Ctrl+C, Ctrl+N, Alt+Z) take precedence. With the editor in NORMAL mode, Space opens the hierarchical menu. Press the group and action keys, or Esc to close it. In INSERT, Space still types a space. F11 and Ctrl+P no longer open actions; Ctrl+P keeps its native and IntelliSense navigation behavior. Neovim interprets other editor commands. The session is isolated from your configuration, but the embedded editor is not a sandbox.
 
 If `nvim` is missing, startup fails with an error rather than silently falling back to the emulated editor. If the child process exits, SQLTerm keeps the last confirmed text and blocks saving or running stale data. Text-loading errors do not change the file path or saved state.
 
-**Alt+Z** toggles visual line wrapping without changing the contents. The status bar still shows the actual line and column. The command palette can show or hide line numbers. These preferences are saved and apply to all tabs.
+**Alt+Z** toggles visual line wrapping without changing the contents. The bottom bar shows the editor mode and, after a query starts, the execution time. Notices appear beside the editor mode without replacing the shortcut hints. The command palette can show or hide line numbers. These preferences are saved and apply to all tabs.
 
 Highlighting distinguishes reserved words, strings, and numbers. Identifier delimiters are not highlighted as strings. Rendering respects the selection and line wrapping without changing SQL or undo history.
 
-Ex commands go to Neovim except for standalone quit commands such as `:q` / `:quit` and `:qa` / `:qall`, which SQLTerm handles. Appending `!` to these commands does not bypass SQLTerm checks.
+The embedded editor does not open the Ex command line with `:`. In INSERT mode, `:` is typed normally; searching with `/` or `?` still works. Use **F1** for help, **Space b d** to close the tab, and **Space q q** to quit.
 
 ### Selection and execution
 
@@ -375,8 +375,8 @@ The cursor shape tries to switch from a block in NORMAL and VISUAL to a bar in I
 | Ctrl+O / Ctrl+S / Ctrl+N | Open / save / new tab |
 | Ctrl+Shift+S | Save as |
 | Ctrl+C | Copy selection or open copy menu |
-| `:q` / `:quit` or Space b d | Close the current tab (confirm if there are unsaved changes) |
-| `:qa` / `:qall` or Space q q | Quit and preserve drafts |
+| Space b d | Close the current tab (confirm if there are unsaved changes) |
+| Space q q | Quit and preserve drafts |
 | `Shift+H` / `Shift+L` in NORMAL | Previous / next tab (wraps at either end) |
 
 ### Space menu

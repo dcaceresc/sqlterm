@@ -152,15 +152,15 @@ La selección sigue la semántica nativa de Neovim: `v` incluye el carácter act
 
 En Windows Terminal, el backend actualizado usa pegado delimitado: Ctrl+V interceptado por la terminal llega como texto literal, no como comandos Vim, y no activa INSERT desde NORMAL. Cuando Ctrl+V llega como una tecla normal a Neovim, conserva su significado nativo de selección visual por bloques. La ejecución SQL no admite selecciones por bloques: muestra un error en lugar de ejecutar el documento completo.
 
-Los atajos globales de SQLTerm (F1–F10, Ctrl+S, Ctrl+Shift+S, Ctrl+O, Ctrl+C, Ctrl+N, Alt+Z) mantienen prioridad. Con el editor en modo NORMAL, Espacio abre el menú jerárquico; pulsa las letras del grupo y la acción, o Esc para cerrar. En INSERT, Espacio sigue escribiendo espacios. F11 y Ctrl+P ya no abren acciones; Ctrl+P conserva su función nativa y de navegación en IntelliSense. Los demás comandos del editor los interpreta Neovim. La sesión está aislada de tu configuración, pero Neovim no es un sandbox: sus comandos Ex siguen siendo comandos reales.
+Los atajos globales de SQLTerm (F1–F10, Ctrl+S, Ctrl+Shift+S, Ctrl+O, Ctrl+C, Ctrl+N, Alt+Z) mantienen prioridad. Con el editor en modo NORMAL, Espacio abre el menú jerárquico; pulsa las letras del grupo y la acción, o Esc para cerrar. En INSERT, Espacio sigue escribiendo espacios. F11 y Ctrl+P ya no abren acciones; Ctrl+P conserva su función nativa y de navegación en IntelliSense. Los demás comandos del editor los interpreta Neovim. La sesión está aislada de tu configuración, pero el editor integrado no es un sandbox.
 
 Si falta `nvim`, el inicio falla con un error; no se sustituye silenciosamente por el editor emulado. Si el hijo termina, se conserva el último texto confirmado y se bloquean guardado y ejecución desde datos obsoletos. Los errores al cargar texto no cambian la ruta ni el estado de guardado.
 
-**Alt+Z** activa o desactiva el ajuste visual de línea sin modificar el contenido. La barra de estado conserva la línea y columna reales. La paleta permite mostrar u ocultar los números de línea. Estas preferencias se guardan y se aplican a todas las pestañas.
+**Alt+Z** activa o desactiva el ajuste visual de línea sin modificar el contenido. La barra inferior muestra el modo del editor y, después de iniciar una consulta, el tiempo de ejecución. Los avisos aparecen junto al modo del editor sin reemplazar los atajos de ayuda. La paleta permite mostrar u ocultar los números de línea. Estas preferencias se guardan y se aplican a todas las pestañas.
 
 El resaltado distingue palabras reservadas, cadenas y números. Los delimitadores de identificadores no se colorean como cadenas. El dibujo respeta la selección y el ajuste de línea, y no modifica el SQL ni el historial de deshacer.
 
-Los comandos Ex se envían a Neovim salvo los comandos de salida simples, como `:q` / `:quit` y `:qa` / `:qall`, que gestiona SQLTerm. Añadir `!` a estos comandos no omite las comprobaciones de SQLTerm.
+El editor integrado no abre la línea de comandos Ex con `:`. En INSERT, `:` se escribe normalmente; la búsqueda con `/` o `?` sigue disponible. Usa **F1** para la ayuda, **Espacio b d** para cerrar la pestaña y **Espacio q q** para salir.
 
 ### Selección y ejecución
 
@@ -375,8 +375,8 @@ La forma del cursor intenta cambiar de bloque en NORMAL y VISUAL a barra en INSE
 | Ctrl+O / Ctrl+S / Ctrl+N | Abrir / guardar / nueva pestaña |
 | Ctrl+Shift+S | Guardar como |
 | Ctrl+C | Copiar selección o abrir menú |
-| `:q` / `:quit` o Espacio b d | Cerrar la pestaña actual (confirma si hay cambios sin guardar) |
-| `:qa` / `:qall` o Espacio q q | Salir y conservar los borradores |
+| Espacio b d | Cerrar la pestaña actual (confirma si hay cambios sin guardar) |
+| Espacio q q | Salir y conservar los borradores |
 | `Shift+H` / `Shift+L` en NORMAL | Pestaña anterior / siguiente (navegación circular) |
 
 ### Menú de Espacio

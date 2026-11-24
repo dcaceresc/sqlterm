@@ -32,19 +32,18 @@ func clipColumns(text string, width int) string {
 	return b.String()
 }
 
-// A lualine-style mode block, context section and right-aligned SQL position.
-// Only the middle section is shortened when space is limited.
-func modeStatus(p Palette, mode, file, connection, state string, row, column, width int) string {
-	badge := " " + mode + " "
-	badge = clipColumns(badge, width)
+// El mensaje usa el espacio entre el modo y el tiempo de ejecución.
+func modeStatus(p Palette, mode, message, elapsed string, width int) string {
+	badge := clipColumns(" "+mode+" ", width)
 	remaining := max(0, width-uniseg.StringWidth(badge))
-	right := clipColumns(fmt.Sprintf(" SQL  %d:%d ", row, column), remaining)
-	middleWidth := max(0, remaining-uniseg.StringWidth(right))
-	middle := fmt.Sprintf(" %s │ %s │ %s", file, connection, state)
-	middle = strings.NewReplacer("\r", " ", "\n", " ", "\t", " ").Replace(middle)
-	middle = clipColumns(middle, middleWidth)
-	padding := max(0, middleWidth-uniseg.StringWidth(middle))
-	return fmt.Sprintf("[%s:%s:b]%s[%s:%s:-]%s%s[%s:%s:b]%s[-:-:-]", colorTag(p.Background), colorTag(p.ModeColor(mode)), tview.Escape(badge), colorTag(p.Foreground), colorTag(p.Surface), tview.Escape(middle), strings.Repeat(" ", padding), colorTag(p.Foreground), colorTag(p.Border), tview.Escape(right))
+	right := ""
+	if elapsed != "" {
+		right = clipColumns(" "+elapsed+" ", remaining)
+	}
+	messageWidth := remaining - uniseg.StringWidth(right)
+	message = clipColumns(" "+headerSingleLine.Replace(message), messageWidth)
+	padding := strings.Repeat(" ", messageWidth-uniseg.StringWidth(message))
+	return fmt.Sprintf("[%s:%s:b]%s[%s:%s:-]%s[%s:%s:b]%s[-:-:-]", colorTag(p.Background), colorTag(p.ModeColor(mode)), tview.Escape(badge), colorTag(p.Foreground), colorTag(p.Surface), tview.Escape(message)+padding, colorTag(p.Foreground), colorTag(p.Border), tview.Escape(right))
 }
 func (u *UI) refreshModeBorders() {
 	for i, t := range u.tabs {

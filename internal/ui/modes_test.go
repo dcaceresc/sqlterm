@@ -7,6 +7,7 @@ import (
 	"sqlterm/internal/config"
 	"strings"
 	"testing"
+	"time"
 )
 
 type cursorScreen struct {
@@ -115,32 +116,38 @@ func TestModeAppearanceFollowsFocusTabAndTheme(t *testing.T) {
 		t.Fatal("switching tabs lost insert appearance")
 	}
 }
-func TestModeStatusFitsWidthAndPreservesPosition(t *testing.T) {
-	p := resolveTheme("tokyo-night")
-	for _, width := range []int{1, 8, 24, 40, 80, 120} {
-		status := modeStatus(p, "INSERT", "客户报告[2026].sql", "PROD/长名称 / production", "query failed\nsecond line", 12, 34, width)
-		if got := tview.TaggedStringWidth(status); got != width {
-			t.Fatalf("status width %d, want %d", got, width)
-		}
-		if strings.Contains(status, "\n") {
-			t.Fatal("status contains newline")
-		}
-		if width >= 24 && !strings.Contains(status, "12:34") {
-			t.Fatal("cursor position clipped instead of context")
-		}
-	}
-	u, s := modeTestUI(t)
-	u.active().Editor.SetText("SELECT 1;\nSELECT 2;")
-	u.app.ForceDraw() // Lay out the text before positioning a cursor on line two.
-	u.active().Editor.Area.Select(12, 12)
+func TestModeStatusShowsMessageAndExecutionTime(t *testing.T) {
+	u, screen := modeTestUI(t)
+	tab := u.active()
+	tab.Profile.Folder, tab.Profile.Name, tab.Profile.Database = "DEV", "test-profile", "test-database"
+	tab.Editor.SetText("SELECT 1;")
+	u.message("query failed")
 	for _, width := range []int{80, 120} {
-		s.SetSize(width, 35)
-		u.app.ForceDraw()
-		if got := tview.TaggedStringWidth(u.status.GetText(false)); got != width {
-			t.Fatalf("resized status width %d want %d", got, width)
-		}
-		if !strings.Contains(u.status.GetText(true), "2:3") {
-			t.Fatalf("position did not update with cursor: %q", u.status.GetText(true))
+		screen.SetSize(width, 35)
+		for _, state := range []struct {
+			execution *execution
+			want      string
+		}{
+			{nil, "NORMAL query failed"},
+			{&execution{Phase: "Paused", Started: time.Now().Add(-3 * time.Second), pausedFor: 250 * time.Millisecond}, "NORMAL query failed 250ms"},
+			{&execution{Phase: "Completed", Duration: 1200 * time.Millisecond}, "NORMAL query failed 1.2s"},
+		} {
+			tab.Execution = state.execution
+			u.app.ForceDraw()
+			if got := tview.TaggedStringWidth(u.status.GetText(false)); got != width {
+				t.Errorf("status width = %d, want %d", got, width)
+			}
+			if got := strings.Join(strings.Fields(u.status.GetText(true)), " "); got != state.want {
+				t.Errorf("status = %q, want %q", got, state.want)
+			}
+			text := screenText(screen)
+			lines := strings.Split(text, "\n")
+			if !strings.Contains(strings.ToLower(lines[34]), "f1 help") || !strings.Contains(strings.ToLower(lines[34]), "f2 connect") {
+				t.Error("help keys no longer visible in the bottom row")
+			}
+			if strings.Contains(lines[32], "query failed") {
+				t.Error("operation message appears on a separate row")
+			}
 		}
 	}
 }
