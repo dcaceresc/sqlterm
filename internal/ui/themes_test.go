@@ -71,7 +71,7 @@ func TestThemePreviewCancelAndSavePreserveWorkspace(t *testing.T) {
 }
 func currentThemeList(u *UI) *tview.List {
 	_, page := u.pages.GetFrontPage()
-	return page.(*centered).child.(*tview.List)
+	return page.(*centered).child.(*tview.Flex).GetItem(1).(*tview.List)
 }
 func TestThemeSaveFailureCanBeCanceled(t *testing.T) {
 	block := filepath.Join(t.TempDir(), "file")
@@ -131,6 +131,57 @@ func TestAllThemesRenderConnectionsAndMaskedPassword(t *testing.T) {
 		u.dismiss()
 	}
 }
+func TestThemePickerShowsHighlightedSQLSample(t *testing.T) {
+	u, s := modeTestUI(t)
+	s.SetSize(80, 24)
+	u.active().Editor.SetText("SELECT 1;")
+	dispatchSelector(u, tcell.KeyF3, 0)
+	const sample = "SELECT 'hola', 42;"
+	check := func(p Palette) {
+		t.Helper()
+		u.app.ForceDraw()
+		for y := range 24 {
+			var line [80]rune
+			for x := range line {
+				line[x], _, _, _ = s.GetContent(x, y)
+			}
+			prefix, _, found := strings.Cut(string(line[:]), sample)
+			if !found {
+				continue
+			}
+			for _, token := range []struct {
+				offset int
+				color  tcell.Color
+			}{{0, p.Syntax.Keyword}, {7, p.Syntax.String}, {15, p.Syntax.Number}} {
+				x := len([]rune(prefix)) + token.offset
+				_, _, style, _ := s.GetContent(x, y)
+				fg, bg, _ := style.Decompose()
+				if fg != token.color || bg != p.Background {
+					t.Errorf("%s: wrong colors for %q at offset %d", p.ID, sample, token.offset)
+				}
+			}
+			return
+		}
+		t.Fatalf("%s: SQL sample not visible at 80x24", p.ID)
+	}
+	check(resolveTheme("tokyo-night"))
+	dispatchSelector(u, tcell.KeyRune, '/')
+	for _, r := range "mocha" {
+		dispatchSelector(u, tcell.KeyRune, r)
+	}
+	check(resolveTheme("catppuccin-mocha"))
+	if u.active().Editor.Area.GetText() != "SELECT 1;" || u.cfg.Theme != "" {
+		t.Fatal("preview changed editor SQL or saved theme")
+	}
+	for _, r := range "zzzz" {
+		dispatchSelector(u, tcell.KeyRune, r)
+	}
+	u.app.ForceDraw()
+	if strings.Contains(screenText(s), sample) {
+		t.Fatal("SQL sample remained visible without a matching theme")
+	}
+}
+
 func TestThemeListTextUsesPaletteBackground(t *testing.T) {
 	u := New(filepath.Join(t.TempDir(), "config.json"), config.Config{})
 	defer u.cancel()

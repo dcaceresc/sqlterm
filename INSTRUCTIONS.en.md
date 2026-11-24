@@ -349,9 +349,11 @@ The top bar shows the environment, connection, database, and status. PROD stands
 
 ### Themes
 
-**F3** or **Space u C** opens the theme picker. **Space c t** is still reserved for the procedure template. The arrow keys preview themes, **Enter** saves, and **Esc** restores the previous theme.
+**F3** or **Space u C** opens the theme picker. **Space c t** is still reserved for the procedure template. The arrow keys preview themes and **Enter** saves. The picker shows a sample query in the highlighted theme's colors without running it or changing the editor. Closing without saving restores the previous theme.
 
-Themes include Tokyo Night, Rosé Pine, Nord, Gruvbox, Light, and Classic. A theme changes panes, the editor, results, forms, and dialogs without disconnecting or replacing SQL. The selection persists. The JSON field `theme` accepts `tokyo-night`, `rose-pine`, `nord`, `gruvbox`, `light`, or `classic`; an unknown value falls back to Tokyo Night.
+**F2**, **F3**, and **F4** open with the list focused. Press **/** to filter; **Enter** picks the highlighted item. **Esc** from search clears the filter and returns to the list; from the list it closes the picker.
+
+Themes include Tokyo Night, Rosé Pine, Nord, Gruvbox, Light, Classic, Dracula, Solarized Light, Catppuccin Mocha, and Everforest. A theme changes panes, the editor, results, forms, and dialogs without disconnecting or replacing SQL. The selection persists. The JSON field `theme` accepts `tokyo-night`, `rose-pine`, `nord`, `gruvbox`, `light`, `classic`, `dracula`, `solarized-light`, `catppuccin-mocha`, or `everforest`; an unknown value falls back to Tokyo Night.
 
 The cursor shape tries to switch from a block in NORMAL and VISUAL to a bar in INSERT, depending on terminal support. The mode indicator and border remain visible. No icons or special font are required.
 

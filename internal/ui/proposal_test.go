@@ -427,11 +427,12 @@ func TestSearchableSelectorsAndContextHelp(t *testing.T) {
 	u.cfg.Profiles = []config.Profile{{Name: "Academia DEV", Folder: "DEV", Engine: "sqlserver", Host: "dev-host", User: "user", Database: "Academia", CredentialID: "private-secret-reference"}, {Name: "Reports PROD", Folder: "PROD", Engine: "postgres", Host: "prod-host", User: "user"}}
 	u.chooseConnection()
 	panel := u.dialogContent.(*tview.Flex)
-	search := panel.GetItem(0).(*tview.InputField)
+	search := panel.GetItem(0).(*selectorSearch)
 	tree := panel.GetItem(1).(*tview.TreeView)
-	if !search.HasFocus() {
-		t.Fatal("connection search must have initial focus")
+	if !tree.HasFocus() {
+		t.Fatal("connection tree must have initial focus")
 	}
+	dispatchSelector(u, tcell.KeyRune, '/')
 	search.SetText("prod")
 	u.app.ForceDraw()
 	ref := tree.GetCurrentNode().GetReference().(connectionRef)

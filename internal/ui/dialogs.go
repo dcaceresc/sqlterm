@@ -26,7 +26,9 @@ func (u *UI) popup(p tview.Primitive, width, height int) {
 	frame := &centered{Flex: tview.NewFlex().AddItem(nil, 0, 1, false).AddItem(inner, width, 0, true).AddItem(nil, 0, 1, false), inner: inner, child: p, width: width, height: height}
 	frame.SetInputCapture(func(k *tcell.EventKey) *tcell.EventKey {
 		if k.Key() == tcell.KeyEscape {
-			u.dismiss()
+			if !u.clearSelectorSearch() {
+				u.dismiss()
+			}
 			return nil
 		}
 		return k

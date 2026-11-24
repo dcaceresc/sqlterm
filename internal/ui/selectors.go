@@ -9,10 +9,60 @@ import (
 	"sqlterm/internal/config"
 )
 
+type selectorSearch struct {
+	*tview.InputField
+	results tview.Primitive
+}
+
+func newSelectorSearch(label string, results tview.Primitive) *selectorSearch {
+	return &selectorSearch{InputField: tview.NewInputField().SetLabel(label), results: results}
+}
+
+func (s *selectorSearch) MouseHandler() func(tview.MouseAction, *tcell.EventMouse, func(tview.Primitive)) (bool, tview.Primitive) {
+	return func(action tview.MouseAction, event *tcell.EventMouse, focus func(tview.Primitive)) (bool, tview.Primitive) {
+		return s.InputField.MouseHandler()(action, event, func(p tview.Primitive) {
+			if p == s.InputField {
+				p = s
+			}
+			focus(p)
+		})
+	}
+}
+
+func (u *UI) clearSelectorSearch() bool {
+	search, ok := u.app.GetFocus().(*selectorSearch)
+	if !ok {
+		return false
+	}
+	search.SetText("")
+	u.app.SetFocus(search.results)
+	return true
+}
+
+func (s *selectorSearch) key(u *UI, k *tcell.EventKey, hasResult bool) *tcell.EventKey {
+	if s.HasFocus() {
+		switch k.Key() {
+		case tcell.KeyDown, tcell.KeyTab, tcell.KeyBacktab:
+			u.app.SetFocus(s.results)
+			return nil
+		case tcell.KeyEnter:
+			if hasResult {
+				u.app.SetFocus(s.results)
+				s.results.InputHandler()(k, func(p tview.Primitive) { u.app.SetFocus(p) })
+			}
+			return nil
+		}
+	} else if k.Key() == tcell.KeyRune && k.Rune() == '/' {
+		u.app.SetFocus(s)
+		return nil
+	}
+	return k
+}
+
 func (u *UI) databaseSelector(t *Tab, names []string) {
-	search := tview.NewInputField().SetLabel(u.tr("Find database: "))
 	list := tview.NewList().ShowSecondaryText(false)
-	list.SetBorder(true).SetTitle(u.tr(" Change database · Enter reconnect "))
+	list.SetBorder(true).SetTitle(u.tr(" Change database · / search · Enter reconnect "))
+	search := newSelectorSearch(u.tr("Find database: "), list)
 	detail := tview.NewTextView().SetWrap(true)
 	filtered := []string{}
 	update := func(i int) {
@@ -43,17 +93,9 @@ func (u *UI) databaseSelector(t *Tab, names []string) {
 	}
 	search.SetChangedFunc(rebuild)
 	rebuild("")
-	panel := tview.NewFlex().SetDirection(tview.FlexRow).AddItem(search, 1, 0, true).AddItem(list, 0, 1, false).AddItem(detail, 4, 0, false)
+	panel := tview.NewFlex().SetDirection(tview.FlexRow).AddItem(search, 1, 0, false).AddItem(list, 0, 1, true).AddItem(detail, 4, 0, false)
 	panel.SetInputCapture(func(k *tcell.EventKey) *tcell.EventKey {
-		if search.HasFocus() && (k.Key() == tcell.KeyEnter || k.Key() == tcell.KeyDown || k.Key() == tcell.KeyTab) {
-			u.app.SetFocus(list)
-			return nil
-		}
-		if list.HasFocus() && (k.Key() == tcell.KeyBacktab || k.Key() == tcell.KeyTab || (k.Key() == tcell.KeyRune && k.Rune() == '/')) {
-			u.app.SetFocus(search)
-			return nil
-		}
-		return k
+		return search.key(u, k, len(filtered) > 0)
 	})
 	u.popup(panel, 90, 24)
 }

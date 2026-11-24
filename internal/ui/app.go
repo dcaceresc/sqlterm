@@ -442,6 +442,9 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 	if u.dialogContent != nil {
 		switch k.Key() {
 		case tcell.KeyCtrlC, tcell.KeyEscape:
+			if k.Key() == tcell.KeyEscape && u.clearSelectorSearch() {
+				return nil
+			}
 			wasCopy := u.copyPopup != nil
 			u.dismiss()
 			if wasCopy {

@@ -41,7 +41,7 @@ func TestSelectorDialogsDismissAndReopen(t *testing.T) {
 				u.app.QueueUpdateDraw(func() {
 					previous = u.dialogContent
 					if selector == tcell.KeyF3 {
-						u.dialogContent.(*tview.List).SetCurrentItem(1)
+						currentThemeList(u).SetCurrentItem(1)
 						if u.palette.ID == original {
 							t.Error("theme preview fixture did not change theme")
 						}

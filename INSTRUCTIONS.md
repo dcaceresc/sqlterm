@@ -349,9 +349,11 @@ La barra superior muestra entorno, conexión, base y estado. PROD se destaca con
 
 ### Temas
 
-**F3** o **Espacio u C** abre el selector de temas. **Espacio c t** sigue reservado para la plantilla de procedimientos. Las flechas muestran una vista previa, **Enter** guarda y **Esc** restaura el tema anterior.
+**F3** o **Espacio u C** abre el selector de temas. **Espacio c t** sigue reservado para la plantilla de procedimientos. Las flechas muestran una vista previa y **Enter** guarda. El selector muestra una consulta de ejemplo con los colores del tema resaltado, sin ejecutarla ni modificar el editor. Cerrar sin guardar restaura el tema anterior.
 
-Se incluyen Tokyo Night, Rosé Pine, Nord, Gruvbox, Light y Classic. El tema cambia paneles, editor, resultados, formularios y diálogos sin desconectar ni reemplazar SQL. La elección persiste. El campo JSON `theme` acepta `tokyo-night`, `rose-pine`, `nord`, `gruvbox`, `light` o `classic`; un valor desconocido usa Tokyo Night.
+**F2**, **F3** y **F4** abren con el foco en la lista. Pulsa **/** para filtrar; **Enter** elige el elemento resaltado. **Esc** desde la búsqueda limpia el filtro y vuelve a la lista; desde la lista cierra el selector.
+
+Se incluyen Tokyo Night, Rosé Pine, Nord, Gruvbox, Light, Classic, Dracula, Solarized Light, Catppuccin Mocha y Everforest. El tema cambia paneles, editor, resultados, formularios y diálogos sin desconectar ni reemplazar SQL. La elección persiste. El campo JSON `theme` acepta `tokyo-night`, `rose-pine`, `nord`, `gruvbox`, `light`, `classic`, `dracula`, `solarized-light`, `catppuccin-mocha` o `everforest`; un valor desconocido usa Tokyo Night.
 
 La forma del cursor intenta cambiar de bloque en NORMAL y VISUAL a barra en INSERT, pero depende del soporte del terminal. El indicador de modo y el borde permanecen visibles. No se requieren iconos ni una fuente especial.
 

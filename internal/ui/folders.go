@@ -103,8 +103,9 @@ func connectionRoot(c config.Config, filter string) *tview.TreeNode {
 }
 func (u *UI) connectionBrowser() {
 	tree := tview.NewTreeView()
-	tree.SetBorder(true).SetTitle(u.tr(" Connections · Enter connect / expand "))
-	search := tview.NewInputField().SetLabel(u.tr("Find: "))
+	tree.SetBorder(true).SetTitle(u.tr(" Connections · / search · Enter connect / expand "))
+	search := newSelectorSearch(u.tr("Find: "), tree)
+	var hasMatches bool
 	details := tview.NewTextView().SetWrap(true)
 	details.SetBorder(true).SetTitle(u.tr(" Selected connection "))
 	preferredIndex := -1
@@ -112,17 +113,18 @@ func (u *UI) connectionBrowser() {
 		target := u.connectionFolder
 		root := connectionRoot(u.cfg, filter)
 		tree.SetRoot(root).SetCurrentNode(root)
-		if filter != "" {
-			var first *tview.TreeNode
-			root.Walk(func(n, parent *tview.TreeNode) bool {
-				if ref, ok := n.GetReference().(connectionRef); ok && !ref.FolderNode && first == nil {
-					first = n
-				}
-				return true
-			})
-			if first != nil {
-				tree.SetCurrentNode(first)
+		var first *tview.TreeNode
+		root.Walk(func(n, parent *tview.TreeNode) bool {
+			if ref, ok := n.GetReference().(connectionRef); ok && !ref.FolderNode && first == nil {
+				first = n
 			}
+			return true
+		})
+		hasMatches = first != nil
+		if first != nil {
+			tree.SetCurrentNode(first)
+		} else if filter != "" {
+			details.SetText(u.tr("No matching connections"))
 		}
 		if filter == "" {
 			hasFavorites := false
@@ -272,15 +274,14 @@ func (u *UI) connectionBrowser() {
 	}
 	buttons := tview.NewForm().SetHorizontal(true).AddButton(u.tr("+ Add profile"), add).AddButton(u.tr("New folder"), newFolder).AddButton(u.tr("Edit profile"), edit).AddButton("★ "+u.tr("Favorite"), favorite)
 	buttons.SetBorderPadding(0, 0, 0, 0)
-	panel := tview.NewFlex().SetDirection(tview.FlexRow).AddItem(search, 1, 0, true).AddItem(tree, 0, 1, false).AddItem(details, 5, 0, false).AddItem(buttons, 3, 0, false)
+	panel := tview.NewFlex().SetDirection(tview.FlexRow).AddItem(search, 1, 0, false).AddItem(tree, 0, 1, true).AddItem(details, 5, 0, false).AddItem(buttons, 3, 0, false)
 	panel.SetInputCapture(func(k *tcell.EventKey) *tcell.EventKey {
-		focus := u.app.GetFocus()
-		if focus == search {
-			if k.Key() == tcell.KeyEnter || k.Key() == tcell.KeyTab {
-				u.app.SetFocus(tree)
-				return nil
-			}
+		wasSearching := search.HasFocus()
+		if k = search.key(u, k, hasMatches || search.GetText() == ""); k == nil || wasSearching {
 			return k
+		}
+		if k.Key() == tcell.KeyEnter && tree.HasFocus() && search.GetText() != "" && !hasMatches {
+			return nil
 		}
 		if k.Key() == tcell.KeyTab {
 			if tree.HasFocus() {
@@ -288,17 +289,13 @@ func (u *UI) connectionBrowser() {
 				return nil
 			}
 			if _, i := buttons.GetFocusedItemIndex(); i == buttons.GetButtonCount()-1 {
-				u.app.SetFocus(search)
+				u.app.SetFocus(tree)
 				return nil
 			}
 			return k
 		}
 		if k.Key() == tcell.KeyBacktab {
-			if tree.HasFocus() {
-				u.app.SetFocus(search)
-				return nil
-			}
-			if _, i := buttons.GetFocusedItemIndex(); i == 0 {
+			if _, i := buttons.GetFocusedItemIndex(); !tree.HasFocus() && i == 0 {
 				u.app.SetFocus(tree)
 				return nil
 			}
@@ -325,9 +322,6 @@ func (u *UI) connectionBrowser() {
 				return nil
 			case 'd':
 				remove()
-				return nil
-			case '/':
-				u.app.SetFocus(search)
 				return nil
 			}
 		}

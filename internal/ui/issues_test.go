@@ -82,7 +82,7 @@ func TestFavoritesSectionIsFirstAcrossFoldersAndPersists(t *testing.T) {
 	u.cfg.Profiles = []config.Profile{{Name: "Same", Folder: "DEV", Engine: "sqlserver", Host: "dev-host", User: "u", CredentialID: "dev-id"}, {Name: "Same", Folder: "PROD", Engine: "postgres", Host: "prod-host", User: "u", CredentialID: "prod-id"}}
 	u.chooseConnection()
 	panel := u.dialogContent.(*tview.Flex)
-	search := panel.GetItem(0).(*tview.InputField)
+	search := panel.GetItem(0).(*selectorSearch)
 	tree := panel.GetItem(1).(*tview.TreeView)
 	buttons := panel.GetItem(3).(*tview.Form)
 	search.SetText("prod-host")

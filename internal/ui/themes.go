@@ -2,6 +2,8 @@ package ui
 
 import (
 	"fmt"
+	"strings"
+
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
 	"sqlterm/internal/config"
@@ -29,6 +31,14 @@ func palette(id, name, bg, surface, fg, muted, accent, border, selection, select
 		insert, visual = "#38761d", "#7b2cbf"
 	case "classic":
 		insert, visual = "#5fd787", "#af87ff"
+	case "dracula":
+		insert, visual = "#50fa7b", "#ff79c6"
+	case "solarized-light":
+		insert, visual = "#476400", "#574d9b"
+	case "catppuccin-mocha":
+		insert, visual = "#a6e3a1", "#cba6f7"
+	case "everforest":
+		insert, visual = "#a7c080", "#d699b6"
 	}
 	p.Insert = tcell.GetColor(insert)
 	p.Visual = tcell.GetColor(visual)
@@ -45,6 +55,14 @@ func palette(id, name, bg, surface, fg, muted, accent, border, selection, select
 		keyword, str, number = "#0000ff", "#a31515", "#098658"
 	case "classic":
 		keyword, str, number = "#569cd6", "#ce9178", "#b5cea8"
+	case "dracula":
+		keyword, str, number = "#ff79c6", "#f1fa8c", "#bd93f9"
+	case "solarized-light":
+		keyword, str, number = "#005f87", "#476400", "#9c3b00"
+	case "catppuccin-mocha":
+		keyword, str, number = "#cba6f7", "#a6e3a1", "#fab387"
+	case "everforest":
+		keyword, str, number = "#e67e80", "#a7c080", "#dbbc7f"
 	}
 	p.Syntax = editor.SyntaxColors{Keyword: tcell.GetColor(keyword), String: tcell.GetColor(str), Number: tcell.GetColor(number)}
 	return p
@@ -67,6 +85,10 @@ var palettes = []Palette{
 	palette("gruvbox", "Gruvbox", "#282828", "#3c3836", "#ebdbb2", "#a89984", "#fabd2f", "#665c54", "#504945", "#fbf1c7"),
 	palette("light", "Light", "#f5f5f5", "#e7e9ef", "#24283b", "#6c7086", "#34548a", "#b3b7c9", "#c4d7ef", "#1a1b26"),
 	palette("classic", "Classic", "#000000", "#121212", "#ffffff", "#999999", "#87ceeb", "#5f87af", "#87ceeb", "#000000"),
+	palette("dracula", "Dracula", "#282a36", "#343746", "#f8f8f2", "#a7b1d2", "#bd93f9", "#6272a4", "#44475a", "#f8f8f2"),
+	palette("solarized-light", "Solarized Light", "#fdf6e3", "#eee8d5", "#40545a", "#51666f", "#005f87", "#8a9797", "#c6dddd", "#263a42"),
+	palette("catppuccin-mocha", "Catppuccin Mocha", "#1e1e2e", "#313244", "#cdd6f4", "#a6adc8", "#89b4fa", "#6c7086", "#45475a", "#cdd6f4"),
+	palette("everforest", "Everforest", "#2d353b", "#374145", "#d3c6aa", "#a7ad9c", "#7fbbb3", "#6d7b75", "#475258", "#f0e2c3"),
 }
 
 func resolveTheme(id string) Palette {
@@ -146,6 +168,8 @@ func (u *UI) style(p tview.Primitive) {
 		u.style(w.TextArea)
 	case *tview.TextArea:
 		w.SetTextStyle(tcell.StyleDefault.Foreground(t.Foreground).Background(t.Background)).SetSelectedStyle(selected).SetPlaceholderStyle(tcell.StyleDefault.Foreground(t.Muted).Background(t.Background))
+	case *selectorSearch:
+		u.style(w.InputField)
 	case *tview.InputField:
 		w.SetLabelStyle(label).SetFieldStyle(normal).SetPlaceholderStyle(tcell.StyleDefault.Foreground(t.Muted).Background(t.Surface)).SetAutocompleteStyles(t.Surface, normal, selected)
 	case *tview.DropDown:
@@ -182,38 +206,67 @@ func (u *UI) chooseTheme() {
 	}
 	original := u.palette.ID
 	l := tview.NewList().ShowSecondaryText(false)
-	l.SetBorder(true).SetTitle(u.tr(" Themes · arrows preview · Enter save · Esc cancel "))
-	for _, p := range palettes {
-		choice := p
-		label := p.Name
-		if p.ID == original {
-			label += " · " + u.tr("Current")
+	l.SetBorder(true)
+	search := newSelectorSearch(u.tr("Find theme: "), l)
+	sample := tview.NewTextView().SetDynamicColors(true).SetScrollable(false).SetWrap(false)
+	var matches []Palette
+	preview := func(i int, _, _ string, _ rune) {
+		if i < 0 || i >= len(matches) {
+			l.SetTitle(u.tr(" Themes · No matches "))
+			sample.SetText("")
+			return
 		}
-		l.AddItem(label, "", 0, func() {
-			next := u.cfg
-			next.Theme = choice.ID
-			if err := config.Save(u.configPath, next); err != nil {
-				l.SetTitle(u.tr(" ") + err.Error() + " ")
-				return
+		p := matches[i]
+		if u.palette.ID != p.ID {
+			u.applyTheme(p.ID)
+		}
+		l.SetTitle(u.tr(" Themes · Preview: ") + p.Name + " · " + u.tr("/ search · Enter save") + " ")
+		sample.SetText(fmt.Sprintf(" %s [%s]SELECT[-] [%s]'hola'[-], [%s]42[-];",
+			u.tr("SQL sample:"), colorTag(p.Syntax.Keyword), colorTag(p.Syntax.String), colorTag(p.Syntax.Number)))
+	}
+	rebuild := func(filter string) {
+		l.SetChangedFunc(nil)
+		l.Clear()
+		matches = matches[:0]
+		selected := 0
+		for _, p := range palettes {
+			if !fuzzy(strings.ToLower(strings.TrimSpace(filter)), strings.ToLower(p.Name)) {
+				continue
 			}
-			u.cfg = next
-			u.applyTheme(choice.ID)
-			u.dialogCancel = nil
-			u.dismiss()
-		})
-	}
-	l.SetChangedFunc(func(i int, _ string, _ string, _ rune) {
-		if i >= 0 && i < len(palettes) {
-			u.applyTheme(palettes[i].ID)
-			l.SetTitle(u.tr(" Themes · Preview: ") + palettes[i].Name + " · " + u.tr("Enter save · Esc restore") + " ")
+			label := p.Name
+			if p.ID == original {
+				selected = len(matches)
+				label += " · " + u.tr("Current")
+			}
+			matches = append(matches, p)
+			l.AddItem(label, "", 0, func() {
+				next := u.cfg
+				next.Theme = p.ID
+				if err := config.Save(u.configPath, next); err != nil {
+					l.SetTitle(u.tr(" ") + err.Error() + " ")
+					return
+				}
+				u.cfg = next
+				u.applyTheme(p.ID)
+				u.dialogCancel = nil
+				u.dismiss()
+			})
 		}
+		if len(matches) > 0 {
+			l.SetCurrentItem(selected)
+		}
+		preview(selected, "", "", 0)
+		l.SetChangedFunc(preview)
+	}
+	search.SetChangedFunc(rebuild)
+	rebuild("")
+	panel := tview.NewFlex().SetDirection(tview.FlexRow).
+		AddItem(search, 1, 0, false).
+		AddItem(l, 0, 1, true).
+		AddItem(sample, 1, 0, false)
+	panel.SetInputCapture(func(k *tcell.EventKey) *tcell.EventKey {
+		return search.key(u, k, len(matches) > 0)
 	})
-	for i, p := range palettes {
-		if p.ID == original {
-			l.SetCurrentItem(i)
-			break
-		}
-	}
-	u.popup(l, 80, 18)
+	u.popup(panel, 80, 18)
 	u.dialogCancel = func() { u.applyTheme(original) }
 }
