@@ -124,6 +124,8 @@ Estas automatizaciones configuran cachés locales de Go bajo `.cache/build`, `.c
 
 **Espacio c t** genera una plantilla de procedimiento. Revísala y usa **Espacio c A** para aplicarla; una aplicación correcta actualiza el catálogo. Si guardas el archivo antes de aplicar, la comparación conserva como referencia la definición leída del servidor.
 
+En la barra superior, haz clic en el nombre de una pestaña para seleccionarla o en su **×** para cerrarla. El contexto de conexión queda a la derecha en la misma fila. Si falta espacio, la barra da prioridad a la pestaña activa y recorta el texto u oculta otras pestañas sin cerrarlas.
+
 Para consultas libres, **Ctrl+N** o **Espacio f n** crea otra pestaña con conexión independiente. **F5** ejecuta la selección o el documento completo. Solo se ejecuta una sentencia a la vez por pestaña, mientras que otras pestañas pueden trabajar en paralelo.
 
 ## Editor y archivos SQL
@@ -150,13 +152,15 @@ La selección sigue la semántica nativa de Neovim: `v` incluye el carácter act
 
 En Windows Terminal, el backend actualizado usa pegado delimitado: Ctrl+V interceptado por la terminal llega como texto literal, no como comandos Vim, y no activa INSERT desde NORMAL. Cuando Ctrl+V llega como una tecla normal a Neovim, conserva su significado nativo de selección visual por bloques. La ejecución SQL no admite selecciones por bloques: muestra un error en lugar de ejecutar el documento completo.
 
-Los atajos globales de SQLTerm (F1–F10, Ctrl+S, Ctrl+Shift+S, Ctrl+O, Ctrl+C, Ctrl+Q, Ctrl+N, Alt+Z) mantienen prioridad. Con el editor en modo NORMAL, Espacio abre el menú jerárquico; pulsa las letras del grupo y la acción, o Esc para cerrar. En INSERT, Espacio sigue escribiendo espacios. F11 y Ctrl+P ya no abren acciones; Ctrl+P conserva su función nativa y de navegación en IntelliSense. Los demás comandos del editor los interpreta Neovim. La sesión está aislada de tu configuración, pero Neovim no es un sandbox: sus comandos Ex siguen siendo comandos reales.
+Los atajos globales de SQLTerm (F1–F10, Ctrl+S, Ctrl+Shift+S, Ctrl+O, Ctrl+C, Ctrl+N, Alt+Z) mantienen prioridad. Con el editor en modo NORMAL, Espacio abre el menú jerárquico; pulsa las letras del grupo y la acción, o Esc para cerrar. En INSERT, Espacio sigue escribiendo espacios. F11 y Ctrl+P ya no abren acciones; Ctrl+P conserva su función nativa y de navegación en IntelliSense. Los demás comandos del editor los interpreta Neovim. La sesión está aislada de tu configuración, pero Neovim no es un sandbox: sus comandos Ex siguen siendo comandos reales.
 
 Si falta `nvim`, el inicio falla con un error; no se sustituye silenciosamente por el editor emulado. Si el hijo termina, se conserva el último texto confirmado y se bloquean guardado y ejecución desde datos obsoletos. Los errores al cargar texto no cambian la ruta ni el estado de guardado.
 
 **Alt+Z** activa o desactiva el ajuste visual de línea sin modificar el contenido. La barra de estado conserva la línea y columna reales. La paleta permite mostrar u ocultar los números de línea. Estas preferencias se guardan y se aplican a todas las pestañas.
 
 El resaltado distingue palabras reservadas, cadenas y números. Los delimitadores de identificadores no se colorean como cadenas. El dibujo respeta la selección y el ajuste de línea, y no modifica el SQL ni el historial de deshacer.
+
+Los comandos Ex se envían a Neovim salvo los comandos de salida simples, como `:q` / `:quit` y `:qa` / `:qall`, que gestiona SQLTerm. Añadir `!` a estos comandos no omite las comprobaciones de SQLTerm.
 
 ### Selección y ejecución
 
@@ -178,7 +182,7 @@ Al abrir un archivo SQL, los saltos CRLF de Windows se muestran como saltos norm
 
 El diálogo solicita confirmación antes de sobrescribir otro archivo. Cada guardado correcto recuerda la carpeta durante la sesión: el siguiente guardado como empieza allí y conserva el nombre de la pestaña, o propone `query.sql` para una pestaña nueva. La carpeta no se conserva entre sesiones. Si deja de existir, se usa la carpeta del archivo actual o el directorio de trabajo. El diálogo no crea carpetas.
 
-Cerrar una pestaña o reemplazar SQL solicita confirmación cuando existen cambios sin guardar. Al salir normalmente con **Ctrl+Q**, SQLTerm conserva las pestañas SQL y cuál estaba activa, sin guardar los archivos `.sql` ni restablecer conexiones. Los borradores siguen marcados como no guardados. El caché `<config>.workspace.json` queda junto a la configuración y contiene texto SQL, que puede incluir datos sensibles. El caché no se actualiza si se termina el proceso abruptamente. Las operaciones que generan una plantilla también confirman antes de reemplazar SQL modificado.
+Cerrar una pestaña o reemplazar SQL solicita confirmación cuando existen cambios sin guardar. Al salir normalmente con **Espacio q q**, SQLTerm conserva las pestañas SQL y cuál estaba activa, sin guardar los archivos `.sql` ni restablecer conexiones. Los borradores siguen marcados como no guardados. El caché `<config>.workspace.json` queda junto a la configuración y contiene texto SQL, que puede incluir datos sensibles. El caché no se actualiza si se termina el proceso abruptamente. Las operaciones que generan una plantilla también confirman antes de reemplazar SQL modificado.
 
 ### Copiar SQL
 
@@ -255,7 +259,7 @@ Actualizar el catálogo con **Espacio d r** permite encontrar objetos recién cr
 
 ### Comandos y estado
 
-**F5** ejecuta SQL, **F9** invoca una rutina y **F10** cancela la operación activa. Los resultados identifican consulta, destino, número de ejecución, hora, duración y estado. Si editas el SQL después, se indica que los resultados pertenecen a una versión anterior.
+**F5** ejecuta SQL, **F9** invoca una rutina y **F10** cancela la operación activa. El destino permanece en la barra superior. El encabezado de Resultados avisa si la lectura está en pausa, si quedaron filas parciales tras un error o una cancelación, o si las filas corresponden al SQL anterior.
 
 La paleta ofrece **Execution confirmations**:
 
@@ -370,8 +374,10 @@ La forma del cursor intenta cambiar de bloque en NORMAL y VISUAL a barra en INSE
 | `gcc` / `gc` con movimiento / `gc` en VISUAL | Alternar comentarios en la línea actual / rango / selección |
 | Ctrl+O / Ctrl+S / Ctrl+N | Abrir / guardar / nueva pestaña |
 | Ctrl+Shift+S | Guardar como |
-| Ctrl+C / Ctrl+Q | Copiar selección o abrir menú / salir |
-| Alt+1…9 | Cambiar de pestaña |
+| Ctrl+C | Copiar selección o abrir menú |
+| `:q` / `:quit` o Espacio b d | Cerrar la pestaña actual (confirma si hay cambios sin guardar) |
+| `:qa` / `:qall` o Espacio q q | Salir y conservar los borradores |
+| `Shift+H` / `Shift+L` en NORMAL | Pestaña anterior / siguiente (navegación circular) |
 
 ### Menú de Espacio
 

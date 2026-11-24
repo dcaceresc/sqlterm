@@ -18,6 +18,74 @@ import (
 	"sqlterm/internal/result"
 )
 
+func TestResultsLayout(t *testing.T) {
+	for _, labels := range []struct {
+		lang, results, count, paused, partial, stale string
+	}{
+		{"en", "Results", "set 1/1 · 1 received rows", "Paused", "Partial results", "Results of previous SQL"},
+		{"es", "Resultados", "conjunto 1/1 · 1 filas recibidas", "En pausa", "Resultados parciales", "Resultados del SQL anterior"},
+	} {
+		t.Run(labels.lang, func(t *testing.T) {
+			u, screen := modeTestUI(t)
+			u.cfg.Language = labels.lang
+			screen.SetSize(180, 40)
+			tab := u.active()
+			tab.Profile.Database = "DemoDatabase"
+			u.app.SetFocus(u.table)
+			check := func(title string) {
+				t.Helper()
+				u.app.ForceDraw()
+				text := screenText(screen)
+				x, top, width, _ := u.resultsHost.GetRect()
+				line := []rune(strings.Split(text, "\n")[top])
+				if got := strings.Trim(string(line[x:x+width]), "─┌┐═╔╗ "); got != title {
+					t.Errorf("first results line: got %q, want %q", got, title)
+				}
+				for _, obsolete := range []string{"#73", "14:30:00", "Destination above", "Destino en la barra superior", "visible rows", "filas visibles"} {
+					if strings.Contains(text, obsolete) {
+						t.Errorf("obsolete strip text still visible: %q", obsolete)
+					}
+				}
+				if !strings.Contains(strings.Split(text, "\n")[0], "DemoDatabase") {
+					t.Error("destination missing from top bar")
+				}
+			}
+			base := "> " + labels.results
+			check(base)
+			store, err := result.New([]string{"name"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			defer store.Close()
+			tab.Results = []*result.Store{store}
+			tab.Execution = &execution{ID: 73, Started: time.Date(2026, 11, 5, 14, 30, 0, 0, time.Local), Phase: "Error", EditorSQL: tab.Editor.Area.GetText()}
+			u.showResults()
+			check(base + " · " + strings.Replace(labels.count, "· 1 ", "· 0 ", 1))
+			if err := store.Append([]result.Cell{{Text: "received-value"}}); err != nil {
+				t.Fatal(err)
+			}
+			u.showResults()
+			count := " · " + labels.count
+			tab.Execution.Phase = "Completed"
+			check(base + count)
+			text := screenText(screen)
+			if !strings.Contains(text, "received-value") || !strings.Contains(text, u.tr("server order")) {
+				t.Error("missing table contents or row details")
+			}
+			tab.Execution.Phase = "Paused"
+			tab.Execution.Pause = &resultPause{Rows: 1}
+			check(base + " · " + labels.paused + count)
+			tab.Editor.SetText("SELECT 2")
+			check(base + " · " + labels.paused + " · " + labels.stale + count)
+			tab.Execution.Pause = nil
+			for _, phase := range []string{"Cancelled", "Error"} {
+				tab.Execution.Phase = phase
+				check(base + " · " + labels.partial + " · " + labels.stale + count)
+			}
+		})
+	}
+}
+
 func TestExecutionProvenanceAndConfirmedCancellation(t *testing.T) {
 	u := runningUI(t, config.Config{})
 	tab := u.active()
@@ -61,12 +129,13 @@ func TestExecutionProvenanceAndConfirmedCancellation(t *testing.T) {
 		}
 		tab.Editor.SetText("SELECT other FROM somewhere;")
 		u.refreshWorkspace()
-		info := u.resultInfo.GetText(true)
-		if !strings.Contains(info, "Results of previous SQL") || !strings.Contains(info, "Partial results") || !strings.Contains(info, "Academia") {
-			t.Error(info)
+		title := u.table.GetTitle()
+		if !strings.Contains(title, "Results of previous SQL") || !strings.Contains(title, "Partial results") {
+			t.Error(title)
 		}
-		if !strings.Contains(u.contextBar.GetText(true), "PROD") {
-			t.Error("environment missing")
+		u.app.ForceDraw()
+		if context := u.tabsHeader.GetText(true); !strings.Contains(context, "PROD") || !strings.Contains(context, "Academia") {
+			t.Error("environment or database missing from top bar")
 		}
 	})
 }

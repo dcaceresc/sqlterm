@@ -299,7 +299,8 @@ func (u *UI) showHelp() {
 func (u *UI) legacyHelp() string {
 	return fmt.Sprintf(`F2 connections/folders     F3 themes     F4 database     F5 execute SQL
 F6 object search     F7 editor     F8 results     F10 cancel
-Ctrl+N new session     Alt+1..9 switch tabs     Ctrl+O open     Ctrl+S save in place
+Ctrl+N new session
+Shift+H / Shift+L: previous / next tab in NORMAL     Ctrl+O open     Ctrl+S save in place
 Files: terminal folder browser; Tab/Shift+Tab fields, Enter selects, Esc cancels.
 Space f e opens the file browser; Space f n starts a new session.
 Ctrl+Shift+S or Space f S: choose another folder and file name.
@@ -307,7 +308,7 @@ If the terminal cannot distinguish Ctrl+Shift+S from Ctrl+S, Ctrl+S saves in pla
 IntelliSense: automatic while typing; Ctrl+Space opens suggestions.
 SQL Server: EXEC procedure + space lists parameter names/types; @ filters; Tab/Enter inserts @name = .
 Up/Down or Ctrl+N/P select; Tab/Enter accept; Esc closes and returns NORMAL.
-Ctrl+Q quits and keeps SQL tabs for next launch; Ctrl+C copies selected SQL in editor, opens result copy options elsewhere,
+:q / :quit or Space b d closes the current tab; :qa / :qall or Space q q quits and keeps SQL tabs for next launch. Ctrl+C copies selected SQL in editor, opens result copy options elsewhere,
 or closes a dialog. Without an editor selection it shows a notice and keeps the clipboard.
 Esc closes dialogs / returns to NORMAL.
 

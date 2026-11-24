@@ -272,3 +272,97 @@ func TestNeovimUIBlocksStaleOrBlockwiseExecutionAndSave(t *testing.T) {
 		}
 	})
 }
+
+func TestLazyVimTabNavigation(t *testing.T) {
+	u := runningNeovimUI(t)
+	u.app.QueueUpdateDraw(func() {
+		first := u.active()
+		if err := first.Editor.SetText("SELECT 'H';"); err != nil {
+			t.Error(err)
+			return
+		}
+		u.newTab(nil)
+		last := u.active()
+		send := func(r rune, m tcell.ModMask) { dispatchModified(u, tcell.KeyRune, r, m) }
+		send('L', 0)
+		if u.active() != first || u.app.GetFocus() != first.Editor.Area {
+			t.Error("Shift+L must wrap to the first tab and focus its editor")
+			return
+		}
+		send('H', tcell.ModShift)
+		if u.active() != last || u.app.GetFocus() != last.Editor.Area {
+			t.Error("Shift+H must wrap to the last tab and focus its editor")
+			return
+		}
+		for _, key := range []struct {
+			key  tcell.Key
+			r    rune
+			mods tcell.ModMask
+		}{
+			{tcell.KeyRune, '1', tcell.ModAlt},
+			{tcell.KeyCtrlQ, 0, 0},
+		} {
+			event := tcell.NewEventKey(key.key, key.r, key.mods)
+			if got := u.key(event); got != event || u.active() != last || u.closing || u.dialogContent != nil {
+				t.Errorf("removed shortcut must pass through without switching tabs or quitting: %v", event)
+			}
+		}
+		send('L', 0)
+		if u.active() != first {
+			t.Error("Shift+L must still select the first tab")
+			return
+		}
+		send('f', 0)
+		send('H', 0)
+		if u.active() != first || first.Editor.Cursor() != len("SELECT '") {
+			t.Error("Shift+H must remain available to pending Neovim commands")
+			return
+		}
+		send('i', 0)
+		send('L', 0)
+		if u.active() != first || first.Editor.Area.GetText() != "SELECT 'LH';" {
+			t.Error("Shift+L must type normally in INSERT")
+		}
+	})
+}
+
+func executeExInEditor(u *UI, command string) {
+	for _, r := range ":" + command {
+		dispatchModified(u, tcell.KeyRune, r, 0)
+	}
+	dispatchModified(u, tcell.KeyEnter, 0, 0)
+}
+
+func TestNeovimExQuitUsesTabClose(t *testing.T) {
+	for _, command := range []string{"q", "quit"} {
+		t.Run(command, func(t *testing.T) {
+			u := runningNeovimUI(t)
+			u.app.QueueUpdateDraw(func() {
+				u.newTab(nil)
+				tab := u.active()
+				if err := tab.Editor.SetText("SELECT 1;"); err != nil {
+					t.Error(err)
+					return
+				}
+				executeExInEditor(u, "normal! $")
+				if tab.Editor.Cursor() != len("SELECT 1") {
+					t.Error("ordinary Ex command did not reach Neovim")
+				}
+				executeExInEditor(u, command)
+				if u.dialogContent == nil || len(u.tabs) != 2 || u.active() != tab || tab.Editor.Err() != nil || tab.Editor.Mode != "NORMAL" {
+					t.Errorf(":%s must confirm without exiting Neovim: dialog=%T status=%q err=%v mode=%q", command, u.dialogContent, tab.Status, tab.Editor.Err(), tab.Editor.Mode)
+					return
+				}
+				fileDialogKey(u, tcell.KeyEnter)
+				if u.dialogContent != nil || u.active() != tab || tab.Editor.Area.GetText() != "SELECT 1;" {
+					t.Error("cancelling did not preserve the unsaved tab")
+				}
+				tab.Saved = "SELECT 1;"
+				executeExInEditor(u, command)
+				if len(u.tabs) != 1 || u.closing || u.active().Editor.Err() != nil {
+					t.Error("clean tab did not close without quitting SQLTerm")
+				}
+			})
+		})
+	}
+}

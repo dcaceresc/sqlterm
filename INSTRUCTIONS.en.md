@@ -124,6 +124,8 @@ These scripts set local Go caches under `.cache/build`, `.cache/go`, and `.cache
 
 **Space c t** generates a procedure template. Review it and press **Space c A** to apply it. A successful application refreshes the catalog. If you save the file before applying it, the comparison still uses the definition read from the server as its baseline.
 
+In the top bar, click a tab name to select it or its **×** to close it. The connection context stays on the right of the same row. When space is limited, the bar prioritizes the active tab and shortens text or hides other tabs without closing them.
+
 For ad hoc queries, **Ctrl+N** or **Space f n** creates another tab with an independent connection. **F5** runs the selection or the entire document. Each tab runs only one statement at a time, while other tabs can work in parallel.
 
 ## Editor and SQL files
@@ -150,13 +152,15 @@ Selection follows native Neovim behavior: `v` includes the current character and
 
 In Windows Terminal, the updated backend uses bracketed paste. When the terminal intercepts Ctrl+V, the paste arrives as literal text rather than Vim commands and does not enter INSERT from NORMAL. When Ctrl+V reaches Neovim as a regular keystroke, it retains its native visual block selection behavior. SQL execution does not support block selections: it displays an error rather than running the entire document.
 
-SQLTerm's global shortcuts (F1–F10, Ctrl+S, Ctrl+Shift+S, Ctrl+O, Ctrl+C, Ctrl+Q, Ctrl+N, Alt+Z) take precedence. With the editor in NORMAL mode, Space opens the hierarchical menu. Press the group and action keys, or Esc to close it. In INSERT, Space still types a space. F11 and Ctrl+P no longer open actions; Ctrl+P keeps its native and IntelliSense navigation behavior. Neovim interprets other editor commands. The session is isolated from your configuration, but Neovim is not a sandbox: its Ex commands are real commands.
+SQLTerm's global shortcuts (F1–F10, Ctrl+S, Ctrl+Shift+S, Ctrl+O, Ctrl+C, Ctrl+N, Alt+Z) take precedence. With the editor in NORMAL mode, Space opens the hierarchical menu. Press the group and action keys, or Esc to close it. In INSERT, Space still types a space. F11 and Ctrl+P no longer open actions; Ctrl+P keeps its native and IntelliSense navigation behavior. Neovim interprets other editor commands. The session is isolated from your configuration, but Neovim is not a sandbox: its Ex commands are real commands.
 
 If `nvim` is missing, startup fails with an error rather than silently falling back to the emulated editor. If the child process exits, SQLTerm keeps the last confirmed text and blocks saving or running stale data. Text-loading errors do not change the file path or saved state.
 
 **Alt+Z** toggles visual line wrapping without changing the contents. The status bar still shows the actual line and column. The command palette can show or hide line numbers. These preferences are saved and apply to all tabs.
 
 Highlighting distinguishes reserved words, strings, and numbers. Identifier delimiters are not highlighted as strings. Rendering respects the selection and line wrapping without changing SQL or undo history.
+
+Ex commands go to Neovim except for standalone quit commands such as `:q` / `:quit` and `:qa` / `:qall`, which SQLTerm handles. Appending `!` to these commands does not bypass SQLTerm checks.
 
 ### Selection and execution
 
@@ -178,7 +182,7 @@ When you open a SQL file, Windows CRLF line breaks appear as normal line breaks 
 
 The dialog asks before overwriting another file. Each successful save remembers the folder for the session: the next Save As starts there and keeps the tab's file name, or suggests `query.sql` for a new tab. The folder is not retained between sessions. If it no longer exists, SQLTerm uses the current file's folder or the working directory. The dialog does not create folders.
 
-Closing a tab or replacing SQL asks for confirmation when there are unsaved changes. When you exit normally with **Ctrl+Q**, SQLTerm preserves the SQL tabs and which one was active without saving `.sql` files or restoring connections. Drafts remain marked as unsaved. The `<config>.workspace.json` cache sits next to the configuration file and contains SQL text, which may include sensitive data. The cache is not updated if the process terminates abruptly. Template actions also ask before replacing modified SQL.
+Closing a tab or replacing SQL asks for confirmation when there are unsaved changes. When you exit normally with **Space q q**, SQLTerm preserves the SQL tabs and which one was active without saving `.sql` files or restoring connections. Drafts remain marked as unsaved. The `<config>.workspace.json` cache sits next to the configuration file and contains SQL text, which may include sensitive data. The cache is not updated if the process terminates abruptly. Template actions also ask before replacing modified SQL.
 
 ### Copying SQL
 
@@ -255,7 +259,7 @@ Refresh the catalog with **Space d r** to find newly created objects and clear t
 
 ### Commands and status
 
-**F5** runs SQL, **F9** invokes a routine, and **F10** cancels the active operation. Results identify the query, destination, execution number, time, duration, and status. If you edit the SQL afterward, SQLTerm indicates that the results belong to an earlier version.
+**F5** runs SQL, **F9** invokes a routine, and **F10** cancels the active operation. The destination stays in the top bar. The Results heading indicates when reading is paused, when an error or cancellation leaves partial rows, or when the results belong to earlier SQL.
 
 The command palette offers **Execution confirmations**:
 
@@ -370,8 +374,10 @@ The cursor shape tries to switch from a block in NORMAL and VISUAL to a bar in I
 | `gcc` / `gc` with a motion / `gc` in VISUAL | Toggle comments on the current line / range / selection |
 | Ctrl+O / Ctrl+S / Ctrl+N | Open / save / new tab |
 | Ctrl+Shift+S | Save as |
-| Ctrl+C / Ctrl+Q | Copy selection or open copy menu / quit |
-| Alt+1…9 | Switch tabs |
+| Ctrl+C | Copy selection or open copy menu |
+| `:q` / `:quit` or Space b d | Close the current tab (confirm if there are unsaved changes) |
+| `:qa` / `:qall` or Space q q | Quit and preserve drafts |
+| `Shift+H` / `Shift+L` in NORMAL | Previous / next tab (wraps at either end) |
 
 ### Space menu
 

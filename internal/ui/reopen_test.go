@@ -58,9 +58,11 @@ func TestQuitOffersExplicitExitAfterNeovimCloses(t *testing.T) {
 		if err := u.active().Editor.Close(); err != nil {
 			t.Error(err)
 		}
-		fileDialogKey(u, tcell.KeyCtrlQ)
+		for _, key := range " qq" {
+			dispatchModified(u, tcell.KeyRune, key, 0)
+		}
 		if _, ok := u.dialogContent.(*tview.Modal); !ok || u.closing {
-			t.Errorf("Ctrl+Q must offer a choice without exiting, got %T", u.dialogContent)
+			t.Errorf("Space q q must offer a choice without exiting, got %T", u.dialogContent)
 			return
 		}
 		fileDialogKey(u, tcell.KeyEnter)
@@ -68,6 +70,13 @@ func TestQuitOffersExplicitExitAfterNeovimCloses(t *testing.T) {
 			t.Error("cancel did not keep the application open")
 		}
 	})
+}
+
+func quitThroughLeader(u *UI) {
+	u.leaderMenu()
+	for _, key := range "qq" {
+		u.leaderPanel.GetInputCapture()(tcell.NewEventKey(tcell.KeyRune, key, 0))
+	}
 }
 
 func quitTestWorkspace(t *testing.T, u *UI) {
@@ -78,9 +87,9 @@ func quitTestWorkspace(t *testing.T, u *UI) {
 	go func() { finished <- u.Run() }()
 	u.app.QueueUpdateDraw(func() {
 		u.dismiss()
-		fileDialogKey(u, tcell.KeyCtrlQ)
+		quitThroughLeader(u)
 		if !u.closing {
-			t.Error("Ctrl+Q did not start normal shutdown")
+			t.Error("Space q q did not start normal shutdown")
 			u.app.Stop()
 		}
 	})
@@ -150,5 +159,45 @@ func TestExportBrowsesAndRemembersSuccessfulDestination(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(other, "results.json")); !os.IsNotExist(err) {
 		t.Errorf("cancel created another export: %v", err)
+	}
+}
+
+func TestNeovimExQuitAllCachesDrafts(t *testing.T) {
+	for _, command := range []string{"qa", "qall"} {
+		t.Run(command, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), "config.json")
+			u := New(path, config.Config{})
+			u.app.SetScreen(tcell.NewSimulationScreen("UTF-8"))
+			finished := make(chan error, 1)
+			go func() { finished <- u.Run() }()
+			u.app.QueueUpdateDraw(func() {
+				u.dismiss()
+				if err := u.activateNeovim(u.active()); err != nil {
+					t.Error(err)
+					u.app.Stop()
+					return
+				}
+				tab := u.active()
+				u.app.SetFocus(tab.Editor.Area)
+				if err := tab.Editor.SetText("SELECT 'draft';"); err != nil {
+					t.Error(err)
+					u.app.Stop()
+					return
+				}
+				executeExInEditor(u, command)
+				if !u.closing {
+					t.Errorf(":%s did not exit SQLTerm: status=%q err=%v", command, tab.Status, tab.Editor.Err())
+					u.app.Stop()
+				}
+			})
+			if err := <-finished; err != nil {
+				t.Fatal(err)
+			}
+			reopened := New(path, config.Config{})
+			defer reopened.cancel()
+			if got := reopened.active().Editor.Area.GetText(); got != "SELECT 'draft';" || reopened.active().Saved != "" {
+				t.Errorf("expected unsaved draft after restart, got %q", got)
+			}
+		})
 	}
 }

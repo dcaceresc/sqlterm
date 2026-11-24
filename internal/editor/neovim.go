@@ -178,6 +178,26 @@ func (e *Editor) Complete(start, end int, text string) {
 	e.Area.Replace(start, end, text)
 }
 
+// TakeExQuit cancela la línea Ex antes de ceder el cierre al cliente.
+func (e *Editor) TakeExQuit() (matched, all bool, err error) {
+	if e.native == nil || e.Mode != "COMMAND" {
+		return false, false, nil
+	}
+	line, err := e.native.session.ExCommandLine()
+	if err != nil {
+		return false, false, err
+	}
+	switch strings.TrimSuffix(strings.TrimSpace(line), "!") {
+	case "q", "qu", "qui", "quit":
+	case "qa", "qal", "qall", "quita", "quital", "quitall":
+		all = true
+	default:
+		return false, false, nil
+	}
+	e.nativeEdit(func() error { return e.native.session.Input("<Esc>") })
+	return true, all, e.Err()
+}
+
 func (e *Editor) nativeKey(k *tcell.EventKey) {
 	if key := nativeKeyName(k); key != "" {
 		e.nativeEdit(func() error { return e.native.session.Input(key) })

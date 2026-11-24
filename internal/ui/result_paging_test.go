@@ -283,15 +283,17 @@ func TestResultPagingPausedStatusFitsSupportedTerminalSizes(t *testing.T) {
 	tab := u.active()
 	tab.Results = []*result.Store{store}
 	tab.Busy = true
-	tab.Execution = &execution{ID: 1, Source: "Query 1", Scope: "Execute script", Started: time.Now(), Phase: "Paused", Pause: &resultPause{Set: 0, Rows: 1}}
+	pager, _ := db.NewPager(1)
+	tab.Execution = &execution{Started: time.Now(), Pager: pager, EditorSQL: tab.Editor.Area.GetText()}
+	u.setResultPause(tab, tab.Execution, db.Event{Set: 0, Rows: 1})
 	u.showResults()
 	u.app.SetFocus(u.table)
 	for _, size := range [][2]int{{80, 24}, {120, 40}} {
 		screen.SetSize(size[0], size[1])
 		u.app.ForceDraw()
 		text := screenText(screen)
-		if !strings.Contains(text, "F10") || (!strings.Contains(text, "Paused") && !strings.Contains(text, "pause")) || !strings.Contains(text, "1 received") {
-			t.Fatalf("paused paging guidance missing at %dx%d: %s", size[0], size[1], text)
+		if !strings.Contains(text, "Results · Paused · set 1/1 · 1 received rows") || !strings.Contains(text, "F10 Stop/keep") || !strings.Contains(text, "Scroll more") {
+			t.Fatalf("paused heading or paging controls missing at %dx%d: %s", size[0], size[1], text)
 		}
 	}
 }
@@ -589,12 +591,15 @@ func TestPauseFreezesElapsedAndStopsPulseRefresh(t *testing.T) {
 	})
 	// Let any in-flight pulse land before measuring an idle paused tab.
 	time.Sleep(400 * time.Millisecond)
-	var frozen string
+	var frozen time.Duration
 	var started time.Time
 	u.app.QueueUpdateDraw(func() {
-		started, frozen = tab.Execution.Started, u.resultInfo.GetText(true)
-		if !strings.Contains(frozen, "1 received") || !strings.Contains(frozen, "F10") || !strings.Contains(frozen, "Paused") {
-			t.Errorf("paused indicator missing received count or guidance: %q", frozen)
+		started, frozen = tab.Execution.Started, tab.Execution.pausedFor
+		if frozen <= 0 {
+			t.Errorf("paused duration was not recorded: %s", frozen)
+		}
+		if !strings.Contains(tab.Status, "Paused after 1 received rows") || !strings.Contains(tab.Status, "F10 stop and keep rows") {
+			t.Errorf("paused status missing received count or guidance: %q", tab.Status)
 		}
 	})
 	atomic.StoreInt32(&draws, 0)
@@ -603,8 +608,8 @@ func TestPauseFreezesElapsedAndStopsPulseRefresh(t *testing.T) {
 		t.Errorf("paused execution redrew %d times without user action", n)
 	}
 	u.app.QueueUpdateDraw(func() {
-		if got := u.resultInfo.GetText(true); got != frozen {
-			t.Errorf("paused elapsed time kept changing:\n%q\n%q", frozen, got)
+		if got := tab.Execution.pausedFor; got != frozen {
+			t.Errorf("paused elapsed time changed from %s to %s", frozen, got)
 		}
 		// Copy stays restricted while the reader is still open.
 		u.gridKey(tcell.NewEventKey(tcell.KeyRune, 'y', 0))
@@ -622,8 +627,8 @@ func TestPauseFreezesElapsedAndStopsPulseRefresh(t *testing.T) {
 		if tab.Execution.Started != started {
 			t.Error("resuming the next block reset the start time")
 		}
-		if resumed := u.resultInfo.GetText(true); resumed == frozen {
-			t.Error("elapsed duration did not continue after resuming the next block")
+		if resumed := tab.Execution.pausedFor; resumed <= frozen {
+			t.Errorf("elapsed duration did not continue after resuming the next block: %s <= %s", resumed, frozen)
 		}
 	})
 	u.app.QueueUpdateDraw(func() { dispatch(u, tcell.KeyF10, 0) })

@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/gdamore/tcell/v2"
-	"github.com/rivo/tview"
 	"sqlterm/internal/config"
 	"sqlterm/internal/db"
 )
@@ -21,8 +20,8 @@ type execution struct {
 	Phase, Error                                     string
 	Pager                                            *db.Pager
 	Pause                                            *resultPause
-	// pulsePaused stops the elapsed-time timer while the read is paused, and
-	// pausedFor keeps the displayed duration frozen at that pause moment.
+	// pulsePaused detiene los redibujados periódicos durante la pausa.
+	// pausedFor conserva el tiempo transcurrido hasta esa pausa.
 	pulsePaused atomic.Bool
 	pausedFor   time.Duration
 }
@@ -42,9 +41,9 @@ func (u *UI) queryName(t *Tab) string {
 	return u.tr("Query")
 }
 
-func (u *UI) refreshWorkspace() {
+func (u *UI) connectionContext() (environment, details string, color tcell.Color) {
 	t := u.active()
-	environment := strings.Split(t.Profile.Folder, "/")[0]
+	environment, _, _ = strings.Cut(t.Profile.Folder, "/")
 	if environment == "" {
 		environment = "LOCAL"
 	}
@@ -55,7 +54,7 @@ func (u *UI) refreshWorkspace() {
 	if t.SelectingDatabase {
 		database = u.tr("Choose database · F4")
 	}
-	color := u.palette.Accent
+	color = u.palette.Accent
 	if strings.EqualFold(environment, "PROD") {
 		color = tcell.ColorOrangeRed
 	}
@@ -63,7 +62,10 @@ func (u *UI) refreshWorkspace() {
 	if profile == "" {
 		profile = u.tr("No connection")
 	}
-	u.contextBar.SetText(fmt.Sprintf("[::b] SQLTerm │ [%s]%s[-] │ %s │ %s │ %s[-:-:-]", colorTag(color), tview.Escape(environment), tview.Escape(profile), tview.Escape(database), u.tr(state)))
+	return environment, fmt.Sprintf(" │ %s │ %s │ %s", profile, database, u.tr(state)), color
+}
+
+func (u *UI) refreshWorkspace() {
 	u.refreshResultInfo()
 	if o, ok := u.selectedObject(); ok {
 		u.objectDetail.SetText(o.Label())
@@ -78,60 +80,39 @@ func (u *UI) refreshWorkspace() {
 }
 
 func (u *UI) refreshResultInfo() {
-	if u.resultInfo == nil || len(u.tabs) == 0 {
+	if len(u.tabs) == 0 {
 		return
 	}
 	t := u.active()
-	e := t.Execution
-	scope := "Execute script"
-	if selected, _, _ := t.Editor.Area.GetSelection(); selected != "" {
-		scope = "Execute selection"
+	title := u.tr("Results")
+	if u.table.HasFocus() {
+		title = "> " + title
 	}
-	info := u.tr("Not executed") + " · F5 " + u.tr(scope) + " · " + u.tr("Destination above")
-	if e != nil {
-		duration := e.Duration
+	if e := t.Execution; e != nil {
 		switch e.Phase {
-		case "Running", "Receiving rows", "Cancelling":
-			duration = time.Since(e.Started)
 		case "Paused":
-			// A paused read is idle: keep the duration it reached when it paused.
-			duration = e.pausedFor
-		}
-		stale := ""
-		if e.EditorSQL != t.Editor.Area.GetText() {
-			stale = " · " + u.tr("Results of previous SQL")
-		}
-		partial := ""
-		if e.Phase == "Cancelled" || e.Phase == "Error" {
+			title += " · " + u.tr("Paused")
+		case "Cancelled", "Error":
 			for _, store := range t.Results {
 				if store.Count() > 0 {
-					partial = " · " + u.tr("Partial results")
+					title += " · " + u.tr("Partial results")
 					break
 				}
 			}
 		}
-		guidance := ""
-		if e.Phase == "Paused" && e.Pause != nil {
-			guidance = fmt.Sprintf(u.tr(" · %d received · scroll at end for more · F10 stop and keep rows"), e.Pause.Rows)
+		if e.EditorSQL != t.Editor.Area.GetText() {
+			title += " · " + u.tr("Results of previous SQL")
 		}
-		info = fmt.Sprintf("#%d %s │ %s / %s │ %s · %s%s%s\n%s%s · %s · F5 · Space r", e.ID, e.Source, e.Profile, e.Database, e.Started.Format("15:04:05"), duration.Round(time.Millisecond), stale, partial, u.tr(e.Phase), guidance, u.tr(e.Scope))
 	}
-	u.resultInfo.SetText(tview.Escape(info))
 	s := u.currentStore()
-	prefix := ""
-	if u.table.HasFocus() {
-		prefix = "> "
+	if s != nil {
+		title += " · " + fmt.Sprintf(u.tr("set %d/%d · %d received rows"), t.SelectedSet+1, len(t.Results), s.Count())
 	}
+	u.table.SetTitle(" " + title + " ")
 	if s == nil {
-		u.table.SetTitle(" " + prefix + u.tr("Results") + " ")
 		u.resultDetail.SetText(u.tr("No received rows"))
 		return
 	}
-	u.table.SetTitle(fmt.Sprintf(u.tr(" %sResults · set %d/%d · %d received rows "), prefix, t.SelectedSet+1, len(t.Results), s.Count()))
-	rowOffset, _ := u.table.GetOffset()
-	_, _, _, height := u.table.GetInnerRect()
-	visible := max(0, min(s.Count()-rowOffset, height-1))
-	u.resultInfo.SetText(tview.Escape(info + fmt.Sprintf(u.tr(" · %d visible rows"), visible)))
 	row, col := u.table.GetSelection()
 	_, offset := u.table.GetOffset()
 	name := ""

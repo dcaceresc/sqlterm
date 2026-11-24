@@ -13,7 +13,6 @@ import (
 	"sqlterm/internal/diagnostic"
 	"sqlterm/internal/editor"
 	"sqlterm/internal/result"
-	"strings"
 	"sync"
 	"sync/atomic"
 )
@@ -49,49 +48,51 @@ type Tab struct {
 	Pending             func()
 }
 type UI struct {
-	app                                                *tview.Application
-	pages                                              *tview.Pages
-	layout                                             *tview.Flex
-	editorHost                                         *tview.Flex
-	body, center, sidebar, resultsHost                 *tview.Flex
-	contextBar, resultInfo, resultDetail, objectDetail *tview.TextView
-	catalogRows                                        map[int]db.Object
-	dialogReturn                                       tview.Primitive
-	lastWidth, lastHeight                              int
-	lastLayout                                         string
-	nextExecution                                      int
-	restoringCatalog                                   bool
-	tabsBar, status, help                              *tview.TextView
-	objects                                            *tview.List
-	search                                             *tview.InputField
-	kind                                               *tview.DropDown
-	table                                              *tview.Table
-	cfg                                                config.Config
-	vault                                              credentials.Store
-	openSession                                        func(context.Context, config.Profile, string) (*db.Session, error)
-	writeClipboard                                     func(string) error
-	copyingSQL                                         bool
-	palette                                            Palette
-	dialogCancel                                       func()
-	leaderPanel                                        *tview.TextView
-	dialogContent                                      tview.Primitive
-	copyPopup                                          *tview.List
-	connectionFolder                                   string
-	lastExportDir                                      string
-	lastSavedSQLDir                                    string
-	configPath                                         string
-	tabs                                               []*Tab
-	current                                            int
-	closing                                            bool
-	nativeEditors                                      bool
-	nativeWG                                           sync.WaitGroup
-	nativeEventPending                                 atomic.Bool
-	suggestions                                        *suggestionState
-	suppressSuggestions                                bool
-	skipSuggestionMove                                 bool
-	wg                                                 sync.WaitGroup
-	ctx                                                context.Context
-	cancel                                             context.CancelFunc
+	app                                    *tview.Application
+	pages                                  *tview.Pages
+	layout                                 *tview.Flex
+	editorHost                             *tview.Flex
+	body, center, sidebar, resultsHost     *tview.Flex
+	tabsHeader, resultDetail, objectDetail *tview.TextView
+	headerHits                             []tabHeaderHit
+	headerPress                            tabHeaderHit
+	catalogRows                            map[int]db.Object
+	dialogReturn                           tview.Primitive
+	lastWidth, lastHeight                  int
+	lastLayout                             string
+	nextExecution                          int
+	restoringCatalog                       bool
+	status, help                           *tview.TextView
+	objects                                *tview.List
+	search                                 *tview.InputField
+	kind                                   *tview.DropDown
+	table                                  *tview.Table
+	cfg                                    config.Config
+	vault                                  credentials.Store
+	openSession                            func(context.Context, config.Profile, string) (*db.Session, error)
+	writeClipboard                         func(string) error
+	copyingSQL                             bool
+	palette                                Palette
+	dialogCancel                           func()
+	leaderPanel                            *tview.TextView
+	dialogContent                          tview.Primitive
+	copyPopup                              *tview.List
+	connectionFolder                       string
+	lastExportDir                          string
+	lastSavedSQLDir                        string
+	configPath                             string
+	tabs                                   []*Tab
+	current                                int
+	closing                                bool
+	nativeEditors                          bool
+	nativeWG                               sync.WaitGroup
+	nativeEventPending                     atomic.Bool
+	suggestions                            *suggestionState
+	suppressSuggestions                    bool
+	skipSuggestionMove                     bool
+	wg                                     sync.WaitGroup
+	ctx                                    context.Context
+	cancel                                 context.CancelFunc
 }
 
 func New(path string, cfg config.Config) *UI {
@@ -106,9 +107,13 @@ func New(path string, cfg config.Config) *UI {
 		u.cfg.Folders = []string{"DEV", "QA", "PROD"}
 	}
 	u.palette = resolveTheme(cfg.Theme)
-	u.tabsBar = tview.NewTextView().SetDynamicColors(true)
-	u.contextBar = tview.NewTextView().SetDynamicColors(true)
-	u.resultInfo = tview.NewTextView().SetDynamicColors(true)
+	u.tabsHeader = tview.NewTextView().SetDynamicColors(true).SetWrap(false).SetScrollable(false)
+	u.tabsHeader.SetMouseCapture(func(action tview.MouseAction, event *tcell.EventMouse) (tview.MouseAction, *tcell.EventMouse) {
+		if x, y := event.Position(); u.tabsHeader.InRect(x, y) {
+			return tview.MouseConsumed, nil
+		}
+		return action, event
+	})
 	u.resultDetail = tview.NewTextView()
 	u.objectDetail = tview.NewTextView()
 	u.status = tview.NewTextView().SetDynamicColors(true)
@@ -133,15 +138,18 @@ func New(path string, cfg config.Config) *UI {
 	u.table.SetInputCapture(u.gridKey)
 	u.table.SetSelectionChangedFunc(func(int, int) { u.refreshResultInfo() })
 	u.table.SetSeparator('│')
-	u.resultsHost = tview.NewFlex().SetDirection(tview.FlexRow).AddItem(u.resultInfo, 2, 0, false).AddItem(u.table, 0, 1, true).AddItem(u.resultDetail, 1, 0, false)
+	u.resultsHost = tview.NewFlex().SetDirection(tview.FlexRow).AddItem(u.table, 0, 1, true).AddItem(u.resultDetail, 1, 0, false)
 	center := tview.NewFlex().SetDirection(tview.FlexRow).AddItem(u.editorHost, 0, 1, true).AddItem(u.resultsHost, 0, 1, false)
 	u.center = center
 	body := tview.NewFlex().AddItem(left, 34, 0, false).AddItem(center, 0, 1, true)
 	u.body = body
-	u.layout = tview.NewFlex().SetDirection(tview.FlexRow).AddItem(u.contextBar, 1, 0, false).AddItem(u.tabsBar, 1, 0, false).AddItem(body, 0, 1, true).AddItem(u.status, 1, 0, false).AddItem(u.help, 1, 0, false)
+	u.layout = tview.NewFlex().SetDirection(tview.FlexRow).AddItem(u.tabsHeader, 1, 0, false).AddItem(body, 0, 1, true).AddItem(u.status, 1, 0, false).AddItem(u.help, 1, 0, false)
 	u.pages = tview.NewPages().AddPage("main", u.layout, true, true)
 	u.app.SetRoot(u.pages, true).EnableMouse(true).EnablePaste(true).SetInputCapture(u.key)
 	u.app.SetMouseCapture(func(event *tcell.EventMouse, action tview.MouseAction) (*tcell.EventMouse, tview.MouseAction) {
+		if u.tabHeaderMouse(event, action) {
+			return nil, action
+		}
 		if u.dialogContent != nil && (action == tview.MouseLeftDown || action == tview.MouseMiddleDown || action == tview.MouseRightDown) {
 			if x, y := event.Position(); !u.dialogContains(x, y) {
 				u.dismiss()
@@ -168,6 +176,7 @@ func New(path string, cfg config.Config) *UI {
 		u.adaptLayout(width, height)
 		u.status.SetRect(0, max(0, height-2), width, 1)
 		u.refreshBars()
+		u.drawTabHeader(width)
 		return false
 	}).SetAfterDrawFunc(func(screen tcell.Screen) {
 		u.updateCursor(screen)
@@ -250,19 +259,6 @@ func (u *UI) refreshBars() {
 	}
 	t := u.active()
 	u.help.SetText(u.tr(defaultHelp))
-	var b strings.Builder
-	for i, x := range u.tabs {
-		name := u.queryName(x)
-		if x.Editor.Area.GetText() != x.Saved {
-			name += "*"
-		}
-		if i == u.current {
-			fmt.Fprintf(&b, "[%s:%s] %d:%s [-:-] ", colorTag(u.palette.Background), colorTag(u.palette.Accent), i+1, tview.Escape(name))
-		} else {
-			fmt.Fprintf(&b, " %d:%s ", i+1, tview.Escape(name))
-		}
-	}
-	u.tabsBar.SetText(b.String())
 	profile := t.Profile.DisplayName()
 	if profile == "" {
 		profile = u.tr("No connection")
@@ -362,8 +358,9 @@ func (u *UI) quit() {
 	}
 	finish()
 }
-func (u *UI) closeTab() {
-	t := u.active()
+func (u *UI) closeTab() { u.closeTabTarget(u.active()) }
+
+func (u *UI) closeTabTarget(t *Tab) {
 	// A tab with a running (non-paused) statement is refused before any unsaved
 	// SQL prompt, as before. A paused read is released first and closed after.
 	if t.Busy && !pausedExecution(t) {
@@ -417,6 +414,31 @@ func saveAsShortcut(k *tcell.EventKey) bool {
 	return k.Key() == tcell.KeyRune && (k.Rune() == 's' || k.Rune() == 'S') && modifiers == tcell.ModCtrl|tcell.ModShift
 }
 
+func (u *UI) lazyVimTabKey(k *tcell.EventKey) bool {
+	if k.Key() != tcell.KeyRune || k.Modifiers()&^tcell.ModShift != 0 {
+		return false
+	}
+	var delta int
+	switch k.Rune() {
+	case 'H':
+		delta = -1
+	case 'L':
+		delta = 1
+	default:
+		return false
+	}
+	e := u.active().Editor
+	// No interceptar la segunda tecla de un comando pendiente de Neovim.
+	if u.app.GetFocus() != e.Area || !e.IsNeovim() || e.Mode != "NORMAL" || e.Err() != nil {
+		return false
+	}
+	if count := len(u.tabs); count > 1 {
+		u.current = (u.current + delta + count) % count
+		u.showTab()
+	}
+	return true
+}
+
 func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 	if u.leaderPanel != nil {
 		if u.app.GetFocus() == u.active().Editor.Area {
@@ -424,7 +446,7 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 			case tcell.KeyCtrlC:
 				u.leaderPanel = nil
 				return nil
-			case tcell.KeyF1, tcell.KeyF2, tcell.KeyF3, tcell.KeyF4, tcell.KeyF6, tcell.KeyF7, tcell.KeyF8, tcell.KeyCtrlQ:
+			case tcell.KeyF1, tcell.KeyF2, tcell.KeyF3, tcell.KeyF4, tcell.KeyF6, tcell.KeyF7, tcell.KeyF8:
 			default:
 				return u.leaderPanel.GetInputCapture()(k)
 			}
@@ -440,7 +462,7 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 				u.app.SetFocus(u.table)
 			}
 			return nil
-		case tcell.KeyF1, tcell.KeyF2, tcell.KeyF3, tcell.KeyF4, tcell.KeyF6, tcell.KeyF7, tcell.KeyF8, tcell.KeyCtrlQ:
+		case tcell.KeyF1, tcell.KeyF2, tcell.KeyF3, tcell.KeyF4, tcell.KeyF6, tcell.KeyF7, tcell.KeyF8:
 			u.dismiss()
 		}
 	}
@@ -476,6 +498,24 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 	if u.customKey(k) {
 		return nil
 	}
+	if u.lazyVimTabKey(k) {
+		return nil
+	}
+	if e := u.active().Editor; k.Key() == tcell.KeyEnter && k.Modifiers() == 0 && u.app.GetFocus() == e.Area {
+		matched, all, err := e.TakeExQuit()
+		if err != nil {
+			u.message(err.Error())
+			return nil
+		}
+		if matched {
+			if all {
+				u.quit()
+			} else {
+				u.closeTab()
+			}
+			return nil
+		}
+	}
 	if k.Key() == tcell.KeyRune && k.Modifiers()&tcell.ModAlt != 0 && (k.Rune() == 'z' || k.Rune() == 'Z') {
 		u.toggleEditorOption(true)
 		return nil
@@ -495,9 +535,6 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 			return nil
 		}
 		u.copyMenu()
-		return nil
-	case tcell.KeyCtrlQ:
-		u.quit()
 		return nil
 	case tcell.KeyF1:
 		u.showHelp()
@@ -551,16 +588,6 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 			return k
 		}
 		return nil
-	}
-	if k.Modifiers()&tcell.ModAlt != 0 && k.Key() == tcell.KeyRune {
-		if k.Rune() >= '1' && k.Rune() <= '9' {
-			n := int(k.Rune() - '1')
-			if n < len(u.tabs) {
-				u.current = n
-				u.showTab()
-			}
-			return nil
-		}
 	}
 	return k
 }
