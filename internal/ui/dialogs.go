@@ -301,6 +301,7 @@ func (u *UI) legacyHelp() string {
 F6 object search     F7 editor     F8 results     F10 cancel
 Ctrl+N new session     Alt+1..9 switch tabs     Ctrl+O open     Ctrl+S save in place
 Files: terminal folder browser; Tab/Shift+Tab fields, Enter selects, Esc cancels.
+Space f e opens the file browser; Space f n starts a new session.
 Ctrl+Shift+S or Space f S: choose another folder and file name.
 If the terminal cannot distinguish Ctrl+Shift+S from Ctrl+S, Ctrl+S saves in place.
 IntelliSense: automatic while typing; Ctrl+Space opens suggestions.
@@ -318,16 +319,13 @@ Ctrl+C keeps the current mode and selection; y/d return NORMAL;
 x delete; p paste; u undo; Ctrl+R redo; / search forward.
 Ctrl+C copies literal selected SQL to the system clipboard, even during query execution.
 It preserves SQL, selection and undo; NUL is escaped as \0 in clipboard text only.
-Ctrl+} comments / uncomments each selected line; without selection, toggles the complete current line.
-Ctrl+Shift+} toggles every line; one undo; no SQL execution or file save.
-Ctrl+] / Ctrl+Shift+] control-code events are also accepted. If the terminal cannot distinguish these chords, use Space c c or Space c a.
+gcc toggles the current line in NORMAL; gc followed by a motion toggles a range; gc in VISUAL toggles the selected lines.
 Selection is kept for repeated toggling. Full-line -- comments use the theme's muted color.
 Space in the focused NORMAL editor opens hierarchical commands. INSERT Space keeps typing.
 Groups: f files, b tabs, c code, d connections, s explore, r results, u preferences, w layout.
-Space c c toggles selected lines or the current logical line; Space w opens layout actions.
 Space ? opens help; Space x cancels an operation; Space q q quits.
 Backspace returns to the parent group; Esc cancels without executing an action.
-Space u t opens themes. Themes preview with arrows; Enter saves, Esc restores.
+Space u C opens themes. Themes preview with arrows; Enter saves, Esc restores.
 Connections: Enter connect/expand, + add profile, n new folder,
 e edit profile, r rename folder, d delete empty folder, / search.
 

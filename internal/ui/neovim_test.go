@@ -86,44 +86,47 @@ func TestNeovimUISpacePreservesInsertAndSearch(t *testing.T) {
 	})
 }
 
-func TestNeovimUICommentShortcutConsumesWindowsKeyEncodings(t *testing.T) {
-	if testing.Short() {
-		t.Skip("requires installed Neovim")
-	}
-	for _, tt := range []struct {
-		name string
-		key  tcell.Key
-		r    rune
-		sql  string
-	}{
-		{"Windows control character", tcell.KeyGS, 29, "SELECT 1;\nSELECT 2;"},
-		{"Windows modified bracket", tcell.KeyRune, ']', "SELECT 1;\nSELECT 2;"},
-		{"Modified brace", tcell.KeyRune, '}', "SELECT 1;\nSELECT 2;"},
-		{"VT control key", tcell.KeyCtrlRightSq, 0, "SELECT 1;\nSELECT 2;"},
-		{"UTF-8 last line without newline", tcell.KeyRune, ']', "SELECT 'ñ' AS café"},
-	} {
-		t.Run(tt.name, func(t *testing.T) {
-			u := runningNeovimUI(t)
-			u.app.QueueUpdateDraw(func() {
-				e := u.active().Editor
-				sql := tt.sql
-				if err := e.SetText(sql); err != nil {
-					t.Error(err)
-					return
-				}
-				dispatchModified(u, tcell.KeyRune, 'V', 0)
-				dispatchModified(u, tt.key, tt.r, tcell.ModCtrl)
-				if got := e.Area.GetText(); got != "-- "+sql || e.Mode != "VISUAL" || e.Err() != nil {
-					t.Errorf("Ctrl+}: text=%q mode=%s err=%v", got, e.Mode, e.Err())
-					return
-				}
-				dispatchModified(u, tt.key, tt.r, tcell.ModCtrl)
-				if got := e.Area.GetText(); got != sql || e.Err() != nil || u.dialogContent != nil {
-					t.Errorf("uncomment: text=%q err=%v dialog=%T", got, e.Err(), u.dialogContent)
-				}
-			})
-		})
-	}
+func TestNeovimUIUsesNativeCommentCommands(t *testing.T) {
+	u := runningNeovimUI(t)
+	u.app.QueueUpdateDraw(func() {
+		tab := u.active()
+		e := tab.Editor
+		const sql = "  SELECT 'ñ';\n  SELECT 2;"
+		if err := e.SetText(sql); err != nil {
+			t.Error(err)
+			return
+		}
+		keys := func(seq string) {
+			for _, r := range seq {
+				dispatchModified(u, tcell.KeyRune, r, 0)
+			}
+		}
+		check := func(want string) {
+			t.Helper()
+			if got := e.Area.GetText(); got != want || e.Err() != nil || tab.Busy || tab.Session != nil || tab.Saved != "" || tab.Path != "" {
+				t.Errorf("comment: text=%q want=%q err=%v", got, want, e.Err())
+			}
+		}
+		for _, mod := range []tcell.ModMask{tcell.ModCtrl, tcell.ModCtrl | tcell.ModShift} {
+			dispatchModified(u, tcell.KeyRune, '}', mod)
+			if got := e.Area.GetText(); got != sql {
+				t.Errorf("removed shortcut changed SQL: %q", got)
+			}
+			dispatchModified(u, tcell.KeyEscape, 0, 0)
+		}
+		keys("gcc")
+		check("  -- SELECT 'ñ';\n  SELECT 2;")
+		keys("gcc")
+		check(sql)
+		keys("gcj")
+		check("  -- SELECT 'ñ';\n  -- SELECT 2;")
+		keys("u")
+		check(sql)
+		keys("Vjgc")
+		check("  -- SELECT 'ñ';\n  -- SELECT 2;")
+		keys("u")
+		check(sql)
+	})
 }
 
 func TestNeovimUICompletionKeepsInsertMode(t *testing.T) {

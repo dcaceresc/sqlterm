@@ -44,12 +44,19 @@ func TestLeaderNativeActionInteractions(t *testing.T) {
 		if e.Cursor() != position || e.Area.GetText() != "SELECT 1;" || u.app.GetFocus() != e.Area || u.leaderPanel != nil {
 			t.Error("leader navigation changed editor state")
 		}
-		send(" ca")
-		if e.Area.GetText() != "-- SELECT 1;" {
-			t.Errorf("comment action: %q", e.Area.GetText())
+		for _, key := range []string{" ca", " cc", " cs"} {
+			send(key)
+			if e.Area.GetText() != "SELECT 1;" || u.leaderPanel == nil || u.dialogContent != nil || u.app.GetFocus() != e.Area {
+				t.Errorf("%q must leave SQL, focus, and menu unchanged: %q", key, e.Area.GetText())
+			}
+			dispatchModified(u, tcell.KeyEscape, 0, 0)
 		}
-		dispatchModified(u, tcell.KeyEscape, 0, 0)
+		previouslyEnabled := u.cfg.Editor.LineNumbers == nil || *u.cfg.Editor.LineNumbers
 		send(" ul")
+		if u.cfg.Editor.LineNumbers == nil || *u.cfg.Editor.LineNumbers == previouslyEnabled || u.dialogContent != nil || u.leaderPanel != nil {
+			t.Error("line numbers did not toggle in place")
+		}
+		send(" ui")
 		if u.dialogContent == nil || u.app.GetFocus() == e.Area || u.leaderPanel != nil {
 			t.Error("language action did not focus its dialog")
 		}

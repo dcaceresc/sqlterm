@@ -1,5 +1,7 @@
 # SQLTerm
 
+Español (predeterminado) · [English](README.en.md)
+
 SQLTerm es un cliente SQL de terminal escrito en Go para **SQL Server, MySQL y PostgreSQL**. Lo creé para mi flujo personal: trabajo principalmente en Linux y necesito usar la misma herramienta también en Windows para buscar objetos, revisar y editar rutinas, ejecutar consultas y explorar resultados sin salir de la terminal.
 
 No pretende ser un cliente universal ni reemplazar todas las herramientas de administración de bases de datos. Su alcance prioriza las capacidades que uso y puedo mantener con claridad.

@@ -60,8 +60,8 @@ func (u *UI) spanishHelp() map[string]string {
 		"Connections":     "F2 perfiles y carpetas · / buscar · + añadir · e editar · n carpeta · r renombrar · d eliminar carpeta vacía · * favorito\nF4 busca bases. La nueva conexión sustituye la anterior solo tras conectar correctamente. Conserva SQL; no conserva transacciones, variables ni tablas temporales.\nSi cambias motor, servidor, puerto o usuario, vuelve a escribir la contraseña antes de probar o guardar.\nF3: flechas vista previa, Enter guardar, Esc restaurar. Ctrl+Q salir; Ctrl+C copia o cancela diálogo.",
 	}
 	intro["Editor"] += "\nCtrl+C copia la selección SQL al portapapeles del sistema; sin selección muestra un aviso y no copia nada. Conserva texto, selección y deshacer; funciona aunque haya una consulta en curso. NUL se representa como \\0 solo en el texto copiado."
-	intro["Editor"] += "\nCtrl+} comenta o descomenta cada línea seleccionada con --; sin selección alterna la línea completa del cursor. Ctrl+Shift+} alterna todas las líneas. También se acepta Ctrl+] y Ctrl+Shift+] cuando la terminal los comunica como código de control. Si la terminal no distingue estas combinaciones, usa Espacio c c o Espacio c a. Conserva indentación y selección para repetir la acción; permite deshacer y no ejecuta ni guarda SQL. Los comentarios de línea usan el color atenuado del tema; la selección conserva sus colores."
-	intro["Editor"] += "\nEspacio en NORMAL abre acciones; pulsa la letra de la acción o Esc para cerrar. En INSERT escribe espacios. Enfoca el editor en NORMAL para abrir los comandos de Espacio.\nArchivos: Ctrl+O explora carpetas; Ctrl+S guarda directamente en la ruta actual. Ctrl+Shift+S o Espacio f S elige otro destino. Si la terminal informa Ctrl+Shift+S como Ctrl+S, se realiza un guardado normal. Tab/Shift+Tab cambia de campo; Enter selecciona; Esc cancela."
+	intro["Editor"] += "\nEn NORMAL, gcc alterna el comentario de la línea actual y gc seguido de un movimiento comenta o descomenta un rango. En VISUAL, gc alterna el comentario de las líneas seleccionadas. Ninguna de estas acciones ejecuta ni guarda SQL. Los comentarios de línea usan el color atenuado del tema; la selección conserva sus colores."
+	intro["Editor"] += "\nEspacio en NORMAL abre acciones; pulsa la letra de la acción o Esc para cerrar. En INSERT escribe espacios. Enfoca el editor en NORMAL para abrir los comandos de Espacio.\nArchivos: Ctrl+O o Espacio f e explora carpetas; Espacio f n inicia una sesión nueva. Ctrl+S guarda directamente en la ruta actual. Ctrl+Shift+S o Espacio f S elige otro destino. Si la terminal informa Ctrl+Shift+S como Ctrl+S, se realiza un guardado normal. Tab/Shift+Tab cambia de campo; Enter selecciona; Esc cancela."
 	intro["Editor"] += "\nV selecciona la línea lógica completa; j/k extienden por líneas. gg va al inicio del archivo; ggVG selecciona todo el archivo. Ctrl+C conserva el modo actual y la selección; yy conserva NORMAL. y/d copian/cortan la selección y vuelven a NORMAL."
 	intro["Editor"] += "\nEl panel SQL usa Neovim 0.11+ aislado (nvim en PATH), sin la configuración personal de LazyVim. v incluye el carácter actual; los atajos globales de SQLTerm tienen prioridad. El pegado delimitado de Windows Terminal es literal y conserva NORMAL. No se ejecutan selecciones por bloques. No hay sustitución silenciosa si falta o termina Neovim; se bloquea guardar/ejecutar datos obsoletos."
 	intro["Editor"] += "\nSQL Server: EXEC procedimiento seguido de espacio muestra parámetros y tipos; @ filtra, Tab/Enter inserta @nombre = . Reaparece tras una coma entre argumentos; no ejecuta SQL."
@@ -73,17 +73,17 @@ func (u *UI) spanishHelp() map[string]string {
 
 var spanish = map[string]string{
 	"Files": "Archivos", "Tabs": "Pestañas", "Code": "Código", "Explore": "Explorar", "Preferences": "Preferencias",
-	"Space · Esc cancel · Backspace parent":                  "Espacio · Esc cancelar · Retroceso volver",
-	"Select SQL text before copying":                         "Selecciona texto SQL antes de copiar",
-	"SQL clipboard copy already in progress":                 "Ya hay una copia SQL al portapapeles en curso",
-	"Copied SQL selection to clipboard":                      "Selección SQL copiada al portapapeles",
-	"Could not copy SQL: %s":                                 "No se pudo copiar el SQL: %s",
-	"(NUL escaped as \\0)":                                   "(NUL representado como \\0)",
-	"Comment selection":                                      "Comentar línea o selección",
-	"Ctrl+} · comment / uncomment selection or current line": "Ctrl+} · comentar / descomentar selección o línea actual",
-	"Comment whole document":                                 "Comentar todo el documento",
-	"Ctrl+Shift+} · comment / uncomment each SQL line":       "Ctrl+Shift+} · comentar / descomentar cada línea SQL",
-	"Word wrap": "Ajuste de línea", "Alt+Z · toggle visual wrapping of long SQL lines": "Alt+Z · activar/desactivar ajuste visual de líneas SQL largas", "Line numbers": "Números de línea", "Show / hide SQL line numbers": "Mostrar / ocultar números de línea SQL", "On": "Activado", "Off": "Desactivado", "Favorites": "Favoritos", "Favorite": "Favorito",
+	"Space · Esc cancel · Backspace parent":         "Espacio · Esc cancelar · Retroceso volver",
+	"Select SQL text before copying":                "Selecciona texto SQL antes de copiar",
+	"SQL clipboard copy already in progress":        "Ya hay una copia SQL al portapapeles en curso",
+	"Copied SQL selection to clipboard":             "Selección SQL copiada al portapapeles",
+	"Could not copy SQL: %s":                        "No se pudo copiar el SQL: %s",
+	"(NUL escaped as \\0)":                          "(NUL representado como \\0)",
+	"Comment selection":                             "Comentar línea o selección",
+	"Comment / uncomment selection or current line": "Comentar / descomentar selección o línea actual",
+	"Comment whole document":                        "Comentar todo el documento",
+	"Comment / uncomment each SQL line":             "Comentar / descomentar cada línea SQL",
+	"Word wrap":                                     "Ajuste de línea", "Alt+Z · toggle visual wrapping of long SQL lines": "Alt+Z · activar/desactivar ajuste visual de líneas SQL largas", "Line numbers": "Números de línea", "Show / hide SQL line numbers": "Mostrar / ocultar números de línea SQL", "On": "Activado", "Off": "Desactivado", "Favorites": "Favoritos", "Favorite": "Favorito",
 	"Welcome to SQLTerm": "Bienvenido a SQLTerm",
 	"Connect":            "Conectar", "Export": "Exportar", "Sort results": "Ordenar resultados", "Search results": "Buscar resultados", "Read definition": "Leer definición", "Read parameters": "Leer parámetros", "List databases": "Listar bases de datos", "Cancelling · waiting for driver": "Cancelando · esperando al controlador", "Loading catalog…": "Cargando catálogo…", "Could not load catalog · Space d r Refresh catalog": "No se pudo cargar el catálogo · Espacio d r Actualizar catálogo", "Choose after connecting": "Elegir después de conectar",
 	"%s · %s\n%s:%d · %s\nUser: %s · * toggle favorite": "%s · %s\n%s:%d · %s\nUsuario: %s · * cambiar favorito", "Enter collapses/expands folders or connects profiles": "Enter contrae/expande carpetas o conecta perfiles", "/ search · + add · n folder · e edit": "/ buscar · + añadir · n carpeta · e editar",

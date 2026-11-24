@@ -22,13 +22,13 @@ func (u *UI) leaderGroups() map[rune][]command {
 		return out
 	}
 	return map[rune][]command{
-		'f': group("osS", "Open SQL", "Save SQL", "Save SQL as"),
-		'b': group("nd", "New session", "Close tab"),
-		'c': group("csaxAptTiq", "Comment selection", "Comment selection", "Comment whole document", "Execute SQL", "Apply definition", "Invoke procedure / function", "New routine template", "New table template", "Insert object name", "Generate SELECT"),
+		'f': group("ensS", "Open SQL", "New session", "Save SQL", "Save SQL as"),
+		'b': group("d", "Close tab"),
+		'c': group("xAptTiq", "Execute SQL", "Apply definition", "Invoke procedure / function", "New routine template", "New table template", "Insert object name", "Generate SELECT"),
 		'd': group("cbdre", "Connections", "Change database", "Disconnect", "Refresh catalog", "Execution confirmations"),
 		's': group("odgh", "Search objects", "View definition", "Grouped / flat catalog", "History"),
 		'r': group("yiebm", "Copy results", "Inspect cell", "Export results", "Result block size", "Technical messages"),
-		'u': group("wntl", "Word wrap", "Line numbers", "Themes", "Language / Idioma"),
+		'u': group("wlCi", "Word wrap", "Line numbers", "Themes", "Language / Idioma"),
 		'w': u.layoutCommands(),
 		'q': group("q", "Quit"),
 	}

@@ -417,19 +417,6 @@ func saveAsShortcut(k *tcell.EventKey) bool {
 	return k.Key() == tcell.KeyRune && (k.Rune() == 's' || k.Rune() == 'S') && modifiers == tcell.ModCtrl|tcell.ModShift
 }
 
-func commentShortcut(k *tcell.EventKey) bool {
-	modifiers := k.Modifiers()
-	if k.Key() == tcell.KeyCtrlRightSq {
-		return modifiers == 0 || modifiers == tcell.ModCtrl || modifiers == tcell.ModShift || modifiers == tcell.ModCtrl|tcell.ModShift
-	}
-	return k.Key() == tcell.KeyRune && k.Rune() == '}' && (modifiers == tcell.ModCtrl || modifiers == tcell.ModCtrl|tcell.ModShift)
-}
-
-func neovimCommentShortcut(k *tcell.EventKey) bool {
-	// Win32 puede informar el carácter de control 29 o el corchete con Ctrl.
-	return k.Modifiers() == tcell.ModCtrl && (k.Key() == tcell.KeyGS || k.Key() == tcell.KeyRune && k.Rune() == ']')
-}
-
 func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 	if u.leaderPanel != nil {
 		if u.app.GetFocus() == u.active().Editor.Area {
@@ -487,10 +474,6 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 		return nil
 	}
 	if u.customKey(k) {
-		return nil
-	}
-	if e := u.active().Editor; u.app.GetFocus() == e.Area && (commentShortcut(k) || e.IsNeovim() && neovimCommentShortcut(k)) {
-		u.commentSQL(k.Modifiers()&tcell.ModShift != 0)
 		return nil
 	}
 	if k.Key() == tcell.KeyRune && k.Modifiers()&tcell.ModAlt != 0 && (k.Rune() == 'z' || k.Rune() == 'Z') {

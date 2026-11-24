@@ -40,7 +40,7 @@ func TestLeaderRender(t *testing.T) {
 
 func TestLeaderMaps(t *testing.T) {
 	u, _ := modeTestUI(t)
-	expected := map[rune]string{'f': "osS", 'b': "nd", 'c': "csaxAptTiq", 'd': "cbdre", 's': "odgh", 'r': "yiebm", 'u': "wntl", 'w': "bedmrc><+-", 'q': "q"}
+	expected := map[rune]string{'f': "ensS", 'b': "d", 'c': "xAptTiq", 'd': "cbdre", 's': "odgh", 'r': "yiebm", 'u': "wlCi", 'w': "bedmrc><+-", 'q': "q"}
 	groups := u.leaderGroups()
 	for key, keys := range expected {
 		var got strings.Builder
@@ -62,7 +62,7 @@ func TestLeaderAvailabilityAndCase(t *testing.T) {
 	for _, test := range []struct {
 		group, key rune
 		name       string
-	}{{'f', 's', "Save SQL"}, {'f', 'S', "Save SQL as"}, {'c', 'a', "Comment whole document"}, {'c', 'A', "Apply definition"}, {'c', 't', "New routine template"}, {'c', 'T', "New table template"}} {
+	}{{'f', 'e', "Open SQL"}, {'f', 'n', "New session"}, {'b', 'd', "Close tab"}, {'u', 'w', "Word wrap"}, {'u', 'l', "Line numbers"}, {'u', 'C', "Themes"}, {'u', 'i', "Language / Idioma"}, {'f', 's', "Save SQL"}, {'f', 'S', "Save SQL as"}, {'c', 'A', "Apply definition"}, {'c', 't', "New routine template"}, {'c', 'T', "New table template"}} {
 		found := false
 		for _, c := range groups[test.group] {
 			if c.Key == test.key {

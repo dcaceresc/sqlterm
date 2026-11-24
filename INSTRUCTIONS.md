@@ -1,5 +1,7 @@
 # Instrucciones de SQLTerm
 
+Español (predeterminado) · [English](INSTRUCTIONS.en.md)
+
 Esta guía explica cómo instalar, configurar y usar SQLTerm. El cliente está orientado al flujo personal para el que fue creado, tiene Linux y Windows como plataformas principales y admite SQL Server, MySQL y PostgreSQL.
 
 ## Contenido
@@ -122,7 +124,7 @@ Estas automatizaciones configuran cachés locales de Go bajo `.cache/build`, `.c
 
 **Espacio c t** genera una plantilla de procedimiento. Revísala y usa **Espacio c A** para aplicarla; una aplicación correcta actualiza el catálogo. Si guardas el archivo antes de aplicar, la comparación conserva como referencia la definición leída del servidor.
 
-Para consultas libres, **Ctrl+N** crea otra pestaña con conexión independiente. **F5** ejecuta la selección o el documento completo. Solo se ejecuta una sentencia a la vez por pestaña, mientras que otras pestañas pueden trabajar en paralelo.
+Para consultas libres, **Ctrl+N** o **Espacio f n** crea otra pestaña con conexión independiente. **F5** ejecuta la selección o el documento completo. Solo se ejecuta una sentencia a la vez por pestaña, mientras que otras pestañas pueden trabajar en paralelo.
 
 ## Editor y archivos SQL
 
@@ -160,11 +162,9 @@ El resaltado distingue palabras reservadas, cadenas y números. Los delimitadore
 
 **F5** ejecuta el texto seleccionado; si no hay selección, ejecuta el documento. Las acciones de comentar o copiar no ejecutan SQL.
 
-**Ctrl+}** o **Espacio c c** alterna comentarios en las líneas completas alcanzadas por la selección. Si la selección termina justo al inicio de otra línea, esa línea no se incluye. Sin selección, se comenta o descomenta la línea lógica completa donde está el cursor.
+Neovim alterna comentarios SQL con `--`: en NORMAL, `gcc` actúa sobre la línea actual y `gc` seguido de un movimiento actúa sobre un rango (por ejemplo, `gcj` incluye la línea siguiente). En VISUAL, selecciona texto y pulsa `gc` para alternar el comentario de las líneas seleccionadas. Usa `u` en NORMAL para deshacer.
 
-**Ctrl+Shift+}** o **Espacio c a** aplica la misma operación al documento. Se agrega `-- ` después de la indentación o se quita `--` y un espacio opcional. Las líneas mixtas se alternan por separado, se conservan la selección y los saltos de línea, y una acción completa se deshace como una sola operación.
-
-También se acepta el código de control que algunas terminales envían como Ctrl+] (con Shift para todo el editor). Los atajos requieren que la terminal distinga Ctrl+} de Ctrl+Shift+}. Si no los comunica de forma diferenciada, usa las acciones de comentar de **Espacio c c**. Una `}` sin Ctrl sigue siendo texto normal.
+Para alternar comentarios en todo el documento, selecciona todas las líneas con `ggVG` y pulsa `gc`.
 
 Las líneas comentadas se muestran atenuadas, excepto marcadores dentro de cadenas o cuerpos con dollar quoting. El color es solo visual.
 
@@ -172,7 +172,7 @@ Las líneas comentadas se muestran atenuadas, excepto marcadores dentro de caden
 
 Al abrir un archivo SQL, los saltos CRLF de Windows se muestran como saltos normales, sin `^M`. Al guardar se conserva CRLF si el archivo usaba ese formato de manera uniforme; si mezclaba LF y CRLF, se guarda con LF.
 
-**Ctrl+O** abre el explorador integrado. **Enter** entra en carpetas o abre un archivo, `[..]` sube al nivel superior, Tab y Shift+Tab cambian de campo y **Esc** cancela. Se muestran todos los archivos para admitir scripts sin extensión `.sql`. La apertura admite archivos de hasta 8 MiB; si falla, conserva el documento actual.
+**Ctrl+O** o **Espacio f e** abre el explorador integrado. **Enter** entra en carpetas o abre un archivo, `[..]` sube al nivel superior, Tab y Shift+Tab cambian de campo y **Esc** cancela. Se muestran todos los archivos para admitir scripts sin extensión `.sql`. La apertura admite archivos de hasta 8 MiB; si falla, conserva el documento actual.
 
 **Ctrl+Shift+S** abre **Guardar SQL como / Save SQL as** cuando la terminal distingue la combinación. Algunas terminales pueden comunicarla como **Ctrl+S**; en ese caso se realiza el guardado normal. **Ctrl+S** guarda directamente cuando el archivo ya tiene ruta y abre el diálogo de guardado cuando todavía no la tiene.
 
@@ -345,7 +345,7 @@ La barra superior muestra entorno, conexión, base y estado. PROD se destaca con
 
 ### Temas
 
-**F3** o **Espacio u t** abre el selector de temas. **Espacio c t** sigue reservado para la plantilla de procedimientos. Las flechas muestran una vista previa, **Enter** guarda y **Esc** restaura el tema anterior.
+**F3** o **Espacio u C** abre el selector de temas. **Espacio c t** sigue reservado para la plantilla de procedimientos. Las flechas muestran una vista previa, **Enter** guarda y **Esc** restaura el tema anterior.
 
 Se incluyen Tokyo Night, Rosé Pine, Nord, Gruvbox, Light y Classic. El tema cambia paneles, editor, resultados, formularios y diálogos sin desconectar ni reemplazar SQL. La elección persiste. El campo JSON `theme` acepta `tokyo-night`, `rose-pine`, `nord`, `gruvbox`, `light` o `classic`; un valor desconocido usa Tokyo Night.
 
@@ -353,22 +353,21 @@ La forma del cursor intenta cambiar de bloque en NORMAL y VISUAL a barra en INSE
 
 ### Idioma
 
-**Espacio u l** ofrece **Language / Idioma**. Los mensajes técnicos del motor, el SQL, los identificadores y los valores no se traducen.
+**Espacio u i** ofrece **Language / Idioma**. Los mensajes técnicos del motor, el SQL, los identificadores y los valores no se traducen.
 
 ## Atajos
 
 | Tecla | Acción |
 | --- | --- |
 | F1 / F2 | Ayuda / conexiones |
-| F3 / Espacio u t | Temas con vista previa |
+| F3 / Espacio u C | Temas con vista previa |
 | F4 | Seleccionar o cambiar base |
 | F5 / F9 / F10 | Ejecutar / invocar / cancelar |
 | F6 / F7 / F8 | Objetos / editor / resultados |
 | Espacio (editor en NORMAL) | Menú jerárquico de acciones |
 | Ctrl+Space | Abrir IntelliSense |
 | Alt+Z | Alternar ajuste de línea |
-| Ctrl+} | Comentar selección o línea actual |
-| Ctrl+Shift+} | Comentar todo el editor |
+| `gcc` / `gc` con movimiento / `gc` en VISUAL | Alternar comentarios en la línea actual / rango / selección |
 | Ctrl+O / Ctrl+S / Ctrl+N | Abrir / guardar / nueva pestaña |
 | Ctrl+Shift+S | Guardar como |
 | Ctrl+C / Ctrl+Q | Copiar selección o abrir menú / salir |
@@ -380,17 +379,17 @@ Con el editor enfocado en NORMAL, pulsa **Espacio**, el grupo y la acción. Cada
 
 | Grupo | Acciones después de Espacio |
 | --- | --- |
-| `f` Archivos | `o` abrir · `s` guardar · `S` guardar como |
-| `b` Pestañas | `n` nueva sesión · `d` cerrar pestaña |
-| `c` Código | `c` o `s` comentar selección o línea actual · `a` comentar documento · `x` ejecutar · `A` revisar/aplicar definición · `p` invocar rutina · `t` plantilla de rutina · `T` plantilla de tabla · `i` insertar nombre de objeto · `q` generar SELECT |
+| `f` Archivos | `e` explorar archivos · `n` nueva sesión · `s` guardar · `S` guardar como |
+| `b` Pestañas | `d` cerrar pestaña |
+| `c` Código | `x` ejecutar · `A` revisar/aplicar definición · `p` invocar rutina · `t` plantilla de rutina · `T` plantilla de tabla · `i` insertar nombre de objeto · `q` generar SELECT |
 | `d` Conexiones | `c` perfiles · `b` cambiar base · `d` desconectar · `r` actualizar catálogo · `e` confirmaciones |
 | `s` Explorar | `o` buscar objetos · `d` ver definición · `g` catálogo agrupado/plano · `h` historial |
 | `r` Resultados | `y` copiar · `i` inspeccionar celda · `e` exportar · `b` tamaño de bloque · `m` mensajes técnicos |
-| `u` Preferencias | `w` ajuste de línea · `n` números · `t` tema · `l` idioma |
+| `u` Preferencias | `w` ajuste de línea · `l` números · `C` tema · `i` idioma |
 | `w` Distribución | `b` equilibrada · `e` edición · `d` exploración · `m` maximizar editor · `r` maximizar resultados · `c` mostrar/ocultar catálogo · `>` / `<` ancho del catálogo ±4 columnas · `+` / `-` dar espacio al editor/resultados ±10 puntos porcentuales |
 | Generales | `?` ayuda · `x` cancelar operación · `q q` salir |
 
-Por ejemplo, **Espacio c c** alterna comentarios sin ejecutar ni guardar SQL. Si existe selección, actúa sobre las líneas alcanzadas; de lo contrario, sobre la línea completa del cursor. **Espacio w b** restaura la vista equilibrada tras maximizar.
+**Espacio w b** restaura la vista equilibrada tras maximizar.
 
 `keys` permite alias globales con nombres de teclas especiales de tcell, por ejemplo `"run": "Ctrl-E"` o `"apply": "F12"`. Las acciones admitidas son `run`, `connect`, `invoke`, `cancel`, `help`, `save`, `open`, `new`, `apply`, `refresh`, `theme`, `database` y `complete`. F4 queda reservado para bases. F11 y Ctrl-P no se admiten como alias de acciones. Los alias tienen prioridad y los atajos predeterminados restantes continúan activos.
 
