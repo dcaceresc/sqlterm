@@ -333,6 +333,7 @@ e edit profile, r rename folder, d delete empty folder, / search.
 Results: [ / ] previous/next result set; click focuses a data cell; Enter marks a cell, column or row; clicking a column header or row number marks it too; m messages;
 / search rows; s sort selected column ascending; S descending; e export.
 Shift+arrows or drag marks a rectangle. Moving focus clears only mouse rectangles. Ctrl+A marks all data; Esc clears the mark.
+e defaults to Selection when a selection is active, or Entire result otherwise. CSV, JSON and XLSX follow the displayed order.
 v marks a full-row range; use arrows to extend it. Ctrl+C/y copy without headers
 from the selection or the focused cell, row or column. Y copies the same scope
 with headers. Space in the focused grid opens the Results menu without changing

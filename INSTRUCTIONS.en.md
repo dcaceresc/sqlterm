@@ -309,7 +309,7 @@ The transformation affects only the output. `NULL` is represented as `\N` and NU
 
 ### Export and storage
 
-`e` lets you explicitly select **Spreadsheet-safe CSV**, **Literal CSV**, or **JSON**, regardless of the file extension. It then opens the same file browser used by Open and Save so you can choose a folder and file name. It remembers the last successful export folder even after a restart, without changing the folder used to save SQL. Export requires a new file, never overwrites an existing one, and removes partial output if canceled.
+Use **Shift+arrow keys** or drag to mark a rectangle. Press **`e`** to export: the default scope is **Selection** when a selection is active, or **Entire result** otherwise. When a selection is active, you can switch to the entire result before saving. Export follows the displayed order. Choose **Spreadsheet-safe CSV**, **Literal CSV**, **JSON**, or **Excel (.xlsx)**, regardless of the file extension. It then opens the same file browser used by Open and Save so you can choose a folder and file name. It remembers the last successful export folder even after a restart, without changing the folder used to save SQL. Export requires a new file, never overwrites an existing one, and removes partial output if canceled.
 
 Both CSV modes exported from Results start with a UTF-8 byte order mark (BOM) so Excel can display accents and other special characters when opening the file directly. Safe CSV applies spreadsheet protection to headers and cells. Literal CSV preserves text and warns about untrusted data. Both use `\N` for SQL NULL and escape text beginning with `\` to distinguish NULL, an empty string, and literal `\N`.
 
