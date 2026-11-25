@@ -1,10 +1,14 @@
 # VS Code MSSQL — Copy and export parity
 Objective: match the MSSQL results-grid workflow in SQLTerm without restoring the automatic copy popup.
-Status: T1–T4 are implemented and T6–T7 are verified. T8 is pending; T5 remains deferred. Do not treat this checkpoint as full MSSQL interaction parity.
+Status: T1–T4 and T6 are verified. T7’s Results menu and inspector removal are implemented and locally tested; independent verification is outstanding. T8 is pending; T5 remains deferred. Do not treat this checkpoint as full MSSQL interaction parity.
 
 ## Specs
 S1. User request: “la funcionalidad de exportar y copiar verifica la de vscode mssql y haz un plan para igualarlo”
 S2. Existing interaction to preserve: “si hago control + c o y como en nvim se copiara la celda” and “ese popup eliminalo”.
+
+S3. “hay un problema con los comandos de espacio solo se activan si estoy en el editor si estoy en resultados no se activa el menu cuando el usuario este en resultados por lo cual tendria que seleccionar algo pasar a editor y luego otra vez espacio”. Selected option: “Abrir directamente el menú de Resultados”.
+
+S4. “funciona el menu pero faltan cosas en el menu de resultados que el la copia con cabeceras que es con Y y lo de v,  hay que quitar la funciona i de inspeccionar la celda”. Clarification: “quita todo la funcionalidad”.
 
 ## Tasks
 T1 | S1–S2 | Implemented; see T6 | Shared grid selection: distinguish focus from explicit selection; preserve click/Enter on a cell, column header, or row number; add rectangular selection with Shift+arrows and mouse drag, and Select All. Highlight the selected scope and exclude the visual `#` gutter from data.
@@ -14,8 +18,8 @@ T4 | S1 | Implemented | Add Excel (`.xlsx`) export using the same scopes. Verify
 T5 | S1 | Deferred | After core parity is verified, evaluate clipboard CSV, JSON, `IN (...)` and `INSERT`, and Save as `INSERT`. Confirm SQL dialect and escaping before implementing SQL output.
 
 T6 | S1–S2 | Verified | `fix: separa foco y selección en resultados` | Separate focus from selection: a simple data-cell click focuses rather than leaving a persistent mark. A mouse rectangle survives releasing Shift but clears when focus moves. Keep a separate regression for the reported keyboard rectangle: Shift+arrows followed by Down leaves the original rectangle as the copy target. Test the visual state and exact clipboard content independently.
-T7 | S1–S2 | Verified | `fix: copia la selección con cabeceras` | Make Y act on the active rectangle with headers, without requiring v or copying the whole result by surprise. Keep v as a separate full-row range; verify v → arrows → Y through keyboard dispatch. Expose Copy Headers from the reachable Results menu. Keep Ctrl+C/y headerless and popup-free.
-T8 | S1–S2 | Pending | Verify e proposes Selection only for an active range, otherwise Entire result, across CSV, JSON and XLSX. Update English and Spanish controls to say Shift. The cell inspector (i) and multiple-result support ([ and ]) are out of scope for this correction.
+T7 | S1–S4 | Local tests passed; candidate for independent verification | `03d1053` (original slice), `fix: completa el menú de resultados` (follow-up slice) | Make Y act on the active rectangle with headers, without requiring v or copying the whole result by surprise. Keep v as a separate full-row range; verify v → arrows → Y through keyboard dispatch. Expose Copy Headers from the reachable Results menu. Keep Ctrl+C/y headerless and popup-free. Open the Results menu directly on Space from the focused grid, keeping its focus and selection; preserve access through the editor’s existing menu. Add `Y` and `v` to Results and remove the cell inspector feature and its `i` action.
+T8 | S1–S2 | Pending | Verify e proposes Selection only for an active range, otherwise Entire result, across CSV, JSON and XLSX. Update English and Spanish controls to say Shift. Multiple-result support ([ and ]) remains out of scope.
 
 ## Log
 L1. User request: “la funcionalidad de exportar y copiar verifica la de vscode mssql y haz un plan para igualarlo”
@@ -29,4 +33,8 @@ L8. Checkpoint request: “quiero que guardes en plan en odd/tasks y hagas un co
 L9. User request: “comienza con T6”.
 L10. T6 verification: the mouse regressions failed before the fix and passed afterward. The separate keyboard regression confirms that Down moves focus to `tres` while `y` copies `A / uno` and `B / dos`. `go test ./...` passed. Native assessment was unavailable because the package-local binary was missing. Resume at T7.
 L11. User request: “continua con T7”.
-L12. T7 verification: reproduced `Y` falling back to the whole result. Focused tests confirmed exact clipboard output for a rectangle, an unmarked focused cell, `v` plus arrows, and `Space r h` through the Neovim leader menu. `Ctrl+C` and `y` remained headerless and popup-free. `go test ./...` passed. Native assessment was unavailable because the package-local binary was missing. Resume at T8.
+L12. T7 verification: reproduced `Y` falling back to the whole result. Focused tests confirmed exact clipboard output for a rectangle, an unmarked focused cell, `v` plus arrows, and `Space r h` through the Neovim leader menu. `Ctrl+C` and `y` remained headerless and popup-free. `go test ./...` passed. Native assessment was unavailable because the package-local binary was missing. T8 remains pending.
+L13. “hay un problema con los comandos de espacio solo se activan si estoy en el editor si estoy en resultados no se activa el menu cuando el usuario este en resultados por lo cual tendria que seleccionar algo pasar a editor y luego otra vez espacio”. Selected option: “Abrir directamente el menú de Resultados”.
+L14. Grid menu follow-up: focused tests and `go test ./...` passed. The editor menu differential check matched exit code, stdout, and stderr. The independent verifier could not start (`fatal: detected dubious ownership in repository`); native assessment could not find its package-local binary. No follow-up commit yet.
+L15. “funciona el menu pero faltan cosas en el menu de resultados que el la copia con cabeceras que es con Y y lo de v,  hay que quitar la funciona i de inspeccionar la celda”. Clarification: “quita todo la funcionalidad”.
+L16. Focused S4 tests went RED then GREEN, and `go test ./...` passed. The editor and Files `S` differential preserved exit status, stdout, and stderr. Native assessment lacked its package-local binary; the independent verifier required the exact committed candidate.

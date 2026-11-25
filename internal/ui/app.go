@@ -74,7 +74,7 @@ type UI struct {
 	copyingSQL                         bool
 	palette                            Palette
 	dialogCancel                       func()
-	leaderPanel                        *tview.TextView
+	leaderPanel                        *leaderOverlay
 	dialogContent                      tview.Primitive
 	connectionFolder                   string
 	lastExportDir                      string
@@ -422,7 +422,7 @@ func (u *UI) lazyVimTabKey(k *tcell.EventKey) bool {
 
 func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 	if u.leaderPanel != nil {
-		if u.app.GetFocus() == u.active().Editor.Area {
+		if u.app.GetFocus() == u.leaderPanel.origin {
 			switch k.Key() {
 			case tcell.KeyCtrlC:
 				u.leaderPanel = nil
@@ -437,9 +437,6 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 	if u.dialogContent != nil {
 		switch k.Key() {
 		case tcell.KeyCtrlC, tcell.KeyEscape:
-			if u.cellInspectorKey(k.Key()) {
-				return nil
-			}
 			if k.Key() == tcell.KeyEscape && u.clearSelectorSearch() {
 				return nil
 			}
@@ -493,9 +490,15 @@ func (u *UI) key(k *tcell.EventKey) *tcell.EventKey {
 		u.toggleEditorOption(true)
 		return nil
 	}
-	if e := u.active().Editor; k.Key() == tcell.KeyRune && k.Rune() == ' ' && k.Modifiers() == 0 && u.app.GetFocus() == e.Area && e.IsNeovim() && e.Mode == "NORMAL" {
-		u.leaderMenu()
-		return nil
+	if k.Key() == tcell.KeyRune && k.Rune() == ' ' && k.Modifiers() == 0 {
+		if u.app.GetFocus() == u.table {
+			u.openLeader(u.table, 'r')
+			return nil
+		}
+		if e := u.active().Editor; u.app.GetFocus() == e.Area && e.IsNeovim() && e.Mode == "NORMAL" {
+			u.leaderMenu()
+			return nil
+		}
 	}
 	switch k.Key() {
 	case tcell.KeyCtrlC:

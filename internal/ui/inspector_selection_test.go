@@ -1,64 +1,40 @@
 package ui
 
 import (
-	"context"
-	"io"
-	"path/filepath"
 	"testing"
 
 	"github.com/gdamore/tcell/v2"
+	"github.com/rivo/tview"
 	"sqlterm/internal/config"
 )
 
-func TestCellInspectorLineAndSearchCopy(t *testing.T) {
-	for _, tc := range []struct{ name, keys, want string }{
-		{"line", "V", "first\n"},
-		{"search", "/β", "β"},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			u := New(filepath.Join(t.TempDir(), "config.json"), config.Config{})
-			defer u.cancel()
-			copied := make(chan string, 1)
+func testTechnicalMessagesCopy(t *testing.T) {
+	u := runningUI(t, config.Config{})
+	copied := make(chan string, 2)
+	for i, want := range []string{"'=notice\nsecond line", "=notice\nsecond line"} {
+		u.app.QueueUpdateDraw(func() {
+			u.active().Messages = []string{"=notice", "second line"}
 			u.writeClipboard = func(text string) error { copied <- text; return nil }
-			u.inspectCellText("Cell", "name", func(context.Context, io.Writer, bool) error { return nil }, "first\nαβγ\n")
-			dispatchSelector(u, tcell.KeyRune, 'i')
-			dispatchSelector(u, tcell.KeyRune, 'x')
-			for _, key := range tc.keys {
-				dispatchSelector(u, tcell.KeyRune, key)
+			u.app.SetFocus(u.table)
+			dispatchModified(u, tcell.KeyRune, ' ', 0)
+			dispatchModified(u, tcell.KeyRune, 'm', 0)
+			panel, ok := u.dialogContent.(*tview.Flex)
+			if !ok || panel.GetItemCount() != 2 || panel.GetItem(0).(*tview.TextView).GetText(false) != "=notice\nsecond line" {
+				t.Error("Results menu did not open the read-only Technical Messages dialog")
+				return
 			}
-			if tc.name == "search" {
-				dispatchSelector(u, tcell.KeyEnter, 0)
-			}
-			dispatchSelector(u, tcell.KeyCtrlC, 0)
-			if text := receiveCopy(t, copied); text != tc.want {
-				t.Fatalf("copied %q, want %q", text, tc.want)
+			buttons := panel.GetItem(1).(*tview.Form)
+			buttons.GetButton(i).InputHandler()(tcell.NewEventKey(tcell.KeyEnter, 0, 0), func(p tview.Primitive) { u.app.SetFocus(p) })
+		})
+		if got := receiveCopy(t, copied); got != want {
+			t.Fatalf("copied messages %q, want %q", got, want)
+		}
+		waitUI(t, u, func() bool { return !u.active().Busy })
+		u.app.QueueUpdateDraw(func() {
+			dispatchModified(u, tcell.KeyEscape, 0, 0)
+			if u.dialogContent != nil || !u.table.HasFocus() {
+				t.Error("Escape did not restore focus to Results")
 			}
 		})
-	}
-}
-
-func TestCellInspectorVisualCopy(t *testing.T) {
-	u := New(filepath.Join(t.TempDir(), "config.json"), config.Config{})
-	defer u.cancel()
-	copied := make(chan string, 1)
-	u.writeClipboard = func(text string) error { copied <- text; return nil }
-	u.inspectCellText("Cell", "name", func(context.Context, io.Writer, bool) error { return nil }, "αβγ\nsecond\n")
-	dispatchSelector(u, tcell.KeyCtrlC, 0)
-	if u.dialogContent == nil {
-		t.Fatal("copy with no selection closed the inspector")
-	}
-	select {
-	case text := <-copied:
-		t.Fatalf("unexpected copy: %q", text)
-	default:
-	}
-	dispatchSelector(u, tcell.KeyRune, 'v')
-	dispatchSelector(u, tcell.KeyRight, 0)
-	dispatchSelector(u, tcell.KeyCtrlC, 0)
-	if text := receiveCopy(t, copied); text != "αβ" {
-		t.Fatalf("visual copied %q", text)
-	}
-	if u.dialogContent == nil {
-		t.Fatal("copy closed the inspector")
 	}
 }

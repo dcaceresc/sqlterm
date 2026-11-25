@@ -275,11 +275,11 @@ Rows are fetched continuously without scrolling to request more. While the query
 
 ## Results, copying, and export
 
-### Navigation and inspection
+### Navigation and selection
 
 In the results pane:
 
-- Click or press **Enter** on a cell to highlight it, on a header to highlight the column, or on the leading number to highlight the row. **Ctrl+C** or **y** copies the selection without headers or row numbers. **i** opens the cell text inspector.
+- Click a data cell to focus it. Press **Enter** to mark the focused cell, column, or row; clicking a column header or row number marks it too. **Ctrl+C** or **y** copies without headers or row numbers.
 - `/` searches.
 - `s` and `S` sort the column locally in ascending or descending order.
 - `m` shows messages.
@@ -290,20 +290,18 @@ Sorting is lexicographic, puts `NULL` first in ascending order, and only affects
 
 In SQL Server, `uniqueidentifier` values appear as readable GUIDs, including in routine results. Other binary columns are not treated as GUIDs just because they are 16 bytes long. An invalid binary length produces a read error rather than unreadable text.
 
-The inspector distinguishes `NULL` from `""`, shows the column name and position, and offers safe or literal copying. It can also copy the column name and value as one TSV row.
-
 ### Safe and literal copying
 
 | Key | Action |
 | --- | --- |
 | Ctrl+C / y | Copy the selected cell, row, or column |
-| Y | Copy received rows or the range marked with v, with headers |
+| Y | Copy the selection or focused cell, row, or column, with headers |
 | r / R | Copy the row without / with headers |
 | c | Copy the cell |
 | v | Start or clear a row selection |
 | + / - | Widen or narrow the active column |
 
-The inspector can also copy a cell with its header as a name, tab, and value on a single TSV row. Embedded tabs and line breaks are quoted.
+Press **Space** in the focused grid to open Results directly, or **Space r** from the NORMAL editor. In either menu, **Y** copies with headers, **h** copies only headers, and **v** toggles a full-row range. Use the grid arrow keys to extend the range.
 
 Safe mode is the default. It prefixes `'` to text whose first significant character is `=`, `+`, `-`, or `@`, in both headers and values, to reduce formula execution when pasting into a spreadsheet. This also protects values such as `-42`. Use **Literal** only when you need the exact text and trust the data.
 
@@ -382,7 +380,7 @@ With focus on the editor in NORMAL, press **Space**, the group key, and the acti
 | `c` Code | `x` run · `A` review/apply definition · `p` invoke routine · `t` routine template · `T` table template · `i` insert object name · `q` generate SELECT |
 | `d` Connections | `c` profiles · `b` switch database · `d` disconnect · `r` refresh catalog · `e` confirmations |
 | `s` Explore | `o` find objects · `d` view definition · `g` grouped/flat catalog · `h` history |
-| `r` Results | `y` copy · `i` inspect cell · `e` export · `m` technical messages |
+| `r` Results | `y` copy · `Y` copy with headers · `h` copy only headers · `v` toggle row range · `e` export · `m` technical messages |
 | `u` Preferences | `w` line wrap · `l` line numbers · `C` theme · `i` language |
 | `w` Layout | `b` balanced · `e` editing · `d` browsing · `m` maximize editor · `r` maximize results · `c` show/hide catalog · `>` / `<` adjust catalog width by ±4 columns · `+` / `-` give the editor/results ±10 percentage points of space |
 | General | `?` help · `x` cancel operation · `q q` quit |

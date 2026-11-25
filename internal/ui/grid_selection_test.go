@@ -343,6 +343,15 @@ func TestGridCopiesCellRowAndColumnWithoutDialog(t *testing.T) {
 }
 
 func TestGridCopyExplicitSelection(t *testing.T) {
+	testGridCopyActions(t, false)
+}
+
+func TestResultsMenuCopyAndRange(t *testing.T) {
+	testGridCopyActions(t, true)
+}
+
+func testGridCopyActions(t *testing.T, menuParity bool) {
+	t.Helper()
 	for _, tc := range []struct {
 		name, action, want string
 		keys               []tcell.Key
@@ -356,11 +365,22 @@ func TestGridCopyExplicitSelection(t *testing.T) {
 		{"Y copies rectangle", "Y", "'=dup\t'=dup\n'@José\t\\N\n\"a\tb\nc\"\t\n", []tcell.Key{tcell.KeyLeft, tcell.KeyUp}, false},
 		{"Y copies focused cell without a mark", "Y", "'=dup\n\"a\tb\nc\"\n", nil, false},
 		{"v selects full rows for Y", "vY", "other\t'=dup\t'=dup\nskip\t'@José\t\\N\nskip\t\"a\tb\nc\"\t\n", []tcell.Key{tcell.KeyLeft}, false},
-		{"Results menu copies only headers", "menu", "'=dup\t'=dup\n", []tcell.Key{tcell.KeyLeft, tcell.KeyUp}, false},
+		{"Editor Results menu copies only headers", "menu", "'=dup\t'=dup\n", []tcell.Key{tcell.KeyLeft, tcell.KeyUp}, false},
+		{"Grid Results menu copies only selected headers", "grid menu", "'=dup\t'=dup\n", []tcell.Key{tcell.KeyLeft, tcell.KeyUp}, false},
+		{"grid Shift+Y copies rectangle", "grid Y", "'=dup\t'=dup\n'@José\t\\N\n\"a\tb\nc\"\t\n", []tcell.Key{tcell.KeyLeft, tcell.KeyUp}, false},
+		{"editor Y copies rectangle", "editor Y", "'=dup\t'=dup\n'@José\t\\N\n\"a\tb\nc\"\t\n", []tcell.Key{tcell.KeyLeft, tcell.KeyUp}, false},
+		{"grid v extends full rows", "grid vY", "other\t'=dup\t'=dup\nskip\t'@José\t\\N\nskip\t\"a\tb\nc\"\t\n", []tcell.Key{tcell.KeyLeft}, false},
+		{"editor v extends full rows", "editor vY", "other\t'=dup\t'=dup\nskip\t'@José\t\\N\nskip\t\"a\tb\nc\"\t\n", []tcell.Key{tcell.KeyLeft}, false},
+		{"grid y remains headerless", "grid y", "'@José\t\\N\n\"a\tb\nc\"\t\n", []tcell.Key{tcell.KeyLeft, tcell.KeyUp}, false},
 	} {
+		fromEditor := tc.action == "editor Y" || tc.action == "editor vY"
+		parityCase := fromEditor || tc.action == "grid Y" || tc.action == "grid vY" || tc.action == "grid y"
+		if parityCase != menuParity {
+			continue
+		}
 		t.Run(tc.name, func(t *testing.T) {
 			var u *UI
-			if tc.action == "menu" {
+			if tc.action == "menu" || fromEditor {
 				u = runningNeovimUI(t)
 			} else {
 				u = runningUI(t, config.Config{})
@@ -398,6 +418,44 @@ func TestGridCopyExplicitSelection(t *testing.T) {
 					dispatchModified(u, key, 0, mods)
 				}
 				switch {
+				case parityCase:
+					open := func() {
+						dispatchModified(u, tcell.KeyRune, ' ', 0)
+						if u.app.GetFocus() == u.active().Editor.Area {
+							dispatchModified(u, tcell.KeyRune, 'r', 0)
+						}
+					}
+					if fromEditor {
+						u.app.SetFocus(u.active().Editor.Area)
+					}
+					open()
+					if tc.action == "grid vY" || tc.action == "editor vY" {
+						dispatchModified(u, tcell.KeyRune, 'v', 0)
+						if u.leaderPanel != nil || u.app.GetFocus() != u.table {
+							t.Error("menu v did not return control to the grid")
+							return
+						}
+						dispatchModified(u, tcell.KeyUp, 0, 0)
+						open()
+					}
+					origin := u.app.GetFocus()
+					r, c := u.table.GetSelection()
+					dispatchModified(u, tcell.KeyRune, 'Y', tcell.ModShift|tcell.ModAlt)
+					if u.leaderPanel == nil {
+						t.Error("Alt+Shift+Y unexpectedly activated the menu")
+						return
+					}
+					key, mods := 'Y', tcell.ModShift
+					if tc.action == "editor Y" {
+						mods = 0
+					} else if tc.action == "grid y" {
+						key, mods = 'y', 0
+					}
+					dispatchModified(u, tcell.KeyRune, key, mods)
+					found = u.leaderPanel == nil
+					if row, col := u.table.GetSelection(); row != r || col != c || u.app.GetFocus() != origin {
+						t.Error("menu copy changed focus or grid coordinates")
+					}
 				case tc.action == "Y" || tc.action == "vY":
 					if tc.action == "vY" {
 						dispatchModified(u, tcell.KeyRune, 'v', 0)
@@ -415,6 +473,24 @@ func TestGridCopyExplicitSelection(t *testing.T) {
 					dispatchModified(u, tcell.KeyRune, 'r', 0)
 					dispatchModified(u, tcell.KeyRune, 'h', 0)
 					found = u.leaderPanel == nil
+				case tc.action == "grid menu":
+					row, col := u.table.GetSelection()
+					dispatchModified(u, tcell.KeyRune, ' ', 0)
+					if u.leaderPanel == nil {
+						t.Error("Space did not open the Results menu from the grid")
+						return
+					}
+					dispatchModified(u, tcell.KeyRune, 'h', 0)
+					found = u.leaderPanel == nil
+					if r, c := u.table.GetSelection(); u.app.GetFocus() != u.table || r != row || c != col {
+						t.Error("copying headers changed grid focus or cell")
+					}
+					for _, cell := range [][2]int{{1, 2}, {2, 3}} {
+						_, bg, _ := u.table.GetCell(cell[0], cell[1]).Style.Decompose()
+						if bg != u.palette.Selection {
+							t.Errorf("rectangle cell %v lost its highlight", cell)
+						}
+					}
 				case tc.action != "":
 					for _, c := range u.commands() {
 						if c.Name == tc.action && (c.Available == nil || c.Available()) {

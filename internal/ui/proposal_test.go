@@ -362,7 +362,7 @@ func TestProposalBilingualWorkspaceScreens(t *testing.T) {
 	}
 }
 
-func TestRangeCopyAndInspectorKeepOriginalValues(t *testing.T) {
+func TestRangeCopyKeepsOriginalValues(t *testing.T) {
 	u := runningUI(t, config.Config{})
 	s, err := result.New([]string{"name"})
 	if err != nil {
@@ -396,26 +396,6 @@ func TestRangeCopyAndInspectorKeepOriginalValues(t *testing.T) {
 	u.app.QueueUpdateDraw(func() {
 		if !strings.Contains(u.active().Status, "Copied 2 rows") {
 			t.Error("incorrect copy scope")
-		}
-		u.app.SetFocus(u.table)
-		u.viewCell(1, 0)
-		panel := u.dialogContent.(*tview.Flex)
-		buttons := panel.GetItem(1).(*tview.Form)
-		buttons.GetButton(0).InputHandler()(tcell.NewEventKey(tcell.KeyEnter, 0, 0), func(p tview.Primitive) { u.app.SetFocus(p) })
-	})
-	select {
-	case text := <-copied:
-		if text != "third" {
-			t.Fatal("inspector did not copy complete original value", text)
-		}
-	case <-time.After(3 * time.Second):
-		t.Fatal("inspector copy timed out")
-	}
-	waitUI(t, u, func() bool { return !u.active().Busy })
-	u.app.QueueUpdateDraw(func() {
-		u.dismiss()
-		if !u.table.HasFocus() {
-			t.Error("inspector did not restore results focus")
 		}
 	})
 }

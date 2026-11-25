@@ -80,6 +80,17 @@ func (u *UI) gridFocusChanged(row, col int) {
 	u.refreshResultInfo()
 }
 
+func (u *UI) toggleGridRowRange() {
+	t := u.active()
+	if t.CopyAnchor > 0 {
+		t.CopyAnchor = 0
+	} else if row, _ := u.table.GetSelection(); row > 0 && u.canSelectGrid() {
+		t.clearGridSelection()
+		t.CopyAnchor = row
+	}
+	u.refreshResultInfo()
+}
+
 func (u *UI) selectAllGrid() {
 	if !u.canSelectGrid() {
 		return

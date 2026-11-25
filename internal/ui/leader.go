@@ -27,14 +27,23 @@ func (u *UI) leaderGroups() map[rune][]command {
 		'c': group("xAptTiq", "Execute SQL", "Apply definition", "Invoke procedure / function", "New routine template", "New table template", "Insert object name", "Generate SELECT"),
 		'd': group("cbdre", "Connections", "Change database", "Disconnect", "Refresh catalog", "Execution confirmations"),
 		's': group("odgh", "Search objects", "View definition", "Grouped / flat catalog", "History"),
-		'r': group("yhiem", "Copy results", "Copy Headers", "Inspect cell", "Export results", "Technical messages"),
+		'r': group("yYhvem", "Copy results", "Copy with Headers", "Copy Headers", "Toggle row range", "Export results", "Technical messages"),
 		'u': group("wlCi", "Word wrap", "Line numbers", "Themes", "Language / Idioma"),
 		'w': u.layoutCommands(),
 		'q': group("q", "Quit"),
 	}
 }
 
+type leaderOverlay struct {
+	*tview.TextView
+	origin tview.Primitive
+}
+
 func (u *UI) leaderMenu() {
+	u.openLeader(u.active().Editor.Area, 0)
+}
+
+func (u *UI) openLeader(origin tview.Primitive, initialGroup rune) {
 	groups := u.leaderGroups()
 	byName := make(map[string]command)
 	for _, c := range u.commands() {
@@ -43,12 +52,16 @@ func (u *UI) leaderMenu() {
 	labels := map[rune]string{'f': "Files", 'b': "Tabs", 'c': "Code", 'd': "Connections", 's': "Explore", 'r': "Results", 'u': "Preferences", 'w': "Layout", 'q': "Quit"}
 	text := tview.NewTextView()
 	text.SetBorder(true)
-	current := rune(0)
+	current := initialGroup
+	title := " Space · Esc cancel · Backspace parent "
+	if initialGroup == 'r' {
+		title = " Results · Esc or Backspace cancel "
+	}
+	text.SetTitle(u.tr(title))
 	var entries []command
 	rebuild := func() {
 		entries = nil
 		text.Clear()
-		text.SetTitle(u.tr(" Space · Esc cancel · Backspace parent "))
 		if current == 0 {
 			for _, key := range "fbcdsruwq" {
 				fmt.Fprintf(text, "%c  %s\n", key, u.tr(labels[key]))
@@ -74,11 +87,16 @@ func (u *UI) leaderMenu() {
 			u.leaderPanel = nil
 			return nil
 		case tcell.KeyBackspace, tcell.KeyBackspace2:
+			if initialGroup != 0 {
+				u.leaderPanel = nil
+				return nil
+			}
 			current = 0
 			rebuild()
 			return nil
 		}
-		if k.Key() != tcell.KeyRune || k.Modifiers() != 0 {
+		shiftedResultsCopy := current == 'r' && k.Rune() == 'Y' && k.Modifiers() == tcell.ModShift
+		if k.Key() != tcell.KeyRune || (k.Modifiers() != 0 && !shiftedResultsCopy) {
 			return nil
 		}
 		if current == 0 {
@@ -103,7 +121,7 @@ func (u *UI) leaderMenu() {
 	})
 	u.style(text)
 	text.SetWrap(false)
-	u.leaderPanel = text
+	u.leaderPanel = &leaderOverlay{TextView: text, origin: origin}
 }
 
 // drawLeader muestra las próximas teclas a la derecha sin cambiar el foco ni cubrir toda la sesión.
@@ -112,7 +130,7 @@ func (u *UI) drawLeader(screen tcell.Screen) {
 	if panel == nil {
 		return
 	}
-	if !u.active().Editor.Area.HasFocus() {
+	if !panel.origin.HasFocus() {
 		u.leaderPanel = nil
 		return
 	}

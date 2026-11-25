@@ -330,21 +330,18 @@ Space u C opens themes. Themes preview with arrows; Enter saves, Esc restores.
 Connections: Enter connect/expand, + add profile, n new folder,
 e edit profile, r rename folder, d delete empty folder, / search.
 
-Results: [ / ] previous/next result set; click focuses a data cell; Enter marks a cell, column or row; clicking a column header or row number marks it too; i inspect value
-or the column name with the value; m messages;
+Results: [ / ] previous/next result set; click focuses a data cell; Enter marks a cell, column or row; clicking a column header or row number marks it too; m messages;
 / search rows; s sort selected column ascending; S descending; e export.
 Shift+arrows or drag marks a rectangle. Moving focus clears only mouse rectangles. Ctrl+A marks all data; Esc clears the mark.
 v marks a full-row range; use arrows to extend it. Ctrl+C/y copy without headers
 from the selection or the focused cell, row or column. Y copies the same scope
-with headers. For headers only, use F7 to focus the editor in NORMAL mode,
-then Space r h. The Actions palette offers Copy with Headers and Copy Headers.
+with headers. Space in the focused grid opens the Results menu without changing
+selection; Esc or Backspace closes it. In the menu, Y copies with headers, h copies
+only headers, and v toggles the row range. From the NORMAL editor, use Space r.
 r/R copy the current row;
-c current cell. The menu also offers Cell with header: the selected cell's
-column name, a tab and its value in one TSV row, so a paste fills two adjacent
-cells of one spreadsheet row. Copy shortcuts and CSV default to spreadsheet-safe
-text, including both fields of Cell with header; menus expose literal copy/CSV
-with an untrusted-data warning. Clipboard rows are TSV in displayed order. JSON
-remains literal and unchanged.
+c copies the current cell. Copy shortcuts and CSV default to spreadsheet-safe
+text. The export menu offers a literal CSV option with an untrusted-data warning.
+Clipboard rows are TSV in displayed order. JSON remains literal and unchanged.
 Sorting is lexical, NULL first ascending. Export uses displayed order and offers Selection or Entire result when data is marked.
 Excel (.xlsx) stores headers and values as text, not formulas, and leaves NULL blank.
 The file browser opens in the last successful export folder.

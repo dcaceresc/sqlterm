@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
-	"io"
 	"path/filepath"
 	"sqlterm/internal/result"
 	"strconv"
@@ -109,35 +108,6 @@ func (u *UI) showResults() {
 	u.table.SetOffset(0, 0).Select(1, 1)
 	u.refreshResultInfo()
 }
-func (u *UI) viewCell(row, col int) {
-	s := u.currentStore()
-	if s == nil || row < 1 {
-		return
-	}
-	n := row - 1
-	if len(u.active().Order) > 0 {
-		if n >= len(u.active().Order) {
-			return
-		}
-		n = u.active().Order[n]
-	}
-	r, e := s.Row(n)
-	if e != nil {
-		u.message(e.Error())
-		return
-	}
-	if col < 0 || col >= len(r) {
-		return
-	}
-	v := r[col]
-	text := v.Text
-	if v.Null {
-		text = "SQL NULL"
-	}
-	u.inspectCellText(fmt.Sprintf(u.tr("Cell · row %d · column %d: %s"), row, col+1, s.Columns[col]), s.Columns[col], func(ctx context.Context, w io.Writer, spreadsheetSafe bool) error {
-		return s.WriteCellWithHeader(ctx, w, n, col, spreadsheetSafe)
-	}, text)
-}
 func (u *UI) resultPreviewLocked() bool {
 	t := u.active()
 	if t.Execution == nil {
@@ -187,20 +157,7 @@ func (u *UI) gridKey(k *tcell.EventKey) *tcell.EventKey {
 		u.setGridContent(t, u.currentStore())
 		return nil
 	case 'v':
-		if t.CopyAnchor > 0 {
-			t.CopyAnchor = 0
-		} else {
-			r, _ := u.table.GetSelection()
-			if r > 0 && u.canSelectGrid() {
-				t.gridSelection = gridSelection{}
-				t.CopyAnchor = r
-			}
-		}
-		u.refreshResultInfo()
-		return nil
-	case 'i':
-		row, col := u.table.GetSelection()
-		u.viewCell(row, col-1)
+		u.toggleGridRowRange()
 		return nil
 	case 'y':
 		u.copyGridSelection()

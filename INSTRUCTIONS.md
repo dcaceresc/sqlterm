@@ -275,11 +275,11 @@ La lectura es continua y no requiere desplazarse para pedir más filas. Mientras
 
 ## Resultados, copia y exportación
 
-### Navegación e inspección
+### Navegación y selección
 
 En resultados:
 
-- Haz clic o pulsa **Enter** en una celda para marcarla, en una cabecera para marcar la columna o en el número inicial para marcar la fila. **Ctrl+C** o **y** copia lo marcado sin cabeceras ni números de fila. **i** abre el inspector de texto de la celda.
+- Haz clic en una celda de datos para enfocarla. Pulsa **Enter** para marcar la celda, columna o fila enfocada; hacer clic en una cabecera de columna o en el número de fila también la marca. **Ctrl+C** o **y** copia sin cabeceras ni números de fila.
 - `/` busca.
 - `s` y `S` ordenan localmente la columna en sentido ascendente o descendente.
 - `m` muestra mensajes.
@@ -290,20 +290,18 @@ La ordenación es léxica, coloca `NULL` primero al ascender y solo actúa sobre
 
 En SQL Server, los valores `uniqueidentifier` se muestran como GUID legibles, también en resultados de rutinas. Otras columnas binarias no se interpretan como GUID solo por tener 16 bytes. Una longitud binaria inválida produce un error de lectura en lugar de texto ilegible.
 
-El inspector distingue `NULL` de `""`, muestra nombre y posición de columna y ofrece copia segura o literal. También copia nombre de columna y valor en una fila TSV.
-
 ### Copia segura y literal
 
 | Tecla | Acción |
 | --- | --- |
 | Ctrl+C / y | Copiar la celda, fila o columna marcada |
-| Y | Copiar con cabeceras las filas recibidas o el rango marcado con v |
+| Y | Copiar con cabeceras la selección o la celda, fila o columna enfocada |
 | r / R | Copiar la fila sin / con cabeceras |
 | c | Copiar la celda |
 | v | Iniciar o quitar una selección de filas |
 | + / - | Ampliar o reducir la columna activa |
 
-El inspector también permite copiar el nombre de la columna y el valor como una fila TSV.
+Pulsa **Espacio** en la grilla enfocada para abrir Resultados directamente, o **Espacio r** desde el editor en modo NORMAL. En ambos menús, **Y** copia con cabeceras, **h** copia solo las cabeceras y **v** inicia o quita un rango de filas completas. Usa las flechas en la grilla para ampliar el rango.
 
 El modo seguro es el predeterminado. Antepone `'` al texto cuyo primer carácter significativo sea `=`, `+`, `-` o `@`, tanto en cabeceras como en valores, para reducir la ejecución de fórmulas al pegar en una hoja de cálculo. También protege valores como `-42`. Usa **Literal** solo si necesitas el texto exacto y confías en los datos.
 
@@ -382,7 +380,7 @@ Con el editor enfocado en NORMAL, pulsa **Espacio**, el grupo y la acción. Cada
 | `c` Código | `x` ejecutar · `A` revisar/aplicar definición · `p` invocar rutina · `t` plantilla de rutina · `T` plantilla de tabla · `i` insertar nombre de objeto · `q` generar SELECT |
 | `d` Conexiones | `c` perfiles · `b` cambiar base · `d` desconectar · `r` actualizar catálogo · `e` confirmaciones |
 | `s` Explorar | `o` buscar objetos · `d` ver definición · `g` catálogo agrupado/plano · `h` historial |
-| `r` Resultados | `y` copiar · `i` inspeccionar celda · `e` exportar · `m` mensajes técnicos |
+| `r` Resultados | `y` copiar · `Y` copiar con cabeceras · `h` copiar solo cabeceras · `v` alternar rango de filas · `e` exportar · `m` mensajes técnicos |
 | `u` Preferencias | `w` ajuste de línea · `l` números · `C` tema · `i` idioma |
 | `w` Distribución | `b` equilibrada · `e` edición · `d` exploración · `m` maximizar editor · `r` maximizar resultados · `c` mostrar/ocultar catálogo · `>` / `<` ancho del catálogo ±4 columnas · `+` / `-` dar espacio al editor/resultados ±10 puntos porcentuales |
 | Generales | `?` ayuda · `x` cancelar operación · `q q` salir |

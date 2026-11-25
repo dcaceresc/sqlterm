@@ -6,6 +6,7 @@ import (
 
 	"github.com/gdamore/tcell/v2"
 	"github.com/rivo/tview"
+	"sqlterm/internal/result"
 )
 
 func TestLeaderRender(t *testing.T) {
@@ -40,7 +41,7 @@ func TestLeaderRender(t *testing.T) {
 
 func TestLeaderMaps(t *testing.T) {
 	u, _ := modeTestUI(t)
-	expected := map[rune]string{'f': "ensS", 'b': "d", 'c': "xAptTiq", 'd': "cbdre", 's': "odgh", 'r': "yhiem", 'u': "wlCi", 'w': "bedmrc><+-", 'q': "q"}
+	expected := map[rune]string{'f': "ensS", 'b': "d", 'c': "xAptTiq", 'd': "cbdre", 's': "odgh", 'r': "yYhvem", 'u': "wlCi", 'w': "bedmrc><+-", 'q': "q"}
 	groups := u.leaderGroups()
 	for key, keys := range expected {
 		var got strings.Builder
@@ -98,7 +99,7 @@ func TestLeaderExcludedModesAndPanes(t *testing.T) {
 			}
 		}
 		e.Mode = "NORMAL"
-		for _, pane := range []tview.Primitive{u.table, u.objects, u.search, u.kind} {
+		for _, pane := range []tview.Primitive{u.objects, u.search, u.kind} {
 			u.app.SetFocus(pane)
 			u.key(tcell.NewEventKey(tcell.KeyRune, ' ', 0))
 			if u.leaderPanel != nil {
@@ -111,6 +112,97 @@ func TestLeaderExcludedModesAndPanes(t *testing.T) {
 			t.Error("modified Space opened menu")
 		}
 	})
+}
+
+func TestLeaderResultsFromGrid(t *testing.T) {
+	u, screen := modeTestUI(t)
+	u.app.SetFocus(u.table)
+	dispatchModified(u, tcell.KeyRune, ' ', tcell.ModAlt)
+	if u.leaderPanel != nil {
+		t.Fatal("modified Space opened the Results menu")
+	}
+	open := func() {
+		t.Helper()
+		dispatchModified(u, tcell.KeyRune, ' ', 0)
+		u.app.ForceDraw()
+		if u.leaderPanel == nil || u.dialogContent != nil || u.app.GetFocus() != u.table {
+			t.Fatal("Space did not keep a nonmodal Results menu on the focused grid")
+		}
+		var rendered strings.Builder
+		width, height := screen.Size()
+		for y := 0; y < height; y++ {
+			for x := width / 2; x < width; x++ {
+				r, _, _, _ := screen.GetContent(x, y)
+				rendered.WriteRune(r)
+			}
+			rendered.WriteByte('\n')
+		}
+		menu := rendered.String()
+		for _, label := range []string{"h  Copy Headers", "Y  Copy with Headers", "v  Toggle row range"} {
+			if !strings.Contains(menu, label) {
+				t.Errorf("Results menu is missing %q", label)
+			}
+		}
+		if strings.Contains(menu, "f  Files") || strings.Contains(menu, "Inspect cell") {
+			t.Error("expected Results menu without the cell inspector")
+		}
+	}
+	for _, cancel := range []tcell.Key{tcell.KeyBackspace, tcell.KeyBackspace2, tcell.KeyEscape} {
+		open()
+		dispatchModified(u, tcell.KeyRune, 'r', 0)
+		dispatchModified(u, cancel, 0, 0)
+		if u.leaderPanel != nil || u.app.GetFocus() != u.table {
+			t.Fatalf("%v did not cancel the Results menu in place", cancel)
+		}
+	}
+	open()
+	u.app.SetFocus(u.search)
+	dispatchModified(u, tcell.KeyRune, 'h', 0)
+	if u.leaderPanel != nil || u.search.GetText() != "h" {
+		t.Fatal("Results menu captured input after focus moved")
+	}
+	u.app.SetFocus(u.table)
+	open()
+	u.app.SetFocus(u.search)
+	u.app.ForceDraw()
+	if u.leaderPanel != nil {
+		t.Fatal("Results menu was not dismissed on redraw after focus moved")
+	}
+	t.Run("technical messages still copy", testTechnicalMessagesCopy)
+}
+
+func TestGridInspectorShortcutRemoved(t *testing.T) {
+	u, _ := modeTestUI(t)
+	s, err := result.New([]string{"value"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(s.Close)
+	if err := s.Append([]result.Cell{{Text: "original"}}); err != nil {
+		t.Fatal(err)
+	}
+	u.active().Results = []*result.Store{s}
+	u.showResults()
+	u.app.SetFocus(u.table)
+	status := u.active().Status
+	check := func() {
+		t.Helper()
+		row, col := u.table.GetSelection()
+		if u.dialogContent != nil || !u.table.HasFocus() || row != 1 || col != 1 || u.active().Status != status || u.active().Busy {
+			t.Error("removed i changed dialog, focus, cell or execution state")
+		}
+	}
+	dispatchModified(u, tcell.KeyRune, 'i', 0)
+	check()
+	if u.dialogContent != nil {
+		dispatchModified(u, tcell.KeyEscape, 0, 0)
+	}
+	dispatchModified(u, tcell.KeyRune, ' ', 0)
+	dispatchModified(u, tcell.KeyRune, 'i', 0)
+	check()
+	if u.leaderPanel == nil {
+		t.Error("removed i consumed the Results menu")
+	}
 }
 
 func TestLeaderLayoutLeaves(t *testing.T) {
@@ -183,4 +275,20 @@ func TestLeaderNavigationAndRemovedKeys(t *testing.T) {
 	if u.leaderPanel != nil {
 		t.Fatal("Escape did not dismiss")
 	}
+	t.Run("editor menu still ignores shifted keys outside Results", func(t *testing.T) {
+		u := runningNeovimUI(t)
+		u.app.QueueUpdateDraw(func() {
+			dispatchModified(u, tcell.KeyRune, ' ', 0)
+			root := u.leaderPanel
+			if root == nil {
+				t.Error("Space did not open the editor menu")
+				return
+			}
+			before := root.GetText(true)
+			dispatchModified(u, tcell.KeyRune, 'Y', tcell.ModShift)
+			if u.leaderPanel != root || root.GetText(true) != before || u.dialogContent != nil {
+				t.Error("Shift+Y changed the editor root menu")
+			}
+		})
+	})
 }
