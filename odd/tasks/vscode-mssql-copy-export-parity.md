@@ -1,6 +1,6 @@
 # VS Code MSSQL — Copy and export parity
 Objective: match the MSSQL results-grid workflow in SQLTerm without restoring the automatic copy popup.
-Status: T1–T4 are implemented and T6 is verified. T7–T8 are pending; T5 remains deferred. Do not treat this checkpoint as full MSSQL interaction parity.
+Status: T1–T4 are implemented and T6–T7 are verified. T8 is pending; T5 remains deferred. Do not treat this checkpoint as full MSSQL interaction parity.
 
 ## Specs
 S1. User request: “la funcionalidad de exportar y copiar verifica la de vscode mssql y haz un plan para igualarlo”
@@ -14,7 +14,7 @@ T4 | S1 | Implemented | Add Excel (`.xlsx`) export using the same scopes. Verify
 T5 | S1 | Deferred | After core parity is verified, evaluate clipboard CSV, JSON, `IN (...)` and `INSERT`, and Save as `INSERT`. Confirm SQL dialect and escaping before implementing SQL output.
 
 T6 | S1–S2 | Verified | `fix: separa foco y selección en resultados` | Separate focus from selection: a simple data-cell click focuses rather than leaving a persistent mark. A mouse rectangle survives releasing Shift but clears when focus moves. Keep a separate regression for the reported keyboard rectangle: Shift+arrows followed by Down leaves the original rectangle as the copy target. Test the visual state and exact clipboard content independently.
-T7 | S1–S2 | Pending | Make Y act on the active rectangle with headers, without requiring v or copying the whole result by surprise. Keep v as a separate full-row range; verify v → arrows → Y through keyboard dispatch. Expose Copy Headers from the reachable Results menu. Keep Ctrl+C/y headerless and popup-free.
+T7 | S1–S2 | Verified | `fix: copia la selección con cabeceras` | Make Y act on the active rectangle with headers, without requiring v or copying the whole result by surprise. Keep v as a separate full-row range; verify v → arrows → Y through keyboard dispatch. Expose Copy Headers from the reachable Results menu. Keep Ctrl+C/y headerless and popup-free.
 T8 | S1–S2 | Pending | Verify e proposes Selection only for an active range, otherwise Entire result, across CSV, JSON and XLSX. Update English and Spanish controls to say Shift. The cell inspector (i) and multiple-result support ([ and ]) are out of scope for this correction.
 
 ## Log
@@ -28,3 +28,5 @@ L7. User observations: “en el punto 3 hice marque el rectangulo luego aprete v
 L8. Checkpoint request: “quiero que guardes en plan en odd/tasks y hagas un commit de lo que ya esta para continuar mas tarde”. Do not implement T5 as part of this correction.
 L9. User request: “comienza con T6”.
 L10. T6 verification: the mouse regressions failed before the fix and passed afterward. The separate keyboard regression confirms that Down moves focus to `tres` while `y` copies `A / uno` and `B / dos`. `go test ./...` passed. Native assessment was unavailable because the package-local binary was missing. Resume at T7.
+L11. User request: “continua con T7”.
+L12. T7 verification: reproduced `Y` falling back to the whole result. Focused tests confirmed exact clipboard output for a rectangle, an unmarked focused cell, `v` plus arrows, and `Space r h` through the Neovim leader menu. `Ctrl+C` and `y` remained headerless and popup-free. `go test ./...` passed. Native assessment was unavailable because the package-local binary was missing. Resume at T8.

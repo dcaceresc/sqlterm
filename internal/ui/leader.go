@@ -27,7 +27,7 @@ func (u *UI) leaderGroups() map[rune][]command {
 		'c': group("xAptTiq", "Execute SQL", "Apply definition", "Invoke procedure / function", "New routine template", "New table template", "Insert object name", "Generate SELECT"),
 		'd': group("cbdre", "Connections", "Change database", "Disconnect", "Refresh catalog", "Execution confirmations"),
 		's': group("odgh", "Search objects", "View definition", "Grouped / flat catalog", "History"),
-		'r': group("yiem", "Copy results", "Inspect cell", "Export results", "Technical messages"),
+		'r': group("yhiem", "Copy results", "Copy Headers", "Inspect cell", "Export results", "Technical messages"),
 		'u': group("wlCi", "Word wrap", "Line numbers", "Themes", "Language / Idioma"),
 		'w': u.layoutCommands(),
 		'q': group("q", "Quit"),

@@ -206,15 +206,7 @@ func (u *UI) gridKey(k *tcell.EventKey) *tcell.EventKey {
 		u.copyGridSelection()
 		return nil
 	case 'Y':
-		if t.Busy {
-			u.message(u.tr("Press F10 to stop receiving rows before sorting, copying or exporting"))
-			return nil
-		}
-		if t.CopyAnchor > 0 {
-			u.copyResults("selection", true)
-		} else {
-			u.copyResults("all", true)
-		}
+		u.copyGridHeaders(false)
 		return nil
 	case 'c':
 		if t.Busy {

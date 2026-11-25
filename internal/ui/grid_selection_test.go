@@ -353,9 +353,18 @@ func TestGridCopyExplicitSelection(t *testing.T) {
 		{"rectangle with headers", "Copy with Headers", "'=dup\t'=dup\n'@José\t\\N\n\"a\tb\nc\"\t\n", []tcell.Key{tcell.KeyLeft, tcell.KeyUp}, false},
 		{"headers only", "Copy Headers", "'=dup\t'=dup\n", []tcell.Key{tcell.KeyLeft, tcell.KeyUp}, false},
 		{"one cell vertical header", "Copy with Headers", "'=dup\n\"a\tb\nc\"\n", nil, false},
+		{"Y copies rectangle", "Y", "'=dup\t'=dup\n'@José\t\\N\n\"a\tb\nc\"\t\n", []tcell.Key{tcell.KeyLeft, tcell.KeyUp}, false},
+		{"Y copies focused cell without a mark", "Y", "'=dup\n\"a\tb\nc\"\n", nil, false},
+		{"v selects full rows for Y", "vY", "other\t'=dup\t'=dup\nskip\t'@José\t\\N\nskip\t\"a\tb\nc\"\t\n", []tcell.Key{tcell.KeyLeft}, false},
+		{"Results menu copies only headers", "menu", "'=dup\t'=dup\n", []tcell.Key{tcell.KeyLeft, tcell.KeyUp}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			u := runningUI(t, config.Config{})
+			var u *UI
+			if tc.action == "menu" {
+				u = runningNeovimUI(t)
+			} else {
+				u = runningUI(t, config.Config{})
+			}
 			s, err := result.New([]string{"other", "=dup", "=dup"})
 			if err != nil {
 				t.Fatal(err)
@@ -389,6 +398,23 @@ func TestGridCopyExplicitSelection(t *testing.T) {
 					dispatchModified(u, key, 0, mods)
 				}
 				switch {
+				case tc.action == "Y" || tc.action == "vY":
+					if tc.action == "vY" {
+						dispatchModified(u, tcell.KeyRune, 'v', 0)
+						dispatchModified(u, tcell.KeyUp, 0, 0)
+					}
+					found = true
+					dispatchModified(u, tcell.KeyRune, 'Y', tcell.ModShift)
+				case tc.action == "menu":
+					u.app.SetFocus(u.active().Editor.Area)
+					dispatchModified(u, tcell.KeyRune, ' ', 0)
+					if u.leaderPanel == nil {
+						t.Error("Space did not open Results menu navigation")
+						return
+					}
+					dispatchModified(u, tcell.KeyRune, 'r', 0)
+					dispatchModified(u, tcell.KeyRune, 'h', 0)
+					found = u.leaderPanel == nil
 				case tc.action != "":
 					for _, c := range u.commands() {
 						if c.Name == tc.action && (c.Available == nil || c.Available()) {
