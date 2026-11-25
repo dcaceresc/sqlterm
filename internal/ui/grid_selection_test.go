@@ -36,10 +36,12 @@ func TestGridMouseHighlightsOnlySelectedScope(t *testing.T) {
 		t.Fatalf("cell (%d,%d) not rendered", row, col)
 		return 0, 0
 	}
+	capture := u.gridMouseCapture()
 	for _, target := range [][2]int{{1, 2}, {0, 1}, {2, 0}} {
 		r, c := target[0], target[1]
 		x, y := point(r, c)
-		u.table.MouseHandler()(tview.MouseLeftClick, tcell.NewEventMouse(x, y, tcell.Button1, 0), func(p tview.Primitive) { u.app.SetFocus(p) })
+		event, action := capture(tcell.NewEventMouse(x, y, tcell.Button1, 0), tview.MouseLeftClick)
+		u.table.MouseHandler()(action, event, func(p tview.Primitive) { u.app.SetFocus(p) })
 		u.app.ForceDraw()
 		for row := range 3 {
 			for col := range 3 {
@@ -50,6 +52,18 @@ func TestGridMouseHighlightsOnlySelectedScope(t *testing.T) {
 				if (bg == u.palette.Selection) != want {
 					t.Errorf("click (%d,%d): wrong highlight on (%d,%d)", r, c, row, col)
 				}
+			}
+		}
+		if r > 0 && c > 0 {
+			if _, selected := u.explicitGridCopyScope(); selected {
+				t.Error("a plain click left an explicit selection")
+			}
+			dispatchModified(u, tcell.KeyDown, 0, 0)
+			u.app.ForceDraw()
+			x, y := point(r, c)
+			_, _, style, _ := screen.GetContent(x, y)
+			if _, bg, _ := style.Decompose(); bg == u.palette.Selection {
+				t.Error("the old focus remained highlighted")
 			}
 		}
 	}
@@ -177,7 +191,11 @@ func TestGridDragAndSortWithLiveEvents(t *testing.T) {
 			for dy := 0; dy < h && !found; dy++ {
 				for dx := range w {
 					if r, c := u.table.CellAt(x+dx, y+dy); r == target.row && c == target.col {
-						events = append(events, tcell.NewEventMouse(x+dx, y+dy, target.buttons, 0))
+						var mods tcell.ModMask
+						if target.buttons != tcell.ButtonNone {
+							mods = tcell.ModShift
+						}
+						events = append(events, tcell.NewEventMouse(x+dx, y+dy, target.buttons, mods))
 						found = true
 						break
 					}
@@ -201,9 +219,33 @@ func TestGridDragAndSortWithLiveEvents(t *testing.T) {
 		_, bg, _ := u.table.GetCell(row, col).Style.Decompose()
 		return bg == u.palette.Selection
 	}
+	copied := make(chan string, 1)
 	u.app.QueueUpdateDraw(func() {
 		if !marked(1, 3) || !marked(3, 1) {
-			t.Error("incorrect drag highlight")
+			t.Error("drag highlight did not survive releasing Shift")
+		}
+		dispatchModified(u, tcell.KeyUp, 0, 0)
+		if marked(1, 3) || marked(3, 1) || !marked(2, 3) {
+			t.Error("moving focus did not leave only the focused cell highlighted")
+		}
+		u.writeClipboard = func(text string) error { copied <- text; return nil }
+		dispatchModified(u, tcell.KeyCtrlC, 0, 0)
+	})
+	if got := receiveCopy(t, copied); got != "one" {
+		t.Errorf("copied %q after moving focus, want one", got)
+	}
+	for _, event := range events {
+		u.app.QueueEvent(event)
+	}
+	u.app.QueueEvent(tcell.NewEventKey(tcell.KeyF8, 0, 0))
+	select {
+	case <-drained:
+	case <-time.After(3 * time.Second):
+		t.Fatal("UI did not process second drag")
+	}
+	u.app.QueueUpdateDraw(func() {
+		if !marked(1, 3) || !marked(3, 1) {
+			t.Error("second mouse rectangle was not marked")
 		}
 		dispatchModified(u, tcell.KeyRune, 's', 0)
 	})
@@ -213,6 +255,47 @@ func TestGridDragAndSortWithLiveEvents(t *testing.T) {
 			t.Error("sorting did not clear the selection")
 		}
 	})
+}
+
+func TestGridKeyboardRectangleRemainsCopyTargetAfterDown(t *testing.T) {
+	u := runningUI(t, config.Config{})
+	s, err := result.New([]string{"Letter", "Value"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, row := range [][2]string{{"A", "uno"}, {"B", "dos"}, {"C", "tres"}} {
+		if err := s.Append([]result.Cell{{Text: row[0]}, {Text: row[1]}}); err != nil {
+			s.Close()
+			t.Fatal(err)
+		}
+	}
+	copied := make(chan string, 1)
+	u.app.QueueUpdateDraw(func() {
+		u.active().Results = []*result.Store{s}
+		u.showResults()
+		u.app.SetFocus(u.table)
+		u.table.Select(1, 1)
+		dispatchModified(u, tcell.KeyRight, 0, tcell.ModShift)
+		dispatchModified(u, tcell.KeyDown, 0, tcell.ModShift)
+		dispatchModified(u, tcell.KeyDown, 0, 0)
+		if row, col := u.table.GetSelection(); row != 3 || col != 2 {
+			t.Errorf("focus is (%d,%d), want (3,2)", row, col)
+		}
+		for _, cell := range [][2]int{{1, 1}, {2, 2}} {
+			_, bg, _ := u.table.GetCell(cell[0], cell[1]).Style.Decompose()
+			if bg != u.palette.Selection {
+				t.Errorf("rectangle cell %v lost its highlight", cell)
+			}
+		}
+		u.writeClipboard = func(text string) error { copied <- text; return nil }
+		dispatchModified(u, tcell.KeyRune, 'y', 0)
+		if u.dialogContent != nil {
+			t.Error("copy opened a dialog")
+		}
+	})
+	if got, want := receiveCopy(t, copied), "A\tuno\nB\tdos\n"; got != want {
+		t.Errorf("copied %q, want %q", got, want)
+	}
 }
 
 func TestGridCopiesCellRowAndColumnWithoutDialog(t *testing.T) {

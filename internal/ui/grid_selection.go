@@ -13,6 +13,7 @@ type gridSelection struct {
 	anchor, end gridPoint
 	extending   bool
 	singleCell  bool
+	mouseRange  bool
 }
 
 func (s gridSelection) contains(row, col int) bool {
@@ -68,6 +69,14 @@ func (u *UI) setGridSelection(anchor, end gridPoint, extending bool) {
 	t := u.active()
 	t.CopyAnchor = 0
 	t.gridSelection = gridSelection{anchor: anchor, end: end, extending: extending}
+	u.refreshResultInfo()
+}
+
+func (u *UI) gridFocusChanged(row, col int) {
+	t := u.active()
+	if t != nil && t.gridSelection.mouseRange && t.gridSelection.end != (gridPoint{row, col}) {
+		t.clearGridSelection()
+	}
 	u.refreshResultInfo()
 }
 
@@ -178,14 +187,20 @@ func (u *UI) gridMouseCapture() func(*tcell.EventMouse, tview.MouseAction) (*tce
 					u.app.SetFocus(u.table)
 				}
 				dragged = true
-				u.setGridSelection(start, p, false)
 				u.table.Select(r, c)
+				u.setGridSelection(start, p, false)
+				owner.gridSelection.mouseRange = true
 				if action == tview.MouseMove {
 					return nil, action
 				}
 			}
 		case tview.MouseLeftClick:
-			u.markGridPoint(r, c)
+			if r > 0 && c > 0 && r <= s.Count() && c <= len(s.Columns) {
+				u.active().clearGridSelection()
+				u.refreshResultInfo()
+			} else {
+				u.markGridPoint(r, c)
+			}
 		}
 		return event, action
 	}

@@ -133,7 +133,7 @@ func New(path string, cfg config.Config) *UI {
 	u.table = tview.NewTable().SetFixed(1, 1).SetSelectable(true, true)
 	u.table.SetBorder(true).SetTitle(u.tr(" Results "))
 	u.table.SetInputCapture(u.gridKey)
-	u.table.SetSelectionChangedFunc(func(int, int) { u.refreshResultInfo() })
+	u.table.SetSelectionChangedFunc(u.gridFocusChanged)
 	u.table.SetSeparator('│')
 	u.resultsHost = tview.NewFlex().SetDirection(tview.FlexRow).AddItem(u.table, 0, 1, true)
 	center := tview.NewFlex().SetDirection(tview.FlexRow).AddItem(u.editorHost, 0, 1, true).AddItem(u.resultsHost, 0, 1, false)

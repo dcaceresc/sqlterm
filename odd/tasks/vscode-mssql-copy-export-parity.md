@@ -1,6 +1,6 @@
 # VS Code MSSQL — Copy and export parity
 Objective: match the MSSQL results-grid workflow in SQLTerm without restoring the automatic copy popup.
-Status: T1–T4 are implemented as a checkpoint, with interaction corrections still pending. T5 remains deferred. Do not treat this checkpoint as full MSSQL interaction parity.
+Status: T1–T4 are implemented and T6 is verified. T7–T8 are pending; T5 remains deferred. Do not treat this checkpoint as full MSSQL interaction parity.
 
 ## Specs
 S1. User request: “la funcionalidad de exportar y copiar verifica la de vscode mssql y haz un plan para igualarlo”
@@ -13,7 +13,7 @@ T3 | S1 | Implemented; see T8 | Add export scope to `e`: default to Selection wh
 T4 | S1 | Implemented | Add Excel (`.xlsx`) export using the same scopes. Verify the workbook preserves the selected rows and columns, treats text as data rather than formulas, and handles Unicode and multiline cells.
 T5 | S1 | Deferred | After core parity is verified, evaluate clipboard CSV, JSON, `IN (...)` and `INSERT`, and Save as `INSERT`. Confirm SQL dialect and escaping before implementing SQL output.
 
-T6 | S1–S2 | Pending | Separate focus from selection: a simple data-cell click focuses rather than leaving a persistent mark. A mouse rectangle survives releasing Shift but clears when focus moves. Keep a separate regression for the reported keyboard rectangle: Shift+arrows followed by Down leaves the original rectangle as the copy target. Test the visual state and exact clipboard content independently.
+T6 | S1–S2 | Verified | `fix: separa foco y selección en resultados` | Separate focus from selection: a simple data-cell click focuses rather than leaving a persistent mark. A mouse rectangle survives releasing Shift but clears when focus moves. Keep a separate regression for the reported keyboard rectangle: Shift+arrows followed by Down leaves the original rectangle as the copy target. Test the visual state and exact clipboard content independently.
 T7 | S1–S2 | Pending | Make Y act on the active rectangle with headers, without requiring v or copying the whole result by surprise. Keep v as a separate full-row range; verify v → arrows → Y through keyboard dispatch. Expose Copy Headers from the reachable Results menu. Keep Ctrl+C/y headerless and popup-free.
 T8 | S1–S2 | Pending | Verify e proposes Selection only for an active range, otherwise Entire result, across CSV, JSON and XLSX. Update English and Spanish controls to say Shift. The cell inspector (i) and multiple-result support ([ and ]) are out of scope for this correction.
 
@@ -25,4 +25,6 @@ L4. SQLTerm baseline: `internal/ui/grid.go` and `internal/ui/copy.go` already su
 L5. Acceptance checks: sort the grid, select a rectangle, and verify clipboard bytes and exported rows/columns against the visible selection. Cover cell, row, column, range, all, and no explicit selection; confirm no row numbers are copied or exported. Use fixtures for NULL vs. empty string, Unicode, tabs/newlines, duplicate headers, and formula-like text; verify no clipboard or file changes on cancellation or rejection. Update Spanish and English help with each implemented action.
 L6. Verification of the initial implementation: Go suite, independent verification and LibreOffice XLSX readback passed. Native assessment was unavailable due to untracked files; no native approval was obtained.
 L7. User observations: “en el punto 3 hice marque el rectangulo luego aprete v se desaparece el rectangulo y queda en una sola linea y cuando copio con y se copia solo la linea, en vscode si yo selecciono un rectangulo y mueve el foco el rectangulo deparece y si trato de copiar se copia solo la celda actual”; “si selecciono el rectangulo luego v y copio con cabeceras Y se copia solo una fila con la cabecera, en vscode con el rato y el shift si quito el shit desaparece el rectangulo”; clarification: “desaparece cuando se cambia de foco”. Earlier keyboard observation: Down moved the visible focus to `tres`, but the clipboard still contained only `A / uno` and `B / dos`.
-L8. Checkpoint request: “quiero que guardes en plan en odd/tasks y hagas un commit de lo que ya esta para continuar mas tarde”. Resume at T6 with regression tests; do not implement T5 as part of this correction.
+L8. Checkpoint request: “quiero que guardes en plan en odd/tasks y hagas un commit de lo que ya esta para continuar mas tarde”. Do not implement T5 as part of this correction.
+L9. User request: “comienza con T6”.
+L10. T6 verification: the mouse regressions failed before the fix and passed afterward. The separate keyboard regression confirms that Down moves focus to `tres` while `y` copies `A / uno` and `B / dos`. `go test ./...` passed. Native assessment was unavailable because the package-local binary was missing. Resume at T7.

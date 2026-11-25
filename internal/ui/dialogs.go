@@ -330,10 +330,10 @@ Space u C opens themes. Themes preview with arrows; Enter saves, Esc restores.
 Connections: Enter connect/expand, + add profile, n new folder,
 e edit profile, r rename folder, d delete empty folder, / search.
 
-Results: [ / ] previous/next result set; click/Enter highlight cell, column header or row number; i inspect value
+Results: [ / ] previous/next result set; click focuses a data cell; Enter marks a cell, column or row; clicking a column header or row number marks it too; i inspect value
 or the column name with the value; m messages;
 / search rows; s sort selected column ascending; S descending; e export.
-Shift+arrows or drag marks a rectangle; Ctrl+A marks all data; Esc clears the mark.
+Shift+arrows or drag marks a rectangle. Moving focus clears only mouse rectangles. Ctrl+A marks all data; Esc clears the mark.
 v marks a row range. Ctrl+C/y copy the selection or fall back to the focused
 cell, row or column. The Actions palette offers Copy with Headers and Copy Headers.
 Y copies rows with headers; r/R copy the current row;
