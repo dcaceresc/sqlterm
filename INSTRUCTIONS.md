@@ -113,7 +113,7 @@ Estas automatizaciones configuran cachés locales de Go bajo `.cache/build`, `.c
 
 ## Primer flujo de trabajo
 
-1. Pulsa **F2**, selecciona una carpeta y usa **+** o **Add profile**.
+1. Pulsa **F2**, selecciona una carpeta y usa **a** o **Añadir conexión**.
 2. Completa motor, servidor, base y usuario. **Folder** indica la carpeta lógica del perfil.
 3. Introduce la contraseña en el campo oculto. **Test connection** verifica los datos sin guardar el perfil ni la contraseña; durante la prueba cambia a **Cancel test** y la conexión temporal se cierra al terminar.
 4. Guarda y selecciona el perfil. Si cambias motor, servidor, puerto efectivo o usuario de un perfil con credencial guardada, vuelve a introducir la contraseña antes de probar o guardar.
@@ -217,7 +217,7 @@ Con foco en el árbol:
 | Tecla | Acción |
 | --- | --- |
 | Enter | Conectar o expandir/contraer una carpeta (sin atajos con ←/→ ni Space) |
-| + | Añadir un perfil en la carpeta seleccionada |
+| a | Añadir un perfil en la carpeta seleccionada |
 | n | Crear una carpeta o subcarpeta |
 | e | Editar el perfil o la carpeta seleccionada |
 | r | Abrir el mismo editor de carpetas |
@@ -229,7 +229,7 @@ Usa **Nombre**, **Grupo padre** y **Color** para crear o editar una carpeta. Eli
 
 Para mover un perfil, cambia **Folder**; dejarlo vacío lo devuelve a la raíz. Se permite el mismo nombre en distintas carpetas. Las credenciales conservan su referencia al mover o renombrar y la carpeta nunca cambia la base real de una sesión.
 
-Pulsa `*` o **★ Favorito** para alternar un perfil favorito. Los favoritos se muestran en una sección superior, conservan su carpeta original y persisten entre sesiones.
+Pulsa `f` o **★ Favorito** para alternar un perfil favorito. Los favoritos se muestran en una sección superior, conservan su carpeta original y persisten entre sesiones.
 
 ## Catálogo, tablas y rutinas
 

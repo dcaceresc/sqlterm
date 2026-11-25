@@ -164,9 +164,9 @@ func (u *UI) connectionBrowser() {
 				if database == "" {
 					database = u.tr("Choose after connecting")
 				}
-				details.SetText(fmt.Sprintf(u.tr("%s · %s\n%s:%d · %s\nUser: %s · * toggle favorite"), p.DisplayName(), p.Engine, p.Host, p.EffectivePort(), database, p.User))
+				details.SetText(fmt.Sprintf(u.tr("%s · %s\n%s:%d · %s\nUser: %s · f toggle favorite"), p.DisplayName(), p.Engine, p.Host, p.EffectivePort(), database, p.User))
 			} else {
-				details.SetText(u.tr("Folder: ") + ref.Folder + "\n" + u.tr("Enter collapses/expands folders or connects profiles") + "\n" + u.tr("/ search · + add · n folder · e edit"))
+				details.SetText(u.tr("Folder: ") + ref.Folder + "\n" + u.tr("Enter collapses/expands folders or connects profiles") + "\n" + u.tr("/ search · a add · n folder · e edit"))
 			}
 		}
 	})
@@ -264,7 +264,7 @@ func (u *UI) connectionBrowser() {
 		preferredIndex = ref.ProfileIndex
 		rebuild(search.GetText())
 	}
-	buttons := tview.NewForm().SetHorizontal(true).AddButton(u.tr("+ Add profile"), add).AddButton(u.tr("New folder"), newFolder).AddButton(u.tr("Edit"), edit).AddButton("★ "+u.tr("Favorite"), favorite)
+	buttons := tview.NewForm().SetHorizontal(true).AddButton(u.tr("Add profile"), add).AddButton(u.tr("New folder"), newFolder).AddButton(u.tr("Edit"), edit).AddButton("★ "+u.tr("Favorite"), favorite)
 	buttons.SetBorderPadding(0, 0, 0, 0)
 	panel := tview.NewFlex().SetDirection(tview.FlexRow).AddItem(search, 1, 0, false).AddItem(tree, 0, 1, true).AddItem(details, 5, 0, false).AddItem(buttons, 3, 0, false)
 	panel.SetInputCapture(func(k *tcell.EventKey) *tcell.EventKey {
@@ -297,10 +297,10 @@ func (u *UI) connectionBrowser() {
 		}
 		if tree.HasFocus() && k.Key() == tcell.KeyRune {
 			switch k.Rune() {
-			case '*':
+			case 'f':
 				favorite()
 				return nil
-			case '+':
+			case 'a':
 				add()
 				return nil
 			case 'e':

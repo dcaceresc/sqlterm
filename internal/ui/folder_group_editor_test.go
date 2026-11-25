@@ -182,6 +182,37 @@ func TestTabHeaderFolderColorAndTreeTheme(t *testing.T) {
 	}
 }
 
+func TestConnectionFolderGroupRedAndOrange(t *testing.T) {
+	u := New(filepath.Join(t.TempDir(), "config.json"), config.Config{Folders: []string{"DEV"}, Language: "es"})
+	defer u.cancel()
+	u.chooseConnection()
+	for _, tc := range []struct {
+		index int
+		label string
+		color tcell.Color
+	}{
+		{6, "Rojo", tcell.ColorRed},
+		{7, "Naranja", tcell.ColorOrange},
+	} {
+		selectFolderGroup(t, u, "DEV")
+		folderGroupKey(u, 'e')
+		form, ok := u.dialogContent.(*tview.Form)
+		if !ok {
+			t.Fatalf("expected folder form, got %T", u.dialogContent)
+		}
+		color := form.GetFormItem(2).(*tview.DropDown)
+		color.SetCurrentOption(tc.index)
+		if _, label := color.GetCurrentOption(); label != tc.label {
+			t.Fatalf("color option = %q, want %q", label, tc.label)
+		}
+		saveForm(u, form)
+		u.active().Profile.Folder = "DEV"
+		if _, _, got := u.connectionContext(); got != tc.color {
+			t.Errorf("workspace color = %v, want %v", got, tc.color)
+		}
+	}
+}
+
 func TestConnectionFolderGroupCreateColorAndDelete(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "config.json")
 	u := New(path, config.Config{Folders: []string{"PROD"}})

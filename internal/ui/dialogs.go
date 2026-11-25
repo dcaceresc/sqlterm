@@ -327,8 +327,8 @@ Groups: f files, b tabs, c code, d connections, s explore, r results, u preferen
 Space ? opens help; Space x cancels an operation; Space q q quits.
 Backspace returns to the parent group; Esc cancels without executing an action.
 Space u C opens themes. Themes preview with arrows; Enter saves, Esc restores.
-Connections: Enter connect/expand, + add profile, n new folder,
-e edit selection, r edit folder, d delete empty folder, / search.
+Connections: Enter connect/expand, a add profile, n new folder,
+e edit selection, f toggle favorite, r edit folder, d delete empty folder, / search.
 Folder editor: Name, Parent group (or Root), and Color.
 
 Results: [ / ] previous/next result set; click focuses a data cell; Enter marks a cell, column or row; clicking a column header or row number marks it too; m messages;

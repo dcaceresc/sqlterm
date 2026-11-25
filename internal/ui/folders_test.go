@@ -118,8 +118,15 @@ func TestAddProfileInSelectedFolderAndKeyboardNavigation(t *testing.T) {
 	if ref.Folder != "PROD" {
 		t.Fatal("folder selection not restored")
 	}
-	u.pages.InputHandler()(tcell.NewEventKey(tcell.KeyRune, '+', 0), func(p tview.Primitive) { u.app.SetFocus(p) })
-	f := currentForm(u)
+	dispatchModified(u, tcell.KeyRune, '+', 0)
+	if u.dialogContent != panel {
+		t.Fatal("+ still opened the profile form")
+	}
+	u.pages.InputHandler()(tcell.NewEventKey(tcell.KeyRune, 'a', 0), func(p tview.Primitive) { u.app.SetFocus(p) })
+	f, ok := u.dialogContent.(*tview.Form)
+	if !ok {
+		t.Fatalf("a did not open the profile form: %T", u.dialogContent)
+	}
 	if f.GetFormItem(9).(*tview.InputField).GetText() != "PROD" {
 		t.Fatal("new profile not assigned to selected folder")
 	}

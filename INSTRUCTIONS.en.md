@@ -113,7 +113,7 @@ These scripts set local Go caches under `.cache/build`, `.cache/go`, and `.cache
 
 ## First workflow
 
-1. Press **F2**, select a folder, and use **+** or **Add profile**.
+1. Press **F2**, select a folder, and use **a** or **Add profile**.
 2. Enter the database engine, server, database, and user. **Folder** is the profile's logical folder.
 3. Enter the password in the masked field. **Test connection** checks the settings without saving the profile or password. During the test it changes to **Cancel test**, and the temporary connection closes when the test ends.
 4. Save and select the profile. If you change the engine, server, effective port, or user of a profile with a stored credential, reenter the password before testing or saving.
@@ -217,7 +217,7 @@ With focus on the tree:
 | Key | Action |
 | --- | --- |
 | Enter | Connect or expand/collapse a folder (no ←/→ or Space shortcuts) |
-| + | Add a profile to the selected folder |
+| a | Add a profile to the selected folder |
 | n | Create a folder or subfolder |
 | e | Edit the selected profile or folder |
 | r | Open the same folder editor |
@@ -229,7 +229,7 @@ Use **Name**, **Parent group**, and **Color** to create or edit a folder. Choose
 
 To move a profile, change **Folder**; clear it to move the profile back to the root. Profiles can have the same name in different folders. Moving or renaming preserves credential references, and folder placement never changes the actual database of a session.
 
-Press `*` or use **★ Favorito** in the Spanish interface to toggle a profile's favorite status. Favorites appear in a section at the top, stay in their original folders, and persist between sessions.
+Press `f` or use **★ Favorite** to toggle a profile's favorite status. Favorites appear in a section at the top, stay in their original folders, and persist between sessions.
 
 ## Catalog, tables, and routines
 

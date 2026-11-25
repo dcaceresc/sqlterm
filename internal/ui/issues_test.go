@@ -120,10 +120,14 @@ func TestFavoritesSectionIsFirstAcrossFoldersAndPersists(t *testing.T) {
 	}
 	u.app.SetFocus(tree)
 	tree.SetCurrentNode(leaf)
-	u.pages.InputHandler()(tcell.NewEventKey(tcell.KeyRune, '*', 0), func(p tview.Primitive) { u.app.SetFocus(p) })
+	dispatchModified(u, tcell.KeyRune, '*', 0)
+	if len(u.cfg.Favorites) != 1 || u.cfg.Favorites[0] != "prod-id" {
+		t.Fatal("* still toggled the favorite")
+	}
+	u.pages.InputHandler()(tcell.NewEventKey(tcell.KeyRune, 'f', 0), func(p tview.Primitive) { u.app.SetFocus(p) })
 	u.app.ForceDraw()
 	if len(u.cfg.Favorites) != 0 {
-		t.Fatal("* did not remove favorite")
+		t.Fatal("f did not remove favorite")
 	}
 	for _, node := range tree.GetRoot().GetChildren() {
 		if node.GetReference().(connectionRef).FavoriteGroup {

@@ -19,6 +19,8 @@ var folderColorOptions = []struct {
 	{"orange-red", "Orange-red", tcell.ColorOrangeRed},
 	{"purple", "Purple", tcell.ColorPurple},
 	{"yellow", "Yellow", tcell.ColorYellow},
+	{"red", "Red", tcell.ColorRed},
+	{"orange", "Orange", tcell.ColorOrange},
 }
 
 func folderColor(id string) (tcell.Color, bool) {
