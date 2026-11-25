@@ -62,6 +62,17 @@ func (u *UI) connectionContext() (environment, details string, color tcell.Color
 	if strings.EqualFold(environment, "PROD") {
 		color = tcell.ColorOrangeRed
 	}
+	for path := t.Profile.Folder; path != ""; {
+		if explicit, ok := folderColor(u.cfg.FolderColors[path]); ok {
+			color = explicit
+			break
+		}
+		i := strings.LastIndex(path, "/")
+		if i < 0 {
+			break
+		}
+		path = path[:i]
+	}
 	profile := t.Profile.Name
 	if profile == "" {
 		profile = u.tr("No connection")

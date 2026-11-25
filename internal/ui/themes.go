@@ -186,11 +186,15 @@ func (u *UI) style(p tview.Primitive) {
 		w.SetGraphicsColor(t.Border)
 		if root := w.GetRoot(); root != nil {
 			root.Walk(func(n, parent *tview.TreeNode) bool {
-				color := t.Foreground
+				color, selection := t.Foreground, selected
 				if ref, ok := n.GetReference().(connectionRef); ok && ref.FolderNode {
 					color = t.Accent
+					if explicit, ok := folderColor(u.cfg.FolderColors[ref.Folder]); ok && ref.Folder != "" && !ref.FavoriteGroup {
+						color = explicit
+						selection = selected.Background(explicit)
+					}
 				}
-				n.SetTextStyle(tcell.StyleDefault.Foreground(color).Background(t.Background)).SetSelectedTextStyle(selected)
+				n.SetTextStyle(tcell.StyleDefault.Foreground(color).Background(t.Background)).SetSelectedTextStyle(selection)
 				return true
 			})
 		}

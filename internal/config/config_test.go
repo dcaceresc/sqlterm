@@ -86,6 +86,24 @@ func TestLegacyResultBlockSizeIsIgnored(t *testing.T) {
 	}
 }
 
+func TestConfigOptionalFolderColors(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "config.json")
+	if err := os.WriteFile(path, []byte(`{"folders":["PROD"],"confirm_execution":"production"}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	c, err := Load(path)
+	if err != nil || len(c.Folders) != 1 || c.Folders[0] != "PROD" || c.FolderColors != nil || c.ConfirmExecution != "production" {
+		t.Fatalf("legacy config changed: %#v, %v", c, err)
+	}
+	if err := Save(path, c); err != nil {
+		t.Fatal(err)
+	}
+	text, err := os.ReadFile(path)
+	if err != nil || strings.Contains(string(text), `"folder_colors"`) {
+		t.Fatalf("unset metadata was emitted: %s, %v", text, err)
+	}
+}
+
 func TestFolderNormalizationAndDuplicateNames(t *testing.T) {
 	normalized, err := NormalizeFolder(` DEV\ Project / QA `)
 	if err != nil || normalized != "DEV/Project/QA" {

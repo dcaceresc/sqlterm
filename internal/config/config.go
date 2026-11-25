@@ -122,6 +122,7 @@ type Config struct {
 	Keys              map[string]string `json:"keys,omitempty"`
 	Theme             string            `json:"theme,omitempty"`
 	Folders           []string          `json:"folders"`
+	FolderColors      map[string]string `json:"folder_colors,omitempty"`
 	Layout            Layout            `json:"layout,omitempty"`
 	FlatCatalog       bool              `json:"flat_catalog,omitempty"`
 	RecentConnections []string          `json:"recent_connections,omitempty"`

@@ -219,11 +219,13 @@ With focus on the tree:
 | Enter | Connect or expand/collapse a folder (no ←/→ or Space shortcuts) |
 | + | Add a profile to the selected folder |
 | n | Create a folder or subfolder |
-| e | Edit the selected profile |
-| r | Rename a folder and its descendants |
+| e | Edit the selected profile or folder |
+| r | Open the same folder editor |
 | d | Delete a folder without connections and its empty subfolders |
 | / | Search by name, folder, engine, server, or database |
 | Tab / Shift+Tab | Move between search, tree, and buttons |
+
+Use **Name**, **Parent group**, and **Color** to create or edit a folder. Choose **(Root)** for a top-level folder. Renaming or moving a folder keeps its descendants and open connections. **Default** keeps the theme accent in the tree and the orange-red workspace indicator for PROD unless a folder has an explicit color. In the workspace, the nearest configured folder color wins. Color does not affect execution confirmations: the production policy still uses the top-level folder name, so moving a connection into or out of PROD can change whether it prompts.
 
 To move a profile, change **Folder**; clear it to move the profile back to the root. Profiles can have the same name in different folders. Moving or renaming preserves credential references, and folder placement never changes the actual database of a session.
 

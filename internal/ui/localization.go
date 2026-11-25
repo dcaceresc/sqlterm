@@ -59,6 +59,7 @@ func (u *UI) spanishHelp() map[string]string {
 		"Results":         "Las filas se reciben continuamente. La grilla permanece al inicio y se actualizan el contador y el tiempo transcurrido. F10 cancela y conserva lo recibido.\nHacer clic en una celda de datos solo mueve el foco. Enter marca una celda, columna o fila; hacer clic en una cabecera o número de fila también lo marca. Shift+flechas o arrastrar marca un rectángulo. Mover el foco limpia el rectángulo del ratón, pero no el del teclado. Ctrl+A marca todos los datos; Esc limpia la selección. v marca un rango de filas completas; usa las flechas para ampliarlo. Ctrl+C o y copia sin cabeceras la selección o, si no hay nada marcado, la celda, fila o columna en foco. Y copia el mismo ámbito con cabeceras. Espacio en la grilla enfocada abre el menú de Resultados sin cambiar la selección; Esc o Retroceso lo cierra. En el menú, Y copia con cabeceras, h copia solo las cabeceras y v inicia o quita un rango de filas completas. Desde el editor en modo NORMAL, abre el mismo menú con Espacio r. La paleta Acciones también ofrece Copiar con cabeceras y Copiar solo cabeceras. NULL es SQL NULL; cadena vacía es \"\".\n/ buscar · s/S orden léxico de filas recibidas · [/] conjuntos · e exportar · Y copiar con cabeceras · r/R fila · c celda · v seleccionar rango · +/- ancho de columna\nCopia y CSV son seguros por defecto para hojas de cálculo: la protección ' se aplica al nombre de columna y al valor; el menú de exportación ofrece CSV literal, que deja ambos intactos. Se antepone ' a texto que empieza por =, +, - o @ tras espacios/controles. NUL se representa como \\0. JSON conserva su formato. La tecla e propone Selección si hay una selección activa o Resultado completo si no la hay. CSV, JSON y XLSX respetan el orden visible.",
 		"Connections":     "F2 perfiles y carpetas · / buscar · + añadir · e editar · n carpeta · r renombrar · d eliminar carpeta vacía · * favorito\nF2, F3 y F4 abren en la lista. / filtra; Esc limpia la búsqueda o cierra el menú.\nF4 cambia la base. La nueva conexión sustituye la anterior solo tras conectar correctamente. Conserva SQL; no conserva transacciones, variables ni tablas temporales.\nSi cambias motor, servidor, puerto o usuario, vuelve a escribir la contraseña antes de probar o guardar.\nF3: flechas vista previa, Enter guardar, Esc restaurar. Los comandos Ex están desactivados. F1 abre la ayuda. Espacio b d cierra la pestaña activa; Espacio q q sale y conserva los borradores. Ctrl+C copia o cancela diálogo.",
 	}
+	intro["Connections"] += "\ne edita la conexión o carpeta seleccionada; r también edita carpetas. n y la edición de carpetas ofrecen Nombre, Grupo padre (o Raíz) y Color."
 	intro["Editor"] += "\nCtrl+C copia la selección SQL al portapapeles del sistema; sin selección muestra un aviso y no copia nada. Conserva texto, selección y deshacer; funciona aunque haya una consulta en curso. NUL se representa como \\0 solo en el texto copiado."
 	intro["Editor"] += "\nEn NORMAL, gcc alterna el comentario de la línea actual y gc seguido de un movimiento comenta o descomenta un rango. En VISUAL, gc alterna el comentario de las líneas seleccionadas. Ninguna de estas acciones ejecuta ni guarda SQL. Los comentarios de línea usan el color atenuado del tema; la selección conserva sus colores."
 	intro["Editor"] += "\nEspacio en NORMAL abre acciones; pulsa la letra de la acción o Esc para cerrar. En INSERT escribe espacios. Enfoca el editor en NORMAL para abrir los comandos de Espacio.\nArchivos: Ctrl+O o Espacio f e explora carpetas; Espacio f n inicia una sesión nueva. Ctrl+S guarda directamente en la ruta actual. Ctrl+Shift+S o Espacio f S elige otro destino. Si la terminal informa Ctrl+Shift+S como Ctrl+S, se realiza un guardado normal. Tab/Shift+Tab cambia de campo; Enter selecciona; Esc cancela."
@@ -263,6 +264,25 @@ var spanish = map[string]string{
 	"New folder":                    "Nueva carpeta",
 	"Edit profile":                  "Editar conexión",
 	"Rename folder":                 "Renombrar carpeta",
+	"Edit folder":                   "Editar carpeta",
+	"Parent group":                  "Grupo padre",
+	"(Root)":                        "(Raíz)",
+	"Color":                         "Color",
+	"Default":                       "Predeterminado",
+	"Blue":                          "Azul",
+	"Green":                         "Verde",
+	"Orange-red":                    "Rojo anaranjado",
+	"Purple":                        "Morado",
+	"Yellow":                        "Amarillo",
+	`folder name cannot contain / or \`: "El nombre de carpeta no puede contener / ni \\",
+	"folder name is required": "Escribe el nombre de la carpeta",
+	"folder cannot contain control characters": "La carpeta no puede contener caracteres de control",
+	"folder components cannot be empty, . or ..": "Los componentes de la carpeta no pueden estar vacíos ni ser . o ..",
+	"cannot move a folder inside itself": "No se puede mover una carpeta dentro de sí misma",
+	"parent group no longer exists": "El grupo padre ya no existe",
+	"folder already exists": "La carpeta ya existe",
+	"target folder already exists": "La carpeta de destino ya existe",
+	"folder no longer exists": "La carpeta ya no existe",
 
 	"Connections · / search · Enter connect / expand": "Conexiones · / buscar · Enter conectar / expandir",
 	"Change database · / search · Enter reconnect":    "Cambiar base · / buscar · Enter reconectar",

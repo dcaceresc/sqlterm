@@ -219,11 +219,13 @@ Con foco en el árbol:
 | Enter | Conectar o expandir/contraer una carpeta (sin atajos con ←/→ ni Space) |
 | + | Añadir un perfil en la carpeta seleccionada |
 | n | Crear una carpeta o subcarpeta |
-| e | Editar el perfil seleccionado |
-| r | Renombrar una carpeta y sus descendientes |
+| e | Editar el perfil o la carpeta seleccionada |
+| r | Abrir el mismo editor de carpetas |
 | d | Eliminar una carpeta sin conexiones y sus subcarpetas vacías |
 | / | Buscar por nombre, carpeta, motor, servidor o base |
 | Tab / Shift+Tab | Recorrer búsqueda, árbol y botones |
+
+Usa **Nombre**, **Grupo padre** y **Color** para crear o editar una carpeta. Elige **(Raíz)** para una carpeta de nivel superior. Al renombrar o mover una carpeta se conservan sus descendientes y las conexiones abiertas. **Predeterminado** conserva el acento del tema en el árbol y el indicador rojo anaranjado de PROD en el espacio de trabajo, salvo que se haya elegido un color de carpeta. En el espacio de trabajo se usa el color configurado más cercano. El color no afecta a las confirmaciones: la política de producción sigue usando el nombre de la carpeta de nivel superior, por lo que mover una conexión dentro o fuera de PROD puede cambiar si se pide confirmación.
 
 Para mover un perfil, cambia **Folder**; dejarlo vacío lo devuelve a la raíz. Se permite el mismo nombre en distintas carpetas. Las credenciales conservan su referencia al mover o renombrar y la carpeta nunca cambia la base real de una sesión.
 

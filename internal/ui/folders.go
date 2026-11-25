@@ -188,7 +188,19 @@ func (u *UI) connectionBrowser() {
 	search.SetChangedFunc(rebuild)
 	rebuild("")
 	add := func() { u.dismiss(); u.profileForm(-1) }
+	selectedFolder := func() (string, bool) {
+		n := tree.GetCurrentNode()
+		if n == nil {
+			return "", false
+		}
+		ref, ok := n.GetReference().(connectionRef)
+		return ref.Folder, ok && ref.FolderNode && !ref.FavoriteGroup && ref.Folder != ""
+	}
 	edit := func() {
+		if path, ok := selectedFolder(); ok {
+			u.folderGroupForm(path, "")
+			return
+		}
 		n := tree.GetCurrentNode()
 		if n != nil {
 			if ref, ok := n.GetReference().(connectionRef); ok && !ref.FolderNode {
@@ -201,38 +213,18 @@ func (u *UI) connectionBrowser() {
 		u.pickProfileEdit()
 	}
 	newFolder := func() {
-		initial := ""
-		if u.connectionFolder != "" {
-			initial = u.connectionFolder + "/"
-		}
-		u.prompt(u.tr("New folder"), initial, false, func(path string) {
-			if err := u.addFolder(path); err != nil {
-				u.notice(u.tr("Folder"), err.Error())
-				return
+		parent := ""
+		if n := tree.GetCurrentNode(); n != nil {
+			if ref, ok := n.GetReference().(connectionRef); ok {
+				parent = ref.Folder
 			}
-			u.chooseConnection()
-		})
-	}
-	selectedFolder := func() (string, bool) {
-		n := tree.GetCurrentNode()
-		if n == nil {
-			return "", false
 		}
-		ref, ok := n.GetReference().(connectionRef)
-		return ref.Folder, ok && ref.FolderNode && ref.Folder != ""
+		u.folderGroupForm("", parent)
 	}
 	rename := func() {
-		old, ok := selectedFolder()
-		if !ok {
-			return
+		if path, ok := selectedFolder(); ok {
+			u.folderGroupForm(path, "")
 		}
-		u.prompt(u.tr("Rename folder"), old, false, func(path string) {
-			if err := u.renameFolder(old, path); err != nil {
-				u.notice(u.tr("Folder"), err.Error())
-				return
-			}
-			u.chooseConnection()
-		})
 	}
 	remove := func() {
 		path, ok := selectedFolder()
@@ -272,7 +264,7 @@ func (u *UI) connectionBrowser() {
 		preferredIndex = ref.ProfileIndex
 		rebuild(search.GetText())
 	}
-	buttons := tview.NewForm().SetHorizontal(true).AddButton(u.tr("+ Add profile"), add).AddButton(u.tr("New folder"), newFolder).AddButton(u.tr("Edit profile"), edit).AddButton("★ "+u.tr("Favorite"), favorite)
+	buttons := tview.NewForm().SetHorizontal(true).AddButton(u.tr("+ Add profile"), add).AddButton(u.tr("New folder"), newFolder).AddButton(u.tr("Edit"), edit).AddButton("★ "+u.tr("Favorite"), favorite)
 	buttons.SetBorderPadding(0, 0, 0, 0)
 	panel := tview.NewFlex().SetDirection(tview.FlexRow).AddItem(search, 1, 0, false).AddItem(tree, 0, 1, true).AddItem(details, 5, 0, false).AddItem(buttons, 3, 0, false)
 	panel.SetInputCapture(func(k *tcell.EventKey) *tcell.EventKey {
@@ -349,6 +341,10 @@ func (u *UI) saveFolderConfig(next config.Config) error {
 	return nil
 }
 func (u *UI) addFolder(raw string) error {
+	return u.addFolderWithColor(raw, "")
+}
+
+func (u *UI) addFolderWithColor(raw, color string) error {
 	path, err := config.NormalizeFolder(raw)
 	if err != nil {
 		return err
@@ -363,6 +359,10 @@ func (u *UI) addFolder(raw string) error {
 	}
 	next := u.cfg
 	next.Folders = append(append([]string{}, u.cfg.Folders...), path)
+	if color != "" {
+		next.FolderColors = rewriteFolderColors(next.FolderColors, func(s string) string { return s })
+		next.FolderColors[path] = color
+	}
 	if err = u.saveFolderConfig(next); err != nil {
 		return err
 	}
@@ -370,6 +370,10 @@ func (u *UI) addFolder(raw string) error {
 	return nil
 }
 func (u *UI) renameFolder(old, raw string) error {
+	return u.updateFolder(old, raw, nil)
+}
+
+func (u *UI) updateFolder(old, raw string, color *string) error {
 	path, err := config.NormalizeFolder(raw)
 	if err != nil {
 		return err
@@ -377,15 +381,12 @@ func (u *UI) renameFolder(old, raw string) error {
 	if old == "" || path == "" {
 		return fmt.Errorf("folder name is required")
 	}
-	if path == old {
-		return nil
-	}
-	if folderContains(old, path) {
+	if path != old && folderContains(old, path) {
 		return fmt.Errorf("cannot move a folder inside itself")
 	}
 	exists := false
 	for _, s := range config.FolderPaths(u.cfg) {
-		if s == path {
+		if s == path && path != old {
 			return fmt.Errorf("target folder already exists")
 		}
 		if s == old {
@@ -406,9 +407,25 @@ func (u *UI) renameFolder(old, raw string) error {
 	for i, s := range next.Folders {
 		next.Folders[i] = replace(s)
 	}
-	next.Profiles = append([]config.Profile{}, u.cfg.Profiles...)
+	next.Profiles = append([]config.Profile(nil), u.cfg.Profiles...)
+	ids := map[string]string{}
 	for i := range next.Profiles {
-		next.Profiles[i].Folder = replace(next.Profiles[i].Folder)
+		p := &next.Profiles[i]
+		previousID := profileID(*p)
+		p.Folder = replace(p.Folder)
+		if id := profileID(*p); id != previousID {
+			ids[previousID] = id
+		}
+	}
+	next.Favorites = rewriteFolderProfileIDs(next.Favorites, ids)
+	next.RecentConnections = rewriteFolderProfileIDs(next.RecentConnections, ids)
+	next.FolderColors = rewriteFolderColors(next.FolderColors, replace)
+	if color != nil {
+		if *color == "" {
+			delete(next.FolderColors, path)
+		} else {
+			next.FolderColors[path] = *color
+		}
 	}
 	if err = u.saveFolderConfig(next); err != nil {
 		return err
@@ -416,6 +433,29 @@ func (u *UI) renameFolder(old, raw string) error {
 	u.connectionFolder = replace(u.connectionFolder)
 	return nil
 }
+func rewriteFolderProfileIDs(values []string, moved map[string]string) []string {
+	if len(moved) == 0 {
+		return values
+	}
+	next := append([]string(nil), values...)
+	for i, id := range next {
+		if updated, ok := moved[id]; ok {
+			next[i] = updated
+		}
+	}
+	return next
+}
+
+func rewriteFolderColors(colors map[string]string, replace func(string) string) map[string]string {
+	next := make(map[string]string, len(colors))
+	for path, color := range colors {
+		if path = replace(path); path != "" {
+			next[path] = color
+		}
+	}
+	return next
+}
+
 func (u *UI) deleteFolder(path string) error {
 	if path == "" {
 		return fmt.Errorf("select a folder first")
@@ -432,6 +472,12 @@ func (u *UI) deleteFolder(path string) error {
 			next.Folders = append(next.Folders, s)
 		}
 	}
+	next.FolderColors = rewriteFolderColors(next.FolderColors, func(s string) string {
+		if folderContains(path, s) {
+			return ""
+		}
+		return s
+	})
 	if err := u.saveFolderConfig(next); err != nil {
 		return err
 	}
