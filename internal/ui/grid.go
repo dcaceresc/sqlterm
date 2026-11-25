@@ -344,7 +344,7 @@ func (u *UI) exportPrompt(t *Tab, s *result.Store, scope gridCopyScope, order []
 					rows[i] = start + i
 				}
 			}
-			if err := s.ExportProjectionContext(ctx, path, format, spreadsheetSafe, rows, scope.first.col-1, scope.last.col); err != nil {
+			if err := s.ExportProjectionWithCSVBOMContext(ctx, path, format, spreadsheetSafe, rows, scope.first.col-1, scope.last.col); err != nil {
 				return nil, err
 			}
 			return func() {

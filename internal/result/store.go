@@ -144,22 +144,27 @@ func (s *Store) Export(path, format string) error {
 
 // ExportContext preserves literal CSV text and JSON for existing consumers.
 func (s *Store) ExportContext(ctx context.Context, path, format string) error {
-	return s.exportContext(ctx, path, format, false, nil, 0, len(s.Columns), false)
+	return s.exportContext(ctx, path, format, false, nil, 0, len(s.Columns), false, false)
 }
 
 // ExportSpreadsheetContext makes CSV fields safe to open in spreadsheet apps.
 // JSON remains unchanged because it is not a spreadsheet-oriented format.
 func (s *Store) ExportSpreadsheetContext(ctx context.Context, path, format string) error {
-	return s.exportContext(ctx, path, format, true, nil, 0, len(s.Columns), false)
+	return s.exportContext(ctx, path, format, true, nil, 0, len(s.Columns), false, false)
 }
 
 // ExportProjectionContext exporta las columnas [first, end) y las filas en el orden indicado.
 // Si rows es nil, exporta todas las filas en el orden original.
 func (s *Store) ExportProjectionContext(ctx context.Context, path, format string, spreadsheetSafe bool, rows []int, first, end int) error {
-	return s.exportContext(ctx, path, format, spreadsheetSafe, rows, first, end, true)
+	return s.exportContext(ctx, path, format, spreadsheetSafe, rows, first, end, true, false)
 }
 
-func (s *Store) exportContext(ctx context.Context, path, format string, spreadsheetSafe bool, rows []int, first, end int, projected bool) error {
+// ExportProjectionWithCSVBOMContext exporta la proyección con un BOM UTF-8 solo en CSV.
+func (s *Store) ExportProjectionWithCSVBOMContext(ctx context.Context, path, format string, spreadsheetSafe bool, rows []int, first, end int) error {
+	return s.exportContext(ctx, path, format, spreadsheetSafe, rows, first, end, true, true)
+}
+
+func (s *Store) exportContext(ctx context.Context, path, format string, spreadsheetSafe bool, rows []int, first, end int, projected, csvBOM bool) error {
 	if first < 0 || end < first || end > len(s.Columns) {
 		return fmt.Errorf("export: invalid column range [%d, %d)", first, end)
 	}
@@ -205,6 +210,11 @@ func (s *Store) exportContext(ctx context.Context, path, format string, spreadsh
 	w := bufio.NewWriter(f)
 	switch format {
 	case "csv":
+		if csvBOM {
+			if _, e = w.WriteString("\xef\xbb\xbf"); e != nil {
+				return e
+			}
+		}
 		c := csv.NewWriter(w)
 		headers := columns
 		if spreadsheetSafe {

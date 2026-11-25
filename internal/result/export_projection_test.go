@@ -12,6 +12,24 @@ import (
 	"sqlterm/internal/result"
 )
 
+func TestExportProjectionContextCSVHasNoBOM(t *testing.T) {
+	store, err := result.New([]string{"ignored", "Compañía"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(store.Close)
+	if err := store.Append([]result.Cell{{Text: "ignored"}, {Text: "Café"}}); err != nil {
+		t.Fatal(err)
+	}
+	path := filepath.Join(t.TempDir(), "projection.csv")
+	if err := store.ExportProjectionContext(context.Background(), path, "csv", false, []int{0}, 1, 2); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := os.ReadFile(path); err != nil || string(got) != "Compañía\nCafé\n" {
+		t.Fatalf("generic CSV projection = %q, %v; want UTF-8 without a BOM", got, err)
+	}
+}
+
 func TestExportProjectionContextDestinationSafety(t *testing.T) {
 	store, err := result.New([]string{"ignored", "value"})
 	if err != nil {

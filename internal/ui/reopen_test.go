@@ -169,11 +169,11 @@ func TestExportSelectionAndEntireResultInDisplayOrder(t *testing.T) {
 		format       int
 		file, want   string
 	}{
-		{"selection JSON", true, false, 2, "results.json", "{\"columns\":[\"=dup\",\"=dup\"],\"rows\":[[\"@José\",null],[\"two\",\"\"]]}\n"},
-		{"selection safe CSV", true, false, 0, "results.csv", "'=dup,'=dup\n'@José,\\N\ntwo,\n"},
-		{"selection literal CSV", true, false, 1, "results.csv", "=dup,=dup\n@José,\\N\ntwo,\n"},
-		{"all by default despite focus", false, false, 2, "results.json", "{\"columns\":[\"other\",\"=dup\",\"=dup\"],\"rows\":[[\"third\",\"@José\",null],[\"second\",\"two\",\"\"],[\"first\",\"one\",\"end\"]]}\n"},
-		{"override selection", true, true, 2, "results.json", "{\"columns\":[\"other\",\"=dup\",\"=dup\"],\"rows\":[[\"third\",\"@José\",null],[\"second\",\"two\",\"\"],[\"first\",\"one\",\"end\"]]}\n"},
+		{"selection JSON", true, false, 2, "results.json", "{\"columns\":[\"=dup\",\"=dup\"],\"rows\":[[\"@Compañía\",null],[\"Café\",\"\"]]}\n"},
+		{"selection safe CSV", true, false, 0, "results.csv", "\xef\xbb\xbf'=dup,'=dup\n'@Compañía,\\N\nCafé,\n"},
+		{"selection literal CSV", true, false, 1, "results.csv", "\xef\xbb\xbf=dup,=dup\n@Compañía,\\N\nCafé,\n"},
+		{"all by default despite focus", false, false, 2, "results.json", "{\"columns\":[\"other\",\"=dup\",\"=dup\"],\"rows\":[[\"third\",\"@Compañía\",null],[\"second\",\"Café\",\"\"],[\"first\",\"one\",\"end\"]]}\n"},
+		{"override selection", true, true, 2, "results.json", "{\"columns\":[\"other\",\"=dup\",\"=dup\"],\"rows\":[[\"third\",\"@Compañía\",null],[\"second\",\"Café\",\"\"],[\"first\",\"one\",\"end\"]]}\n"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			u := runningUI(t, config.Config{})
@@ -184,8 +184,8 @@ func TestExportSelectionAndEntireResultInDisplayOrder(t *testing.T) {
 			}
 			for _, cells := range [][]result.Cell{
 				{{Text: "first"}, {Text: "one"}, {Text: "end"}},
-				{{Text: "second"}, {Text: "two"}, {}},
-				{{Text: "third"}, {Text: "@José"}, {Null: true}},
+				{{Text: "second"}, {Text: "Café"}, {}},
+				{{Text: "third"}, {Text: "@Compañía"}, {Null: true}},
 			} {
 				if err := store.Append(cells); err != nil {
 					t.Fatal(err)

@@ -311,7 +311,7 @@ La transformación afecta únicamente a la salida. `NULL` se representa como `\N
 
 `e` permite elegir explícitamente **Spreadsheet-safe CSV**, **Literal CSV** o **JSON**, con independencia del sufijo del archivo. Luego abre el mismo navegador de archivos de Abrir y Guardar para elegir carpeta y nombre. Recuerda la carpeta de la última exportación exitosa incluso tras reiniciar, sin modificar la carpeta usada para guardar SQL. La exportación exige un archivo nuevo, no sobrescribe uno existente y elimina la salida parcial de una exportación cancelada.
 
-CSV seguro aplica la protección para hojas de cálculo a cabeceras y celdas. CSV literal conserva el texto y advierte sobre datos no confiables. Ambos usan `\N` para SQL NULL y escapan textos que comienzan con `\` para distinguir NULL, cadena vacía y el texto literal `\N`.
+Ambos modos de CSV exportados desde Resultados comienzan con una marca de orden de bytes (BOM) UTF-8 para que Excel muestre correctamente los acentos y otros caracteres especiales al abrir el archivo directamente. CSV seguro aplica la protección para hojas de cálculo a cabeceras y celdas. CSV literal conserva el texto y advierte sobre datos no confiables. Ambos usan `\N` para SQL NULL y escapan textos que comienzan con `\` para distinguir NULL, cadena vacía y el texto literal `\N`.
 
 JSON usa `{"columns":[...],"rows":[[...]]}`, conserva nombres repetidos, representa SQL NULL como `null` y los demás valores como texto.
 
