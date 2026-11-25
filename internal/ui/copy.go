@@ -13,6 +13,10 @@ func (u *UI) copyGridSelection() {
 		u.message(u.tr("Press F10 to stop receiving rows before sorting, copying or exporting"))
 		return
 	}
+	if scope, ok := u.explicitGridCopyScope(); ok {
+		u.copyGridScope(scope, false, false)
+		return
+	}
 	row, col := u.table.GetSelection()
 	switch {
 	case row > 0 && col > 0:

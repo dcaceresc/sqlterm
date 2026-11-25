@@ -19,6 +19,7 @@ type gridContent struct {
 	palette   *Palette
 	widths    map[int]int
 	selection func() (int, int)
+	marked    func(row, col int) bool
 }
 
 func (g *gridContent) GetRowCount() int {
@@ -47,6 +48,9 @@ func (g *gridContent) GetCell(row, col int) *tview.TableCell {
 		if (r == row && c == col) || (r == 0 && c > 0 && c == col) || (c == 0 && r > 0 && r == row) {
 			bg = p.Selection
 		}
+	}
+	if g.marked != nil && g.marked(row, col) {
+		bg = p.Selection
 	}
 	if col == 0 {
 		label := "#"
@@ -101,7 +105,7 @@ func (u *UI) currentStore() *result.Store {
 func (u *UI) showResults() {
 	t := u.active()
 	s := u.currentStore()
-	u.table.SetContent(&gridContent{store: s, order: t.Order, palette: &u.palette, widths: t.ColumnWidths, selection: u.table.GetSelection})
+	u.setGridContent(t, s)
 	u.table.SetOffset(0, 0).Select(1, 1)
 	u.refreshResultInfo()
 }
@@ -150,6 +154,9 @@ func (u *UI) gridKey(k *tcell.EventKey) *tcell.EventKey {
 	if u.resultPreviewLocked() {
 		return nil
 	}
+	if u.selectGridKey(k) {
+		return nil
+	}
 	if k.Key() == tcell.KeyCtrlN {
 		return tcell.NewEventKey(tcell.KeyDown, 0, k.Modifiers())
 	}
@@ -177,14 +184,17 @@ func (u *UI) gridKey(k *tcell.EventKey) *tcell.EventKey {
 			w = max(8, w-4)
 		}
 		t.ColumnWidths[col] = min(160, w)
-		u.table.SetContent(&gridContent{store: u.currentStore(), order: t.Order, palette: &u.palette, widths: t.ColumnWidths, selection: u.table.GetSelection})
+		u.setGridContent(t, u.currentStore())
 		return nil
 	case 'v':
 		if t.CopyAnchor > 0 {
 			t.CopyAnchor = 0
 		} else {
 			r, _ := u.table.GetSelection()
-			t.CopyAnchor = r
+			if r > 0 && u.canSelectGrid() {
+				t.gridSelection = gridSelection{}
+				t.CopyAnchor = r
+			}
 		}
 		u.refreshResultInfo()
 		return nil
@@ -232,7 +242,7 @@ func (u *UI) gridKey(k *tcell.EventKey) *tcell.EventKey {
 			t.SelectedSet = (t.SelectedSet + d + len(t.Results)) % len(t.Results)
 			t.Order = nil
 			t.SortDescription = ""
-			t.CopyAnchor = 0
+			t.clearGridSelection()
 			u.showResults()
 		}
 		return nil
@@ -260,6 +270,7 @@ func (u *UI) gridKey(k *tcell.EventKey) *tcell.EventKey {
 				return nil, e
 			}
 			return func() {
+				t.clearGridSelection()
 				t.Order = order
 				direction := "ASC"
 				if desc {
@@ -320,28 +331,71 @@ func (u *UI) export() {
 		u.message(u.tr("Press F10 to stop receiving rows before sorting, copying or exporting"))
 		return
 	}
-	l := tview.NewList().ShowSecondaryText(false)
-	l.SetBorder(true).SetTitle(u.tr(" Export complete received set "))
-	l.AddItem(u.tr("Spreadsheet-safe CSV · prefixes formula-like text"), "", 0, func() {
-		u.exportPrompt(t, s, "results.csv", "csv", true)
+	selection, hasSelection := u.explicitGridCopyScope()
+	all := gridCopyScope{first: gridPoint{1, 1}, last: gridPoint{s.Count(), len(s.Columns)}}
+	useSelection := hasSelection
+	order := t.Order
+	menu := tview.NewList().ShowSecondaryText(false)
+	scopeLabel := func() string {
+		if useSelection {
+			return "Export scope: Selection"
+		}
+		return "Export scope: Entire result"
+	}
+	refreshScope := func() { menu.SetTitle(" " + u.tr(scopeLabel()) + " ") }
+	open := func(initial, format string, spreadsheetSafe bool) {
+		scope := all
+		if useSelection {
+			scope = selection
+		}
+		u.exportPrompt(t, s, scope, order, scopeLabel(), initial, format, spreadsheetSafe)
+	}
+	menu.SetBorder(true)
+	refreshScope()
+	menu.AddItem(u.tr("Spreadsheet-safe CSV · prefixes formula-like text"), "", 0, func() {
+		open("results.csv", "csv", true)
 	})
-	l.AddItem(u.tr("Literal CSV · not safe for untrusted spreadsheet data"), "", 0, func() {
-		u.exportPrompt(t, s, "results.csv", "csv", false)
+	menu.AddItem(u.tr("Literal CSV · not safe for untrusted spreadsheet data"), "", 0, func() {
+		open("results.csv", "csv", false)
 	})
-	l.AddItem(u.tr("JSON · literal values unchanged"), "", 0, func() {
-		u.exportPrompt(t, s, "results.json", "json", false)
+	menu.AddItem(u.tr("JSON · literal values unchanged"), "", 0, func() {
+		open("results.json", "json", false)
 	})
-	u.popup(l, 82, 8)
+	if hasSelection {
+		menu.AddItem(u.tr("Change scope: Entire result"), "", 0, func() {
+			useSelection = !useSelection
+			refreshScope()
+			label := "Change scope: Entire result"
+			if !useSelection {
+				label = "Change scope: Selection"
+			}
+			menu.SetItemText(3, u.tr(label), "")
+		})
+	}
+	menu.AddItem(u.tr("Excel (.xlsx) · values stored as text"), "", 0, func() {
+		open("results.xlsx", "xlsx", false)
+	})
+	u.popup(menu, 82, 8)
 }
 
-func (u *UI) exportPrompt(t *Tab, s *result.Store, initial, format string, spreadsheetSafe bool) {
-	u.pickFile(initial, u.lastExportDir, true, "Export", "Export received rows to new file", func(path string) {
+func (u *UI) exportPrompt(t *Tab, s *result.Store, scope gridCopyScope, order []int, title, initial, format string, spreadsheetSafe bool) {
+	u.pickFile(initial, u.lastExportDir, true, "Export", title, func(path string) {
 		u.task(t, "Export", func(ctx context.Context) (func(), error) {
-			export := s.ExportContext
-			if spreadsheetSafe {
-				export = s.ExportSpreadsheetContext
+			var rows []int
+			start, end := scope.first.row-1, scope.last.row
+			switch {
+			case order != nil:
+				if start < 0 || end < start || end > len(order) {
+					return nil, fmt.Errorf("export: result order no longer matches scope")
+				}
+				rows = order[start:end]
+			case start != 0 || end != s.Count():
+				rows = make([]int, end-start)
+				for i := range rows {
+					rows[i] = start + i
+				}
 			}
-			if err := export(ctx, path, format); err != nil {
+			if err := s.ExportProjectionContext(ctx, path, format, spreadsheetSafe, rows, scope.first.col-1, scope.last.col); err != nil {
 				return nil, err
 			}
 			return func() {

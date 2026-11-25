@@ -125,6 +125,52 @@ func (s *Store) WriteSpreadsheetColumn(ctx context.Context, w io.Writer, rows []
 	return writer.Error()
 }
 
+// WriteSpreadsheetProjection escribe las columnas [first, last] y las filas indicadas, en ese orden.
+// Un slice nil incluye todas las filas; un slice vacío permite escribir solo las cabeceras.
+func (s *Store) WriteSpreadsheetProjection(ctx context.Context, w io.Writer, rows []int, first, last int, headers bool) error {
+	if err := ctx.Err(); err != nil {
+		return err
+	}
+	if first < 0 || last < first || last >= len(s.Columns) {
+		return fmt.Errorf("copy: invalid column range %d–%d", first, last)
+	}
+	c := newTSVWriter(w)
+	if headers {
+		if err := tsvWrite(c, w, spreadsheetSafeRecord(s.Columns[first:last+1])); err != nil {
+			return err
+		}
+	}
+	count := s.Count()
+	if rows != nil {
+		count = len(rows)
+	}
+	record := make([]string, last-first+1)
+	for i := 0; i < count; i++ {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		n := i
+		if rows != nil {
+			n = rows[i]
+		}
+		cells, err := s.Row(n)
+		if err != nil {
+			return fmt.Errorf("copy row: %w", err)
+		}
+		if last >= len(cells) {
+			return fmt.Errorf("missing column %d in row %d", last, n)
+		}
+		for j, cell := range cells[first : last+1] {
+			record[j] = SpreadsheetSafeText(tsvCell(cell))
+		}
+		if err := tsvWrite(c, w, record); err != nil {
+			return err
+		}
+	}
+	c.Flush()
+	return c.Error()
+}
+
 func newTSVWriter(w io.Writer) *csv.Writer {
 	c := csv.NewWriter(w)
 	c.Comma = '\t'

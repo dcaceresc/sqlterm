@@ -144,16 +144,53 @@ func (s *Store) Export(path, format string) error {
 
 // ExportContext preserves literal CSV text and JSON for existing consumers.
 func (s *Store) ExportContext(ctx context.Context, path, format string) error {
-	return s.exportContext(ctx, path, format, false)
+	return s.exportContext(ctx, path, format, false, nil, 0, len(s.Columns), false)
 }
 
 // ExportSpreadsheetContext makes CSV fields safe to open in spreadsheet apps.
 // JSON remains unchanged because it is not a spreadsheet-oriented format.
 func (s *Store) ExportSpreadsheetContext(ctx context.Context, path, format string) error {
-	return s.exportContext(ctx, path, format, true)
+	return s.exportContext(ctx, path, format, true, nil, 0, len(s.Columns), false)
 }
 
-func (s *Store) exportContext(ctx context.Context, path, format string, spreadsheetSafe bool) error {
+// ExportProjectionContext exporta las columnas [first, end) y las filas en el orden indicado.
+// Si rows es nil, exporta todas las filas en el orden original.
+func (s *Store) ExportProjectionContext(ctx context.Context, path, format string, spreadsheetSafe bool, rows []int, first, end int) error {
+	return s.exportContext(ctx, path, format, spreadsheetSafe, rows, first, end, true)
+}
+
+func (s *Store) exportContext(ctx context.Context, path, format string, spreadsheetSafe bool, rows []int, first, end int, projected bool) error {
+	if first < 0 || end < first || end > len(s.Columns) {
+		return fmt.Errorf("export: invalid column range [%d, %d)", first, end)
+	}
+	if projected {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+	}
+	columns := s.Columns[first:end]
+	rowCount := func() int {
+		if rows != nil {
+			return len(rows)
+		}
+		return s.Count()
+	}
+	readRow := func(i int) ([]Cell, error) {
+		if rows != nil {
+			i = rows[i]
+		}
+		r, err := s.Row(i)
+		if err != nil {
+			return nil, err
+		}
+		if !projected {
+			return r, nil
+		}
+		if end > len(r) {
+			return nil, fmt.Errorf("export: column range [%d, %d) exceeds row %d width %d", first, end, i, len(r))
+		}
+		return r[first:end], nil
+	}
 	f, e := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0600)
 	if e != nil {
 		return e
@@ -169,18 +206,18 @@ func (s *Store) exportContext(ctx context.Context, path, format string, spreadsh
 	switch format {
 	case "csv":
 		c := csv.NewWriter(w)
-		columns := s.Columns
+		headers := columns
 		if spreadsheetSafe {
-			columns = spreadsheetSafeRecord(columns)
+			headers = spreadsheetSafeRecord(headers)
 		}
-		if e = c.Write(columns); e != nil {
+		if e = c.Write(headers); e != nil {
 			return e
 		}
-		for i := 0; i < s.Count(); i++ {
+		for i := 0; i < rowCount(); i++ {
 			if e = ctx.Err(); e != nil {
 				return e
 			}
-			r, e := s.Row(i)
+			r, e := readRow(i)
 			if e != nil {
 				return e
 			}
@@ -218,15 +255,15 @@ func (s *Store) exportContext(ctx context.Context, path, format string, spreadsh
 		}
 	case "json":
 		// A column array plus row arrays preserves duplicate column names and SQL NULL.
-		cols, _ := json.Marshal(s.Columns)
+		cols, _ := json.Marshal(columns)
 		if _, e = fmt.Fprintf(w, "{\"columns\":%s,\"rows\":[", cols); e != nil {
 			return e
 		}
-		for i := 0; i < s.Count(); i++ {
+		for i := 0; i < rowCount(); i++ {
 			if e = ctx.Err(); e != nil {
 				return e
 			}
-			r, e := s.Row(i)
+			r, e := readRow(i)
 			if e != nil {
 				return e
 			}
@@ -252,14 +289,31 @@ func (s *Store) exportContext(ctx context.Context, path, format string, spreadsh
 		if _, e = w.WriteString("]}\n"); e != nil {
 			return e
 		}
+	case "xlsx":
+		if !projected {
+			return fmt.Errorf("format must be csv or json")
+		}
+		if e = writeXLSX(ctx, w, columns, rowCount(), readRow); e != nil {
+			return e
+		}
 	default:
 		return fmt.Errorf("format must be csv or json")
+	}
+	if projected {
+		if e = ctx.Err(); e != nil {
+			return e
+		}
 	}
 	if e = w.Flush(); e != nil {
 		return e
 	}
 	if e = f.Close(); e != nil {
 		return e
+	}
+	if projected {
+		if e = ctx.Err(); e != nil {
+			return e
+		}
 	}
 	success = true
 	return nil

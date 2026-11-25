@@ -333,14 +333,19 @@ e edit profile, r rename folder, d delete empty folder, / search.
 Results: [ / ] previous/next result set; click/Enter highlight cell, column header or row number; i inspect value
 or the column name with the value; m messages;
 / search rows; s sort selected column ascending; S descending; e export.
-Ctrl+C/y copy highlighted scope; Y copy rows with headers; r/R current row;
+Shift+arrows or drag marks a rectangle; Ctrl+A marks all data; Esc clears the mark.
+v marks a row range. Ctrl+C/y copy the selection or fall back to the focused
+cell, row or column. The Actions palette offers Copy with Headers and Copy Headers.
+Y copies rows with headers; r/R copy the current row;
 c current cell. The menu also offers Cell with header: the selected cell's
 column name, a tab and its value in one TSV row, so a paste fills two adjacent
 cells of one spreadsheet row. Copy shortcuts and CSV default to spreadsheet-safe
 text, including both fields of Cell with header; menus expose literal copy/CSV
 with an untrusted-data warning. Clipboard rows are TSV in displayed order. JSON
 remains literal and unchanged.
-Sorting is lexical, NULL first ascending. Export includes all received rows and opens the file browser in the last successful export folder.
+Sorting is lexical, NULL first ascending. Export uses displayed order and offers Selection or Entire result when data is marked.
+Excel (.xlsx) stores headers and values as text, not formulas, and leaves NULL blank.
+The file browser opens in the last successful export folder.
 
 SQL Server: GO separates batches. MySQL: DELIMITER for routine scripts.
 PostgreSQL: dollar-quoted function bodies are supported.

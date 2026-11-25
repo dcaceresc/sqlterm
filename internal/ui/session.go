@@ -47,7 +47,7 @@ func (u *UI) connect(t *Tab, p config.Profile, password string) {
 			t.SortDescription = ""
 			t.Messages = nil
 			t.SelectedSet = 0
-			t.CopyAnchor = 0
+			t.clearGridSelection()
 			t.ColumnWidths = nil
 			t.Profile = s.Profile
 			u.recordRecent(p)
@@ -280,7 +280,7 @@ func (u *UI) run(t *Tab, sqlText string, work func(context.Context, func(db.Even
 	t.Messages = nil
 	t.Order = nil
 	t.SelectedSet = 0
-	t.CopyAnchor = 0
+	t.clearGridSelection()
 	t.ColumnWidths = nil
 	t.SortDescription = ""
 	if u.active() == t {

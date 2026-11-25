@@ -45,6 +45,7 @@ type Tab struct {
 	Collapsed           map[string]bool
 	ColumnWidths        map[int]int
 	CopyAnchor          int
+	gridSelection       gridSelection
 }
 type UI struct {
 	app                                *tview.Application
@@ -142,6 +143,7 @@ func New(path string, cfg config.Config) *UI {
 	u.layout = tview.NewFlex().SetDirection(tview.FlexRow).AddItem(u.tabsHeader, 1, 0, false).AddItem(body, 0, 1, true).AddItem(u.status, 1, 0, false).AddItem(u.help, 1, 0, false)
 	u.pages = tview.NewPages().AddPage("main", u.layout, true, true)
 	u.app.SetRoot(u.pages, true).EnableMouse(true).EnablePaste(true).SetInputCapture(u.key)
+	gridMouse := u.gridMouseCapture()
 	u.app.SetMouseCapture(func(event *tcell.EventMouse, action tview.MouseAction) (*tcell.EventMouse, tview.MouseAction) {
 		if u.tabHeaderMouse(event, action) {
 			return nil, action
@@ -162,7 +164,7 @@ func New(path string, cfg config.Config) *UI {
 		if u.resultPreviewLocked() && (action == tview.MouseScrollDown || action == tview.MouseScrollUp || action == tview.MouseScrollLeft || action == tview.MouseScrollRight) && u.table.InRect(event.Position()) {
 			return nil, action
 		}
-		return event, action
+		return gridMouse(event, action)
 	})
 	// tview holds its application lock while drawing. These hooks use widget
 	// focus flags, never Application.GetFocus/SetFocus.

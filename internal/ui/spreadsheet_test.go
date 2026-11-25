@@ -134,13 +134,13 @@ func TestSpreadsheetExportMenuFitsAndExposesSafeAndLiteralChoices(t *testing.T) 
 	u.app.SetFocus(u.table)
 	u.export()
 	if _, ok := u.dialogContent.(*tview.List); !ok {
-		t.Fatalf("export must first choose safe CSV, literal CSV, or JSON; got %T", u.dialogContent)
+		t.Fatalf("export must first choose safe CSV, literal CSV, JSON, or Excel; got %T", u.dialogContent)
 	}
 	for _, size := range [][2]int{{80, 24}, {120, 40}} {
 		screen.SetSize(size[0], size[1])
 		u.app.ForceDraw()
 		text := screenText(screen)
-		for _, label := range []string{"Spreadsheet-safe CSV", "Literal CSV", "JSON"} {
+		for _, label := range []string{"Spreadsheet-safe CSV", "Literal CSV", "JSON", "Excel (.xlsx)"} {
 			if !strings.Contains(text, label) {
 				t.Fatalf("%dx%d export menu missing %q: %s", size[0], size[1], label, text)
 			}

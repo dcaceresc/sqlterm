@@ -161,3 +161,71 @@ func TestExportBrowsesAndRemembersSuccessfulDestination(t *testing.T) {
 		t.Errorf("cancel created another export: %v", err)
 	}
 }
+
+func TestExportSelectionAndEntireResultInDisplayOrder(t *testing.T) {
+	for _, tc := range []struct {
+		name         string
+		mark, toggle bool
+		format       int
+		file, want   string
+	}{
+		{"selection JSON", true, false, 2, "results.json", "{\"columns\":[\"=dup\",\"=dup\"],\"rows\":[[\"@José\",null],[\"two\",\"\"]]}\n"},
+		{"selection safe CSV", true, false, 0, "results.csv", "'=dup,'=dup\n'@José,\\N\ntwo,\n"},
+		{"selection literal CSV", true, false, 1, "results.csv", "=dup,=dup\n@José,\\N\ntwo,\n"},
+		{"all by default despite focus", false, false, 2, "results.json", "{\"columns\":[\"other\",\"=dup\",\"=dup\"],\"rows\":[[\"third\",\"@José\",null],[\"second\",\"two\",\"\"],[\"first\",\"one\",\"end\"]]}\n"},
+		{"override selection", true, true, 2, "results.json", "{\"columns\":[\"other\",\"=dup\",\"=dup\"],\"rows\":[[\"third\",\"@José\",null],[\"second\",\"two\",\"\"],[\"first\",\"one\",\"end\"]]}\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			u := runningUI(t, config.Config{})
+			destination := t.TempDir()
+			store, err := result.New([]string{"other", "=dup", "=dup"})
+			if err != nil {
+				t.Fatal(err)
+			}
+			for _, cells := range [][]result.Cell{
+				{{Text: "first"}, {Text: "one"}, {Text: "end"}},
+				{{Text: "second"}, {Text: "two"}, {}},
+				{{Text: "third"}, {Text: "@José"}, {Null: true}},
+			} {
+				if err := store.Append(cells); err != nil {
+					t.Fatal(err)
+				}
+			}
+			u.app.QueueUpdateDraw(func() {
+				u.active().Results = []*result.Store{store}
+				u.active().Order = []int{2, 1, 0}
+				u.showResults()
+				u.app.SetFocus(u.table)
+				u.table.Select(2, 3)
+				if tc.mark {
+					dispatchModified(u, tcell.KeyLeft, 0, tcell.ModShift)
+					dispatchModified(u, tcell.KeyUp, 0, tcell.ModShift)
+				}
+				dispatchModified(u, tcell.KeyRune, 'e', 0)
+				menu := u.dialogContent.(*tview.List)
+				if tc.toggle {
+					if menu.GetItemCount() < 4 {
+						t.Error("scope cannot be changed")
+						return
+					}
+					menu.SetCurrentItem(3)
+					fileDialogKey(u, tcell.KeyEnter)
+				}
+				menu.SetCurrentItem(tc.format)
+				fileDialogKey(u, tcell.KeyEnter)
+				picker, ok := u.dialogContent.(*sqlFileDialog)
+				if !ok {
+					t.Errorf("expected file picker, got %T", u.dialogContent)
+					return
+				}
+				picker.navigate(destination)
+				picker.submit()
+			})
+			waitUI(t, u, func() bool { return !u.active().Busy })
+			got, err := os.ReadFile(filepath.Join(destination, tc.file))
+			if err != nil || string(got) != tc.want {
+				t.Fatalf("export = %q, %v; want %q", got, err, tc.want)
+			}
+		})
+	}
+}
